@@ -22,6 +22,9 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Install iOS Simulator platform
+        run: xcodebuild -downloadPlatform iOS
+
       - name: Create Secrets.plist
         env:
           OWM_API_KEY: ${{ secrets.OWM_API_KEY }}
@@ -34,31 +37,27 @@ jobs:
       - name: Resolve iOS Simulator destination
         id: simulator
         run: |
-          DEVICE_ID=$(python3 <<'PY'
-          import json
-          import subprocess
-
-          data = json.loads(subprocess.check_output(
-              ["xcrun", "simctl", "list", "devices", "available", "-j"],
-              text=True,
-          ))
-          runtimes = sorted(
-              (k for k in data.get("devices", {}) if "iOS" in k),
-              reverse=True,
-          )
-          for runtime in runtimes:
-              for device in data["devices"][runtime]:
-                  if not device.get("isAvailable"):
-                      continue
-                  name = device.get("name", "")
-                  if name.startswith("iPhone"):
-                      print(device["udid"])
-                      raise SystemExit
-          raise SystemExit("No available iPhone simulator found")
-          PY
-          )
-          echo "device_id=$DEVICE_ID" >> "$GITHUB_OUTPUT"
-          echo "Using simulator id: $DEVICE_ID"
+          DESTINATION=$(xcodebuild -showdestinations \
+            -project "Cats&Dogs.xcodeproj" \
+            -scheme "Cats&Dogs" 2>/dev/null | python3 -c "
+          import sys, re
+          for line in sys.stdin:
+              if 'platform:iOS Simulator' not in line or 'placeholder' in line:
+                  continue
+              if 'name:iPhone' not in line:
+                  continue
+              match = re.search(r'id:([0-9A-F-]+)', line)
+              if match:
+                  print(f'platform=iOS Simulator,id={match.group(1)}')
+                  break
+          ")
+          if [ -z "$DESTINATION" ]; then
+            echo 'Available destinations:'
+            xcodebuild -showdestinations -project "Cats&Dogs.xcodeproj" -scheme "Cats&Dogs" || true
+            exit 1
+          fi
+          echo "destination=$DESTINATION" >> "$GITHUB_OUTPUT"
+          echo "Using destination: $DESTINATION"
 
       - name: Build and test
         run: |
@@ -66,7 +65,7 @@ jobs:
           xcodebuild test \
             -project "Cats&Dogs.xcodeproj" \
             -scheme "Cats&Dogs" \
-            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.device_id }}" \
+            -destination "${{ steps.simulator.outputs.destination }}" \
             -resultBundlePath TestResults \
             CODE_SIGNING_ALLOWED=NO
 
