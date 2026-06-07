@@ -24,7 +24,7 @@ GitHub Actions runs on every push and pull request to `main` (see [`.github/work
 
 The workflow builds the app, runs unit tests on an iOS Simulator, and uploads the `.xcresult` bundle if you need to inspect failures.
 
-CI sets `IPHONEOS_DEPLOYMENT_TARGET=17.0` so tests can run on the simulator runtimes preinstalled on GitHub-hosted Mac runners (your local target may be newer).
+The app targets **iOS 17+** so unit tests can run on the simulator runtimes preinstalled on GitHub-hosted Mac runners.
 
 Add the same OpenWeather API key used for Android as a repository secret:
 

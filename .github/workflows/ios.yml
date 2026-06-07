@@ -9,9 +9,6 @@ on:
 jobs:
   build-and-test:
     runs-on: macos-15
-    env:
-      # GitHub-hosted runners ship older simulator runtimes; override for CI only.
-      IPHONEOS_DEPLOYMENT_TARGET: "17.0"
 
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +16,6 @@ jobs:
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          # Use an Xcode release that ships with iOS simulator runtimes on GHA images.
           xcode-version: "16.4"
 
       - name: Show Xcode version
@@ -52,8 +48,7 @@ jobs:
             -scheme "Cats&Dogs" \
             -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             -resultBundlePath TestResults \
-            CODE_SIGNING_ALLOWED=NO \
-            IPHONEOS_DEPLOYMENT_TARGET="$IPHONEOS_DEPLOYMENT_TARGET"
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Upload test results
         if: always()
