@@ -9,6 +9,9 @@ on:
 jobs:
   build-and-test:
     runs-on: macos-15
+    env:
+      # GitHub-hosted runners ship older simulator runtimes; override for CI only.
+      IPHONEOS_DEPLOYMENT_TARGET: "17.0"
 
     steps:
       - uses: actions/checkout@v4
@@ -16,14 +19,13 @@ jobs:
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          # This project targets iOS 26.5; use the newest Xcode image on the runner.
           xcode-version: latest
 
       - name: Show Xcode version
         run: xcodebuild -version
 
-      - name: Install iOS Simulator platform
-        run: xcodebuild -downloadPlatform iOS
+      - name: Prepare Xcode
+        run: sudo xcodebuild -runFirstLaunch
 
       - name: Create Secrets.plist
         env:
@@ -39,7 +41,8 @@ jobs:
         run: |
           DESTINATION=$(xcodebuild -showdestinations \
             -project "Cats&Dogs.xcodeproj" \
-            -scheme "Cats&Dogs" 2>/dev/null | python3 -c "
+            -scheme "Cats&Dogs" \
+            IPHONEOS_DEPLOYMENT_TARGET="$IPHONEOS_DEPLOYMENT_TARGET" 2>/dev/null | python3 -c "
           import sys, re
           for line in sys.stdin:
               if 'platform:iOS Simulator' not in line or 'placeholder' in line:
@@ -53,7 +56,7 @@ jobs:
           ")
           if [ -z "$DESTINATION" ]; then
             echo 'Available destinations:'
-            xcodebuild -showdestinations -project "Cats&Dogs.xcodeproj" -scheme "Cats&Dogs" || true
+            xcodebuild -showdestinations -project "Cats&Dogs.xcodeproj" -scheme "Cats&Dogs" IPHONEOS_DEPLOYMENT_TARGET="$IPHONEOS_DEPLOYMENT_TARGET" || true
             exit 1
           fi
           echo "destination=$DESTINATION" >> "$GITHUB_OUTPUT"
@@ -67,7 +70,8 @@ jobs:
             -scheme "Cats&Dogs" \
             -destination "${{ steps.simulator.outputs.destination }}" \
             -resultBundlePath TestResults \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            IPHONEOS_DEPLOYMENT_TARGET="$IPHONEOS_DEPLOYMENT_TARGET"
 
       - name: Upload test results
         if: always()
