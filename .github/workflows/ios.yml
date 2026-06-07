@@ -19,13 +19,19 @@ jobs:
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest
+          xcode-version: latest-stable
 
       - name: Show Xcode version
         run: xcodebuild -version
 
       - name: Prepare Xcode
         run: sudo xcodebuild -runFirstLaunch
+
+      - name: Start iOS Simulator
+        uses: futureware-tech/simulator-action@v4
+        id: simulator
+        with:
+          model: iPhone 16
 
       - name: Create Secrets.plist
         env:
@@ -36,39 +42,13 @@ jobs:
             /usr/libexec/PlistBuddy -c "Set :OWM_API_KEY $OWM_API_KEY" "Cats&Dogs/Secrets.plist"
           fi
 
-      - name: Resolve iOS Simulator destination
-        id: simulator
-        run: |
-          DESTINATION=$(xcodebuild -showdestinations \
-            -project "Cats&Dogs.xcodeproj" \
-            -scheme "Cats&Dogs" \
-            IPHONEOS_DEPLOYMENT_TARGET="$IPHONEOS_DEPLOYMENT_TARGET" 2>/dev/null | python3 -c "
-          import sys, re
-          for line in sys.stdin:
-              if 'platform:iOS Simulator' not in line or 'placeholder' in line:
-                  continue
-              if 'name:iPhone' not in line:
-                  continue
-              match = re.search(r'id:([0-9A-F-]+)', line)
-              if match:
-                  print(f'platform=iOS Simulator,id={match.group(1)}')
-                  break
-          ")
-          if [ -z "$DESTINATION" ]; then
-            echo 'Available destinations:'
-            xcodebuild -showdestinations -project "Cats&Dogs.xcodeproj" -scheme "Cats&Dogs" IPHONEOS_DEPLOYMENT_TARGET="$IPHONEOS_DEPLOYMENT_TARGET" || true
-            exit 1
-          fi
-          echo "destination=$DESTINATION" >> "$GITHUB_OUTPUT"
-          echo "Using destination: $DESTINATION"
-
       - name: Build and test
         run: |
           set -o pipefail
           xcodebuild test \
             -project "Cats&Dogs.xcodeproj" \
             -scheme "Cats&Dogs" \
-            -destination "${{ steps.simulator.outputs.destination }}" \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             -resultBundlePath TestResults \
             CODE_SIGNING_ALLOWED=NO \
             IPHONEOS_DEPLOYMENT_TARGET="$IPHONEOS_DEPLOYMENT_TARGET"
