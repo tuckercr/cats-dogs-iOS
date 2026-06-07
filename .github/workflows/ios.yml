@@ -30,6 +30,7 @@ jobs:
         with:
           model: iPhone 16
           os_version: "^18.0"
+          shutdown_after_job: "false"
 
       - name: Create Secrets.plist
         env:
