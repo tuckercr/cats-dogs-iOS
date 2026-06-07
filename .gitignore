@@ -1,0 +1,9 @@
+# API key — never commit
+Cats&Dogs/Secrets.plist
+
+# Xcode user state
+*.xcuserstate
+xcuserdata/
+
+# Reference clone (local only)
+.android-reference/
