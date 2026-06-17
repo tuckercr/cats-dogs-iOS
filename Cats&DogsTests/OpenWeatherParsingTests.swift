@@ -24,6 +24,8 @@ final class OpenWeatherParsingTests: XCTestCase {
         XCTAssertEqual(parsed.main.feelsLike, 20.1, accuracy: 0.0001)
         XCTAssertEqual(parsed.main.humidity, 55)
         XCTAssertEqual(parsed.wind.speed, 4.2, accuracy: 0.0001)
+        XCTAssertEqual(parsed.main.tempMin, 0, accuracy: 0.0001)
+        XCTAssertNil(parsed.visibility)
     }
 
     func testParsesForecastPayloadList() throws {

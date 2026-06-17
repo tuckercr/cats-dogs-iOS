@@ -7,27 +7,18 @@ final class GeoLocationViewModel {
     var cityInput = ""
     private(set) var citySuggestions: [CitySuggestion] = []
     private(set) var citySuggestLoading = false
+    private(set) var selectedSuggestion: CitySuggestion?
 
-    private(set) var pinnedLatitude: Double?
-    private(set) var pinnedLongitude: Double?
-
-    private let preferences: PreferencesStore
     private let geocodingRepository: GeocodingRepository
     private var suggestTask: Task<Void, Never>?
-    private var savedCityRestoreDone = false
 
-    init(
-        preferences: PreferencesStore = .shared,
-        geocodingRepository: GeocodingRepository = GeocodingRepository()
-    ) {
-        self.preferences = preferences
+    init(geocodingRepository: GeocodingRepository = GeocodingRepository()) {
         self.geocodingRepository = geocodingRepository
     }
 
     func onCityInputChange(_ value: String) {
         cityInput = value
-        pinnedLatitude = nil
-        pinnedLongitude = nil
+        selectedSuggestion = nil
         suggestTask?.cancel()
 
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -60,8 +51,7 @@ final class GeoLocationViewModel {
         suggestTask?.cancel()
         citySuggestions = []
         citySuggestLoading = false
-        pinnedLatitude = suggestion.weatherLat
-        pinnedLongitude = suggestion.weatherLon
+        selectedSuggestion = suggestion
         cityInput = suggestion.label
     }
 
@@ -71,11 +61,11 @@ final class GeoLocationViewModel {
         citySuggestLoading = false
     }
 
-    func restoreSavedCityOnce() -> String? {
-        guard !savedCityRestoreDone else { return nil }
-        savedCityRestoreDone = true
-        guard let last = preferences.lastCity else { return nil }
-        cityInput = last
-        return last
+    func reset() {
+        suggestTask?.cancel()
+        cityInput = ""
+        citySuggestions = []
+        citySuggestLoading = false
+        selectedSuggestion = nil
     }
 }

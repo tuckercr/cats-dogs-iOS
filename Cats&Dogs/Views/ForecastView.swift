@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct ForecastView: View {
-    @Bindable var geoViewModel: GeoLocationViewModel
+    @Bindable var cityListViewModel: CityListViewModel
     @Bindable var weatherViewModel: WeatherForecastViewModel
+
+    @State private var selectedDay: DayForecast?
 
     var body: some View {
         Group {
@@ -16,10 +18,15 @@ struct ForecastView: View {
 
             case .success(let days):
                 List(days) { day in
-                    ForecastDayCard(day: day)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
+                    Button {
+                        selectedDay = day
+                    } label: {
+                        ForecastDayCard(day: day)
+                    }
+                    .buttonStyle(.plain)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
                 .listStyle(.plain)
 
@@ -40,14 +47,14 @@ struct ForecastView: View {
         .task {
             loadForecast()
         }
+        .sheet(item: $selectedDay) { day in
+            DayDetailSheet(day: day)
+        }
     }
 
     private func loadForecast() {
-        weatherViewModel.refreshForecast(
-            resolvedCityName: weatherViewModel.resolvedCity ?? "",
-            latitude: geoViewModel.pinnedLatitude,
-            longitude: geoViewModel.pinnedLongitude
-        )
+        guard let location = cityListViewModel.activeLocation else { return }
+        weatherViewModel.refreshForecast(location: location)
     }
 }
 
@@ -56,27 +63,23 @@ private struct ForecastDayCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            WeatherIconView(iconCode: day.iconCode, size: 64)
+            WeatherIconView(iconCode: day.iconCode, size: 56)
             VStack(alignment: .leading, spacing: 4) {
                 Text(day.dateLabel)
                     .font(.headline)
                 Text(day.description)
                     .foregroundStyle(.secondary)
-                Text(formatTempFeels(day))
             }
             Spacer()
+            VStack(alignment: .trailing) {
+                Text(WeatherFormatting.temperature(day.tempMax, units: day.units))
+                    .fontWeight(.bold)
+                Text(WeatherFormatting.temperature(day.tempMin, units: day.units))
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(16)
         .background(.quaternary.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    private func formatTempFeels(_ day: DayForecast) -> String {
-        switch day.units {
-        case .metric:
-            String(format: "%.1f °C (feels like %.1f °C)", day.temperature, day.feelsLike)
-        case .imperial:
-            String(format: "%.1f °F (feels like %.1f °F)", day.temperature, day.feelsLike)
-        }
     }
 }

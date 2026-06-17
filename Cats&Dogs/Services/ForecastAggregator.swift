@@ -5,9 +5,43 @@ enum ForecastAggregator {
         let epochSeconds: Int
         let temperature: Double
         let feelsLike: Double
+        let tempMin: Double
+        let tempMax: Double
         let conditionMain: String
         let description: String
         let iconCode: String
+        let windSpeed: Double
+        let windDeg: Int
+        let humidity: Int
+        let pressure: Int
+
+        init(
+            epochSeconds: Int,
+            temperature: Double,
+            feelsLike: Double,
+            tempMin: Double = 0,
+            tempMax: Double = 0,
+            conditionMain: String,
+            description: String,
+            iconCode: String,
+            windSpeed: Double = 0,
+            windDeg: Int = 0,
+            humidity: Int = 0,
+            pressure: Int = 0
+        ) {
+            self.epochSeconds = epochSeconds
+            self.temperature = temperature
+            self.feelsLike = feelsLike
+            self.tempMin = tempMin
+            self.tempMax = tempMax
+            self.conditionMain = conditionMain
+            self.description = description
+            self.iconCode = iconCode
+            self.windSpeed = windSpeed
+            self.windDeg = windDeg
+            self.humidity = humidity
+            self.pressure = pressure
+        }
     }
 
     static func aggregate(
@@ -25,27 +59,60 @@ enum ForecastAggregator {
             return calendar.startOfDay(for: date)
         }
 
-        let formatter = DateFormatter()
-        formatter.timeZone = timeZone
-        formatter.locale = .current
-        formatter.dateFormat = "EEE, MMM d"
+        let dayFormatter = DateFormatter()
+        dayFormatter.timeZone = timeZone
+        dayFormatter.locale = .current
+        dayFormatter.dateFormat = "EEE, MMM d"
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.timeZone = timeZone
+        timeFormatter.locale = .current
+        timeFormatter.dateFormat = "h a"
 
         return grouped.keys.sorted().map { dayStart in
             let daySlots = grouped[dayStart] ?? []
-            let noonMinutes = 12 * 60
             let representative = daySlots.min { lhs, rhs in
                 minutesFromNoon(lhs.epochSeconds, calendar: calendar) <
                     minutesFromNoon(rhs.epochSeconds, calendar: calendar)
             }!
 
+            let dailyMin = daySlots.map { slot in
+                slot.tempMin != 0 ? slot.tempMin : slot.temperature
+            }.min() ?? representative.temperature
+
+            let dailyMax = daySlots.map { slot in
+                slot.tempMax != 0 ? slot.tempMax : slot.temperature
+            }.max() ?? representative.temperature
+
+            let hourlySlots = daySlots
+                .sorted { $0.epochSeconds < $1.epochSeconds }
+                .map { slot -> HourlySlot in
+                    let date = Date(timeIntervalSince1970: TimeInterval(slot.epochSeconds))
+                    return HourlySlot(
+                        timeLabel: timeFormatter.string(from: date),
+                        iconCode: slot.iconCode,
+                        description: slot.description.weatherSentenceCased,
+                        temperature: slot.temperature,
+                        feelsLike: slot.feelsLike,
+                        windSpeed: slot.windSpeed,
+                        windDeg: slot.windDeg,
+                        humidity: slot.humidity,
+                        pressure: slot.pressure,
+                        units: units
+                    )
+                }
+
             return DayForecast(
-                dateLabel: formatter.string(from: dayStart),
+                dateLabel: dayFormatter.string(from: dayStart),
                 conditionMain: representative.conditionMain,
                 description: representative.description.weatherSentenceCased,
                 iconCode: representative.iconCode,
                 temperature: representative.temperature,
                 feelsLike: representative.feelsLike,
-                units: units
+                tempMin: dailyMin,
+                tempMax: dailyMax,
+                units: units,
+                hourlySlots: hourlySlots
             )
         }
     }

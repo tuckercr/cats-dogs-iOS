@@ -17,6 +17,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		C62FC4DE2FD628110081B4AE /* Cats&Dogs.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Cats&Dogs.xctestplan"; sourceTree = "<group>"; };
 		C6ACE5D02FD1E5C2008E6E91 /* Cats&Dogs.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Cats&Dogs.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C6ACE5E02FD1E5C4008E6E91 /* Cats&DogsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Cats&DogsTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -55,6 +56,7 @@
 		C6ACE5C72FD1E5C2008E6E91 = {
 			isa = PBXGroup;
 			children = (
+				C62FC4DE2FD628110081B4AE /* Cats&Dogs.xctestplan */,
 				C6ACE5D22FD1E5C2008E6E91 /* Cats&Dogs */,
 				C6ACE5E22FD1E5C4008E6E91 /* Cats&DogsTests */,
 				C6ACE5D12FD1E5C2008E6E91 /* Products */,
@@ -329,14 +331,19 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Cats & Dogs";
+                INFOPLIST_KEY_CFBundleDisplayName = "Cats & Dogs";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.weather";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Cats & Dogs uses your location to show local weather for your area.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_BackgroundColor[sdk=iphoneos*]" = LaunchBackground;
+				"INFOPLIST_KEY_UILaunchScreen_BackgroundColor[sdk=iphonesimulator*]" = LaunchBackground;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_ImageName[sdk=iphoneos*]" = LaunchSplash;
+				"INFOPLIST_KEY_UILaunchScreen_ImageName[sdk=iphonesimulator*]" = LaunchSplash;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -372,14 +379,19 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Cats & Dogs";
+                INFOPLIST_KEY_CFBundleDisplayName = "Cats & Dogs";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.weather";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Cats & Dogs uses your location to show local weather for your area.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_BackgroundColor[sdk=iphoneos*]" = LaunchBackground;
+				"INFOPLIST_KEY_UILaunchScreen_BackgroundColor[sdk=iphonesimulator*]" = LaunchBackground;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_ImageName[sdk=iphoneos*]" = LaunchSplash;
+				"INFOPLIST_KEY_UILaunchScreen_ImageName[sdk=iphonesimulator*]" = LaunchSplash;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

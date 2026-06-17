@@ -6,7 +6,6 @@ import Observation
 final class WeatherForecastViewModel {
     private(set) var currentWeather: LoadingState<CurrentWeather> = .idle
     private(set) var forecast: LoadingState<[DayForecast]> = .idle
-    private(set) var resolvedCity: String?
 
     private let preferences: PreferencesStore
     private let weatherRepository: WeatherRepository
@@ -21,13 +20,7 @@ final class WeatherForecastViewModel {
         self.weatherRepository = weatherRepository
     }
 
-    func refreshCurrent(city: String, latitude: Double?, longitude: Double?) {
-        let trimmedCity = city.trimmingCharacters(in: .whitespacesAndNewlines)
-        if (latitude == nil || longitude == nil) && trimmedCity.isEmpty {
-            currentWeather = .error(message: "Please enter a city name.", canRetry: false)
-            return
-        }
-
+    func refreshCurrent(location: SavedLocation) {
         currentFetchGeneration += 1
         let fetchId = currentFetchGeneration
 
@@ -35,10 +28,10 @@ final class WeatherForecastViewModel {
             currentWeather = .loading
             let units = WeatherUnits.current
             let result: Result<CurrentWeather, Error>
-            if let latitude, let longitude {
+            if let latitude = location.latitude, let longitude = location.longitude {
                 result = await weatherRepository.fetchCurrentWeather(
                     units: units,
-                    locationLabel: trimmedCity,
+                    locationLabel: location.label,
                     cityQuery: nil,
                     latitude: latitude,
                     longitude: longitude
@@ -46,8 +39,8 @@ final class WeatherForecastViewModel {
             } else {
                 result = await weatherRepository.fetchCurrentWeather(
                     units: units,
-                    locationLabel: trimmedCity,
-                    cityQuery: trimmedCity,
+                    locationLabel: location.label,
+                    cityQuery: location.label,
                     latitude: nil,
                     longitude: nil
                 )
@@ -56,7 +49,6 @@ final class WeatherForecastViewModel {
             guard fetchId == currentFetchGeneration else { return }
             switch result {
             case .success(let weather):
-                resolvedCity = weather.cityName
                 preferences.setLastCity(weather.cityName)
                 currentWeather = .success(weather)
             case .failure(let error):
@@ -68,16 +60,7 @@ final class WeatherForecastViewModel {
         }
     }
 
-    func refreshForecast(resolvedCityName: String, latitude: Double?, longitude: Double?) {
-        let name = resolvedCityName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if (latitude == nil || longitude == nil) && name.isEmpty {
-            forecast = .error(
-                message: "Load current weather first to pick a location.",
-                canRetry: false
-            )
-            return
-        }
-
+    func refreshForecast(location: SavedLocation) {
         forecastFetchGeneration += 1
         let fetchId = forecastFetchGeneration
 
@@ -85,7 +68,7 @@ final class WeatherForecastViewModel {
             forecast = .loading
             let units = WeatherUnits.current
             let result: Result<[DayForecast], Error>
-            if let latitude, let longitude {
+            if let latitude = location.latitude, let longitude = location.longitude {
                 result = await weatherRepository.fetchForecast(
                     units: units,
                     cityQuery: nil,
@@ -95,7 +78,7 @@ final class WeatherForecastViewModel {
             } else {
                 result = await weatherRepository.fetchForecast(
                     units: units,
-                    cityQuery: name,
+                    cityQuery: location.label,
                     latitude: nil,
                     longitude: nil
                 )

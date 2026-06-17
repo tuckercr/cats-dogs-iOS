@@ -138,7 +138,9 @@ final class WeatherRepositoryTests: XCTestCase {
                 name: "Broken City",
                 weather: [],
                 main: MainDTO(temp: 21.0, feelsLike: 20.0, humidity: 55),
-                wind: WindDTO(speed: 4.2)
+                wind: WindDTO(speed: 4.2),
+                visibility: nil,
+                clouds: nil
             )
         )
         let repository = WeatherRepository(client: api, timeZone: utc)
@@ -213,7 +215,9 @@ private func currentWeatherResponse() -> CurrentWeatherResponse {
             WeatherDescDTO(main: "Clear", description: "clear sky", icon: "01d"),
         ],
         main: MainDTO(temp: 72.5, feelsLike: 70.0, humidity: 42),
-        wind: WindDTO(speed: 5.5)
+        wind: WindDTO(speed: 5.5),
+        visibility: 10_000,
+        clouds: CloudsDTO(all: 25)
     )
 }
 
@@ -227,6 +231,7 @@ private func forecastItem(epochSeconds: Int, temperature: Double, main: String) 
                 description: "\(main.lowercased()) description",
                 icon: "01d"
             ),
-        ]
+        ],
+        wind: WindDTO(speed: 1.0)
     )
 }

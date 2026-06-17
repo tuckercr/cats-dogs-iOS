@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "AB2CF027-2323-4935-BAD2-474635264171",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Cats&Dogs.xcodeproj",
+      "identifier" : "C6ACE5CF2FD1E5C2008E6E91",
+      "name" : "Cats&Dogs"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:Cats&Dogs.xcodeproj",
+        "identifier" : "C6ACE5E32FD1E5C4008E6E91",
+        "name" : "Cats&DogsTests"
+      }
+    }
+  ],
+  "version" : 1
+}
