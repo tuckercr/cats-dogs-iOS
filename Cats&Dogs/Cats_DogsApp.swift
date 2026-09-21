@@ -28,9 +28,6 @@ struct Cats_DogsApp: App {
             } else {
                 RootView()
                     .transition(.opacity)
-                    .task {
-                        await WeatherNotificationScheduler.shared.scheduleDailyNotifications()
-                    }
             }
         }
         .onChange(of: scenePhase) { _, phase in

@@ -10,6 +10,7 @@ struct CurrentWeatherView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var showAddSheet = false
     @State private var selectedDay: DayForecast?
+    @State private var rescheduleTask: Task<Void, Never>?
 
     private var forecastDays: [DayForecast] {
         if case .success(let days) = weatherViewModel.forecast { return days }
@@ -48,6 +49,8 @@ struct CurrentWeatherView: View {
         }
         .onChange(of: cityListViewModel.activeLocation?.cacheKey) { _, _ in
             refreshActiveLocation()
+            // Also covers removing the last city, which must clear its notifications.
+            rescheduleNotificationsSoon()
         }
         .onChange(of: unitOverride) { _, _ in
             // Cached data is in the old units, so this has to be a real refetch.
@@ -59,10 +62,10 @@ struct CurrentWeatherView: View {
             }
         }
         .onChange(of: weatherViewModel.currentWeather) { _, state in
-            rescheduleNotifications(for: state)
+            if case .success = state { rescheduleNotificationsSoon() }
         }
         .onChange(of: weatherViewModel.forecast) { _, state in
-            rescheduleNotifications(for: state)
+            if case .success = state { rescheduleNotificationsSoon() }
         }
         .task {
             refreshActiveLocation()
@@ -195,10 +198,14 @@ struct CurrentWeatherView: View {
         weatherViewModel.refreshForecast(location: location)
     }
 
-    /// Notification text is built from the cache, so reschedule once fresh data has landed.
-    private func rescheduleNotifications<T: Equatable>(for state: LoadingState<T>) {
-        guard case .success = state else { return }
-        Task {
+    /// Notification text is built from the cache, so reschedule once fresh data has landed. One
+    /// refresh changes state up to four times (cached then fresh, for current and forecast), so the
+    /// calls are coalesced into a single run.
+    private func rescheduleNotificationsSoon() {
+        rescheduleTask?.cancel()
+        rescheduleTask = Task {
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
             await WeatherNotificationScheduler.shared.scheduleDailyNotifications()
         }
     }

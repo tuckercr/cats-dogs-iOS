@@ -28,13 +28,10 @@ final class WeatherNotificationScheduler {
         return status == .authorized || status == .provisional
     }
 
-    /// Builds the notification text from the cached weather for the active city.
-    func scheduleDailyNotifications(
-        preferences: PreferencesStore? = nil,
-        weatherRepository: WeatherRepository? = nil
-    ) async {
+    /// Builds the notification text from the cached weather for the active city. Callers run this
+    /// after a refresh has written the cache, so it never needs the network itself.
+    func scheduleDailyNotifications(preferences: PreferencesStore? = nil) async {
         let preferences = preferences ?? .shared
-        let weatherRepository = weatherRepository ?? WeatherRepository()
         let locations = preferences.savedLocations
         guard !locations.isEmpty, await isAuthorized() else {
             center.removeAllPendingNotificationRequests()
@@ -43,19 +40,7 @@ final class WeatherNotificationScheduler {
 
         let activeIndex = min(preferences.activeLocationIndex, locations.count - 1)
         let location = locations[activeIndex]
-        let units = WeatherUnitsResolver.resolve(override: preferences.unitOverride)
-
-        var weather = preferences.cachedWeather(for: location.cacheKey)
-        if weather == nil {
-            weather = try? await weatherRepository.fetchCurrentWeather(
-                units: units,
-                locationLabel: location.label,
-                cityQuery: location.latitude == nil ? location.label : nil,
-                latitude: location.latitude,
-                longitude: location.longitude
-            ).get()
-        }
-
+        let weather = preferences.cachedWeather(for: location.cacheKey)
         let todayForecast = preferences.cachedForecast(for: location.cacheKey).flatMap { forecastForToday(in: $0) }
 
         let content: (title: String, body: String)
