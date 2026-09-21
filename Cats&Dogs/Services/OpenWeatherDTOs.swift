@@ -8,6 +8,8 @@ struct CurrentWeatherResponse: Decodable {
     let visibility: Int?
     let clouds: CloudsDTO?
     let sys: SysDTO?
+    /// The city's offset from UTC in seconds.
+    var timezone: Int? = nil
 }
 
 struct SysDTO: Decodable {

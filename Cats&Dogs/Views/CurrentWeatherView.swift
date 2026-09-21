@@ -372,7 +372,7 @@ private struct CurrentWeatherContent: View {
                 MetricIconRow(
                     icon: "sunrise.fill",
                     label: "Sunrise",
-                    value: WeatherFormatting.epochTime(sunrise)
+                    value: WeatherFormatting.epochTime(sunrise, timeZone: weather.timeZone)
                 )
             }
             if let sunset = weather.sunsetEpoch {
@@ -380,7 +380,7 @@ private struct CurrentWeatherContent: View {
                 MetricIconRow(
                     icon: "sunset.fill",
                     label: "Sunset",
-                    value: WeatherFormatting.epochTime(sunset)
+                    value: WeatherFormatting.epochTime(sunset, timeZone: weather.timeZone)
                 )
             }
         }

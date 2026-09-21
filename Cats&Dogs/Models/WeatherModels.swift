@@ -18,6 +18,12 @@ struct CurrentWeather: Codable, Equatable {
     let units: WeatherUnits
     let sunriseEpoch: Int?
     let sunsetEpoch: Int?
+    /// The city's offset from UTC, so sunrise and sunset can be shown in its local time.
+    var timezoneOffsetSeconds: Int? = nil
+
+    var timeZone: TimeZone {
+        timezoneOffsetSeconds.flatMap { TimeZone(secondsFromGMT: $0) } ?? .current
+    }
 }
 
 struct HourlySlot: Codable, Equatable, Identifiable {

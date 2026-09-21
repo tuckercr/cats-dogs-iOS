@@ -135,7 +135,8 @@ struct WeatherRepository {
             cloudPercent: response.clouds?.all ?? 0,
             units: units,
             sunriseEpoch: positiveEpoch(response.sys?.sunrise),
-            sunsetEpoch: positiveEpoch(response.sys?.sunset)
+            sunsetEpoch: positiveEpoch(response.sys?.sunset),
+            timezoneOffsetSeconds: response.timezone
         )
     }
 
