@@ -36,6 +36,7 @@ struct SettingsView: View {
                     grantedText: "Location access granted",
                     requestTitle: "Allow location access",
                     openSettingsTitle: "Open Settings to enable location",
+                    settingsURL: UIApplication.openSettingsURLString,
                     onRequest: { locationViewModel.requestPermission() }
                 )
             }
@@ -46,6 +47,8 @@ struct SettingsView: View {
                     grantedText: "Notifications enabled",
                     requestTitle: "Allow notifications",
                     openSettingsTitle: "Open Settings to enable notifications",
+                    // Lands directly on this app's notification settings rather than its general page.
+                    settingsURL: UIApplication.openNotificationSettingsURLString,
                     onRequest: {
                         Task { await settingsViewModel.requestNotificationPermission() }
                     }
@@ -106,6 +109,7 @@ struct SettingsView: View {
         grantedText: String,
         requestTitle: String,
         openSettingsTitle: String,
+        settingsURL: String,
         onRequest: @escaping () -> Void
     ) -> some View {
         switch status {
@@ -117,14 +121,14 @@ struct SettingsView: View {
             Button(requestTitle, action: onRequest)
         case .denied:
             Button(openSettingsTitle) {
-                openAppSettings()
+                openSystemSettings(settingsURL)
             }
         }
     }
 
-    private func openAppSettings() {
-        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-        openURL(url)
+    private func openSystemSettings(_ urlString: String) {
+        guard let url = URL(string: urlString) else { return }
+        UIApplication.shared.open(url)
     }
 }
 
