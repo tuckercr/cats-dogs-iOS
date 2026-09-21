@@ -56,8 +56,7 @@ final class WeatherNotificationScheduler {
             ).get()
         }
 
-        let forecast = preferences.cachedForecast(for: location.cacheKey)
-        let todayForecast = forecast?.first
+        let todayForecast = preferences.cachedForecast(for: location.cacheKey).flatMap { forecastForToday(in: $0) }
 
         let content: (title: String, body: String)
         if let weather {

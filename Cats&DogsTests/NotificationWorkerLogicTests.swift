@@ -86,6 +86,55 @@ final class NotificationWorkerLogicTests: XCTestCase {
         XCTAssertEqual(content.body, "12°/5° • Clear Sky")
     }
 
+    func testDoWorkTakesHighLowFromTodaysForecastEvenWhenItIsNotFirst() async {
+        var posted: [(String, String)] = []
+        var logic = makeLogic(
+            fetchForecast: { _, _, _, _ in
+                .success([
+                    Self.forecast(dateLabel: "Sun, Dec 31", tempMin: -9, tempMax: -1),
+                    Self.forecast(dateLabel: "Mon, Jan 1", tempMin: 5, tempMax: 12),
+                ])
+            },
+            postNotification: { posted.append(($0, $1)) }
+        )
+        logic.todayLabel = { "Mon, Jan 1" }
+
+        _ = await logic.doWork()
+
+        XCTAssertEqual(posted.first?.1, "12°/5° • Clear Sky")
+    }
+
+    /// Late in the evening the forecast's first entry is already tomorrow.
+    func testDoWorkFallsBackToCurrentWeatherWhenForecastHasNoEntryForToday() async {
+        var posted: [(String, String)] = []
+        var logic = makeLogic(
+            fetchForecast: { _, _, _, _ in
+                .success([Self.forecast(dateLabel: "Tue, Jan 2", tempMin: 30, tempMax: 40)])
+            },
+            postNotification: { posted.append(($0, $1)) }
+        )
+        logic.todayLabel = { "Mon, Jan 1" }
+
+        _ = await logic.doWork()
+
+        XCTAssertEqual(posted.first?.1, "18°/10° • Clear Sky")
+    }
+
+    private static func forecast(dateLabel: String, tempMin: Double, tempMax: Double) -> DayForecast {
+        DayForecast(
+            dateLabel: dateLabel,
+            conditionMain: "Clouds",
+            description: "broken clouds",
+            iconCode: "04d",
+            temperature: 10,
+            feelsLike: 9,
+            tempMin: tempMin,
+            tempMax: tempMax,
+            units: .metric,
+            hourlySlots: []
+        )
+    }
+
     private func makeLogic(
         savedLocations: [SavedLocation]? = nil,
         activeIndex: Int = 0,

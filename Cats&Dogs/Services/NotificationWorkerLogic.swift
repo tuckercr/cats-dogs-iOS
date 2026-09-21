@@ -23,6 +23,8 @@ struct NotificationWorkerLogic {
     ) async -> Result<[DayForecast], Error>
     let hasNotificationPermission: () -> Bool
     let postNotification: (_ title: String, _ body: String) -> Void
+    /// Overridable for tests; nil means today's label on this device.
+    var todayLabel: (() -> String)? = nil
 
     func doWork() async -> NotificationWorkerResult {
         let locations = await getSavedLocations()
@@ -46,7 +48,9 @@ struct NotificationWorkerLogic {
             location.latitude,
             location.longitude
         )
-        let todayForecast = try? forecastResult.get().first
+        let todayForecast = (try? forecastResult.get()).flatMap {
+            forecastForToday(in: $0, todayLabel: todayLabel?())
+        }
 
         guard hasNotificationPermission() else { return .success }
 
@@ -54,6 +58,13 @@ struct NotificationWorkerLogic {
         postNotification(content.title, content.body)
         return .success
     }
+}
+
+/// `/forecast` starts at the next 3-hour slot, so late in the day its first entry is tomorrow, and a
+/// stale cache starts with yesterday. Only an entry that is actually today may supply the high/low.
+func forecastForToday(in days: [DayForecast], todayLabel: String? = nil) -> DayForecast? {
+    let todayLabel = todayLabel ?? WeatherFormatting.todayLabel()
+    return days.first { $0.dateLabel == todayLabel }
 }
 
 func buildNotificationContent(
