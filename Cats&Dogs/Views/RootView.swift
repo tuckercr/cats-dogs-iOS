@@ -1,7 +1,8 @@
 import SwiftUI
 
 private enum AppScreen: Hashable {
-    case forecast
+    case settings
+    case locations
 }
 
 struct RootView: View {
@@ -9,6 +10,7 @@ struct RootView: View {
     @State private var cityListViewModel = CityListViewModel()
     @State private var geoViewModel = GeoLocationViewModel()
     @State private var weatherViewModel = WeatherForecastViewModel()
+    @State private var settingsViewModel = SettingsViewModel()
     @State private var path: [AppScreen] = []
 
     var body: some View {
@@ -17,6 +19,10 @@ struct RootView: View {
                 if !state.hasSeenWelcome {
                     WelcomeView {
                         welcomeViewModel.completeWelcome()
+                    }
+                } else if !state.notificationOnboardingDone {
+                    OnboardingNotificationView {
+                        welcomeViewModel.completeNotificationOnboarding()
                     }
                 } else if !state.locationOnboardingDone {
                     OnboardingLocationView(
@@ -34,14 +40,19 @@ struct RootView: View {
                             cityListViewModel: cityListViewModel,
                             geoViewModel: geoViewModel,
                             weatherViewModel: weatherViewModel,
-                            onOpenForecast: { path.append(.forecast) }
+                            onOpenSettings: { path.append(.settings) }
                         )
                         .navigationDestination(for: AppScreen.self) { screen in
                             switch screen {
-                            case .forecast:
-                                ForecastView(
+                            case .settings:
+                                SettingsView(
+                                    settingsViewModel: settingsViewModel,
+                                    onOpenLocations: { path.append(.locations) }
+                                )
+                            case .locations:
+                                LocationsView(
                                     cityListViewModel: cityListViewModel,
-                                    weatherViewModel: weatherViewModel
+                                    geoViewModel: geoViewModel
                                 )
                             }
                         }

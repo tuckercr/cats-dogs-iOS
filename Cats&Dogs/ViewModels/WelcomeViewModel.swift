@@ -3,6 +3,7 @@ import Observation
 
 struct OnboardingState: Equatable {
     var hasSeenWelcome: Bool
+    var notificationOnboardingDone: Bool
     var locationOnboardingDone: Bool
 }
 
@@ -13,10 +14,12 @@ final class WelcomeViewModel {
 
     private let preferences: PreferencesStore
 
-    init(preferences: PreferencesStore = .shared) {
+    init(preferences: PreferencesStore? = nil) {
+        let preferences = preferences ?? .shared
         self.preferences = preferences
         onboardingState = OnboardingState(
             hasSeenWelcome: preferences.hasSeenWelcome,
+            notificationOnboardingDone: preferences.notificationOnboardingDone,
             locationOnboardingDone: preferences.locationOnboardingDone
         )
     }
@@ -26,6 +29,15 @@ final class WelcomeViewModel {
         onboardingState = onboardingState.map { state in
             var updated = state
             updated.hasSeenWelcome = true
+            return updated
+        }
+    }
+
+    func completeNotificationOnboarding() {
+        preferences.setNotificationOnboardingDone()
+        onboardingState = onboardingState.map { state in
+            var updated = state
+            updated.notificationOnboardingDone = true
             return updated
         }
     }

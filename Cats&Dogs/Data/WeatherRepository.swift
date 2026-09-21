@@ -133,8 +133,15 @@ struct WeatherRepository {
             windDeg: response.wind.deg,
             visibilityMeters: response.visibility,
             cloudPercent: response.clouds?.all ?? 0,
-            units: units
+            units: units,
+            sunriseEpoch: positiveEpoch(response.sys?.sunrise),
+            sunsetEpoch: positiveEpoch(response.sys?.sunset)
         )
+    }
+
+    private func positiveEpoch(_ value: Int?) -> Int? {
+        guard let value, value > 0 else { return nil }
+        return value
     }
 
     private func mapForecast(_ response: ForecastResponse, units: WeatherUnits) throws -> [DayForecast] {

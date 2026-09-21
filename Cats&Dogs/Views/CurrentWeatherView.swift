@@ -4,8 +4,9 @@ struct CurrentWeatherView: View {
     @Bindable var cityListViewModel: CityListViewModel
     @Bindable var geoViewModel: GeoLocationViewModel
     @Bindable var weatherViewModel: WeatherForecastViewModel
-    let onOpenForecast: () -> Void
+    let onOpenSettings: () -> Void
 
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showAddSheet = false
     @State private var selectedDay: DayForecast?
 
@@ -32,14 +33,31 @@ struct CurrentWeatherView: View {
                 }
                 .accessibilityLabel("Add a city")
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: onOpenSettings) {
+                    Image(systemName: "gearshape")
+                }
+                .accessibilityLabel("Open settings")
+            }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if cityListViewModel.locations.count >= 2 {
                 cityTabs
             }
         }
-        .onChange(of: cityListViewModel.activeLocation?.label) { _, _ in
+        .onChange(of: cityListViewModel.activeLocation?.cacheKey) { _, _ in
             refreshActiveLocation()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                backgroundRefreshActiveLocation()
+            }
+        }
+        .onChange(of: weatherViewModel.currentWeather) { _, state in
+            rescheduleNotifications(for: state)
+        }
+        .onChange(of: weatherViewModel.forecast) { _, state in
+            rescheduleNotifications(for: state)
         }
         .task {
             refreshActiveLocation()
@@ -92,11 +110,6 @@ struct CurrentWeatherView: View {
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
-                    .contextMenu {
-                        Button("Remove", role: .destructive) {
-                            cityListViewModel.removeLocation(at: index)
-                        }
-                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -141,14 +154,15 @@ struct CurrentWeatherView: View {
                 case .success(let weather):
                     CurrentWeatherContent(
                         weather: weather,
-                        forecastDays: forecastDays,
-                        onOpenForecast: onOpenForecast,
-                        onDaySelected: { selectedDay = $0 }
+                        forecastState: weatherViewModel.forecast,
+                        location: cityListViewModel.activeLocation,
+                        onDaySelected: { selectedDay = $0 },
+                        onForecastRetry: refreshActiveLocation
                     )
 
-                case .error(let message, let canRetry):
+                case .error(let errorKey, let canRetry):
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(message)
+                        Text(WeatherErrorMessages.message(for: errorKey))
                             .foregroundStyle(.red)
                         if canRetry {
                             Button("Retry", action: refreshActiveLocation)
@@ -159,12 +173,35 @@ struct CurrentWeatherView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
         }
+        .refreshable {
+            refreshActiveLocation()
+        }
+        .overlay(alignment: .top) {
+            if weatherViewModel.isRefreshing {
+                ProgressView()
+                    .padding(.top, 8)
+            }
+        }
     }
 
     private func refreshActiveLocation() {
         guard let location = cityListViewModel.activeLocation else { return }
         weatherViewModel.refreshCurrent(location: location)
         weatherViewModel.refreshForecast(location: location)
+    }
+
+    /// Notification text is built from the cache, so reschedule once fresh data has landed.
+    private func rescheduleNotifications<T: Equatable>(for state: LoadingState<T>) {
+        guard case .success = state else { return }
+        Task {
+            await WeatherNotificationScheduler.shared.scheduleDailyNotifications()
+        }
+    }
+
+    private func backgroundRefreshActiveLocation() {
+        guard let location = cityListViewModel.activeLocation else { return }
+        weatherViewModel.backgroundRefreshCurrent(location: location)
+        weatherViewModel.backgroundRefreshForecast(location: location)
     }
 
     private func addCityFromSheet() {
@@ -190,12 +227,18 @@ struct CurrentWeatherView: View {
 
 private struct CurrentWeatherContent: View {
     let weather: CurrentWeather
-    let forecastDays: [DayForecast]
-    let onOpenForecast: () -> Void
+    let forecastState: LoadingState<[DayForecast]>
+    let location: SavedLocation?
     let onDaySelected: (DayForecast) -> Void
+    let onForecastRetry: () -> Void
 
     private var todayLabel: String {
         WeatherFormatting.todayLabel()
+    }
+
+    private var forecastDays: [DayForecast] {
+        if case .success(let days) = forecastState { return days }
+        return []
     }
 
     private var todayForecast: DayForecast? {
@@ -213,25 +256,43 @@ private struct CurrentWeatherContent: View {
         VStack(alignment: .leading, spacing: 12) {
             heroCard
             detailsCard
+            RadarCard(location: location)
 
-            if !upcomingDays.isEmpty {
+            if !upcomingDays.isEmpty || forecastState == .loading || isForecastError {
                 Text("UPCOMING")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.top, 4)
-                ForEach(upcomingDays) { day in
-                    UpcomingDayRow(day: day) {
-                        onDaySelected(day)
+
+                if !upcomingDays.isEmpty {
+                    ForEach(upcomingDays) { day in
+                        UpcomingDayRow(day: day) {
+                            onDaySelected(day)
+                        }
+                    }
+                } else if forecastState == .loading {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                            .padding(.vertical, 24)
+                        Spacer()
+                    }
+                } else if case .error(let errorKey, let canRetry) = forecastState {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(WeatherErrorMessages.message(for: errorKey))
+                            .foregroundStyle(.red)
+                        if canRetry {
+                            Button("Retry", action: onForecastRetry)
+                        }
                     }
                 }
             }
-
-            Button(action: onOpenForecast) {
-                Label("View 5-day forecast", systemImage: "chart.line.uptrend.xyaxis")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
         }
+    }
+
+    private var isForecastError: Bool {
+        if case .error = forecastState { return true }
+        return false
     }
 
     private var heroCard: some View {
@@ -244,6 +305,16 @@ private struct CurrentWeatherContent: View {
                 WeatherIconView(iconCode: weather.iconCode, size: 88)
                 Text(weather.description)
                     .foregroundStyle(.secondary)
+                if location != nil {
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(weather.cityName)
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 Text(WeatherFormatting.temperature(weather.temperature, units: weather.units))
                     .font(.largeTitle)
                     .fontWeight(.bold)
@@ -296,6 +367,22 @@ private struct CurrentWeatherContent: View {
                 label: "Cloud cover",
                 value: "\(weather.cloudPercent)%"
             )
+            if let sunrise = weather.sunriseEpoch {
+                Divider().padding(.horizontal, 16)
+                MetricIconRow(
+                    icon: "sunrise.fill",
+                    label: "Sunrise",
+                    value: WeatherFormatting.epochTime(sunrise)
+                )
+            }
+            if let sunset = weather.sunsetEpoch {
+                Divider().padding(.horizontal, 16)
+                MetricIconRow(
+                    icon: "sunset.fill",
+                    label: "Sunset",
+                    value: WeatherFormatting.epochTime(sunset)
+                )
+            }
         }
         .background(.quaternary.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 12))

@@ -38,4 +38,13 @@ enum WeatherFormatting {
         formatter.dateFormat = "EEE, MMM d"
         return formatter.string(from: Date())
     }
+
+    static func epochTime(_ epochSeconds: Int, timeZone: TimeZone = .current) -> String {
+        let date = Date(timeIntervalSince1970: TimeInterval(epochSeconds))
+        let formatter = DateFormatter()
+        formatter.timeZone = timeZone
+        formatter.locale = .current
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: date)
+    }
 }

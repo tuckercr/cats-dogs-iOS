@@ -6,93 +6,118 @@ import Observation
 final class WeatherForecastViewModel {
     private(set) var currentWeather: LoadingState<CurrentWeather> = .idle
     private(set) var forecast: LoadingState<[DayForecast]> = .idle
+    private(set) var isRefreshing = false
 
     private let preferences: PreferencesStore
     private let weatherRepository: WeatherRepository
+
     private var currentFetchGeneration = 0
     private var forecastFetchGeneration = 0
+    private var currentRefreshing = false
+    private var forecastRefreshing = false
+    private var currentTargetKey: String?
+    private var forecastTargetKey: String?
 
     init(
-        preferences: PreferencesStore = .shared,
-        weatherRepository: WeatherRepository = WeatherRepository()
+        preferences: PreferencesStore? = nil,
+        weatherRepository: WeatherRepository? = nil
     ) {
-        self.preferences = preferences
-        self.weatherRepository = weatherRepository
+        self.preferences = preferences ?? .shared
+        self.weatherRepository = weatherRepository ?? WeatherRepository()
+    }
+
+    func backgroundRefreshCurrent(location: SavedLocation) {
+        Task {
+            let units = resolvedUnits()
+            let result = await fetchCurrent(for: location, units: units)
+            if let target = currentTargetKey, target != location.cacheKey { return }
+            if case .success(let weather) = result {
+                currentWeather = .success(weather)
+                preferences.setLastCity(weather.cityName)
+                preferences.setCachedWeather(weather, for: location.cacheKey)
+            }
+        }
+    }
+
+    func backgroundRefreshForecast(location: SavedLocation) {
+        Task {
+            let units = resolvedUnits()
+            let result = await fetchForecast(for: location, units: units)
+            if let target = forecastTargetKey, target != location.cacheKey { return }
+            if case .success(let days) = result {
+                forecast = .success(days)
+                preferences.setCachedForecast(days, for: location.cacheKey)
+            }
+        }
     }
 
     func refreshCurrent(location: SavedLocation) {
+        currentTargetKey = location.cacheKey
         currentFetchGeneration += 1
         let fetchId = currentFetchGeneration
+        currentRefreshing = true
+        updateRefreshingState()
 
         Task {
-            currentWeather = .loading
-            let units = WeatherUnits.current
-            let result: Result<CurrentWeather, Error>
-            if let latitude = location.latitude, let longitude = location.longitude {
-                result = await weatherRepository.fetchCurrentWeather(
-                    units: units,
-                    locationLabel: location.label,
-                    cityQuery: nil,
-                    latitude: latitude,
-                    longitude: longitude
-                )
-            } else {
-                result = await weatherRepository.fetchCurrentWeather(
-                    units: units,
-                    locationLabel: location.label,
-                    cityQuery: location.label,
-                    latitude: nil,
-                    longitude: nil
-                )
-            }
+            let cached = preferences.cachedWeather(for: location.cacheKey)
+            currentWeather = cached.map { .success($0) } ?? .loading
+
+            let units = resolvedUnits()
+            let result = await fetchCurrent(for: location, units: units)
 
             guard fetchId == currentFetchGeneration else { return }
             switch result {
             case .success(let weather):
                 preferences.setLastCity(weather.cityName)
+                preferences.setCachedWeather(weather, for: location.cacheKey)
                 currentWeather = .success(weather)
             case .failure(let error):
-                currentWeather = .error(
-                    message: Self.userMessage(for: error),
-                    canRetry: true
-                )
+                if cached == nil {
+                    currentWeather = .error(
+                        errorKey: WeatherErrorMessages.errorKey(for: error),
+                        canRetry: WeatherErrorMessages.canRetry(for: error)
+                    )
+                }
+            }
+
+            if fetchId == currentFetchGeneration {
+                currentRefreshing = false
+                updateRefreshingState()
             }
         }
     }
 
     func refreshForecast(location: SavedLocation) {
+        forecastTargetKey = location.cacheKey
         forecastFetchGeneration += 1
         let fetchId = forecastFetchGeneration
+        forecastRefreshing = true
+        updateRefreshingState()
 
         Task {
-            forecast = .loading
-            let units = WeatherUnits.current
-            let result: Result<[DayForecast], Error>
-            if let latitude = location.latitude, let longitude = location.longitude {
-                result = await weatherRepository.fetchForecast(
-                    units: units,
-                    cityQuery: nil,
-                    latitude: latitude,
-                    longitude: longitude
-                )
-            } else {
-                result = await weatherRepository.fetchForecast(
-                    units: units,
-                    cityQuery: location.label,
-                    latitude: nil,
-                    longitude: nil
-                )
-            }
+            let cached = preferences.cachedForecast(for: location.cacheKey)
+            forecast = cached.map { .success($0) } ?? .loading
+
+            let units = resolvedUnits()
+            let result = await fetchForecast(for: location, units: units)
 
             guard fetchId == forecastFetchGeneration else { return }
             switch result {
             case .success(let days):
+                preferences.setCachedForecast(days, for: location.cacheKey)
                 forecast = .success(days)
             case .failure(let error):
-                forecast = .error(
-                    message: Self.userMessage(for: error),
-                    canRetry: true
-                )
+                if cached == nil {
+                    forecast = .error(
+                        errorKey: WeatherErrorMessages.errorKey(for: error),
+                        canRetry: WeatherErrorMessages.canRetry(for: error)
+                    )
+                }
+            }
+
+            if fetchId == forecastFetchGeneration {
+                forecastRefreshing = false
+                updateRefreshingState()
             }
         }
     }
@@ -109,29 +134,54 @@ final class WeatherForecastViewModel {
         }
     }
 
-    private static func userMessage(for error: Error) -> String {
-        if let clientError = error as? OpenWeatherClientError {
-            switch clientError {
-            case .missingApiKey:
-                return "Weather API key is missing. Copy Secrets.example.plist to Secrets.plist and add your key."
-            case .emptyQuery:
-                return "Please enter a city name."
-            case .network:
-                return "We could not reach the weather service. Check your connection and try again."
-            case .http(_, let message):
-                return message
-            case .invalidPayload:
-                return "Weather data is not available right now. Please try again later."
-            }
-        }
-
-        return error.localizedDescription.nilIfEmpty
-            ?? "Weather data is not available right now. Please try again later."
+    private func resolvedUnits() -> WeatherUnits {
+        WeatherUnitsResolver.resolve(override: preferences.unitOverride)
     }
-}
 
-private extension String {
-    var nilIfEmpty: String? {
-        isEmpty ? nil : self
+    private func updateRefreshingState() {
+        isRefreshing = currentRefreshing || forecastRefreshing
+    }
+
+    private func fetchCurrent(
+        for location: SavedLocation,
+        units: WeatherUnits
+    ) async -> Result<CurrentWeather, Error> {
+        let label = location.isCurrentLocation ? "" : location.label
+        if let latitude = location.latitude, let longitude = location.longitude {
+            return await weatherRepository.fetchCurrentWeather(
+                units: units,
+                locationLabel: label,
+                cityQuery: nil,
+                latitude: latitude,
+                longitude: longitude
+            )
+        }
+        return await weatherRepository.fetchCurrentWeather(
+            units: units,
+            locationLabel: label,
+            cityQuery: location.label,
+            latitude: nil,
+            longitude: nil
+        )
+    }
+
+    private func fetchForecast(
+        for location: SavedLocation,
+        units: WeatherUnits
+    ) async -> Result<[DayForecast], Error> {
+        if let latitude = location.latitude, let longitude = location.longitude {
+            return await weatherRepository.fetchForecast(
+                units: units,
+                cityQuery: nil,
+                latitude: latitude,
+                longitude: longitude
+            )
+        }
+        return await weatherRepository.fetchForecast(
+            units: units,
+            cityQuery: location.label,
+            latitude: nil,
+            longitude: nil
+        )
     }
 }

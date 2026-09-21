@@ -1,6 +1,7 @@
 import XCTest
 @testable import Cats_Dogs
 
+@MainActor
 final class WeatherRepositoryTests: XCTestCase {
     private let utc = TimeZone(secondsFromGMT: 0)!
 
@@ -140,7 +141,8 @@ final class WeatherRepositoryTests: XCTestCase {
                 main: MainDTO(temp: 21.0, feelsLike: 20.0, humidity: 55),
                 wind: WindDTO(speed: 4.2),
                 visibility: nil,
-                clouds: nil
+                clouds: nil,
+                sys: nil
             )
         )
         let repository = WeatherRepository(client: api, timeZone: utc)
@@ -217,7 +219,8 @@ private func currentWeatherResponse() -> CurrentWeatherResponse {
         main: MainDTO(temp: 72.5, feelsLike: 70.0, humidity: 42),
         wind: WindDTO(speed: 5.5),
         visibility: 10_000,
-        clouds: CloudsDTO(all: 25)
+        clouds: CloudsDTO(all: 25),
+        sys: SysDTO(sunrise: 1_700_000_000, sunset: 1_700_010_000)
     )
 }
 

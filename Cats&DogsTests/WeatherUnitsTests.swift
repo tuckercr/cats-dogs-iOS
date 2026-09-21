@@ -1,6 +1,7 @@
 import XCTest
 @testable import Cats_Dogs
 
+@MainActor
 final class WeatherUnitsTests: XCTestCase {
     func testUSAndTerritoriesUseImperial() {
         XCTAssertEqual(WeatherUnits.fromRegionCode("US"), .imperial)

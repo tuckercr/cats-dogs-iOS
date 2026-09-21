@@ -1,6 +1,7 @@
 import XCTest
 @testable import Cats_Dogs
 
+@MainActor
 final class GeocodingRepositoryTests: XCTestCase {
     func testSearchCitiesTrimsInputAndFormatsSuggestionLabels() async {
         let api = FakeGeocodingAPI(

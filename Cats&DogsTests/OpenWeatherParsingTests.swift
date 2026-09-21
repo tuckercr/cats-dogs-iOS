@@ -1,6 +1,7 @@
 import XCTest
 @testable import Cats_Dogs
 
+@MainActor
 final class OpenWeatherParsingTests: XCTestCase {
     private let decoder = JSONDecoder()
 

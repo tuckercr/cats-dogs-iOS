@@ -1,6 +1,6 @@
 import Foundation
 
-struct CurrentWeather: Equatable {
+struct CurrentWeather: Codable, Equatable {
     let cityName: String
     let conditionMain: String
     let description: String
@@ -16,9 +16,11 @@ struct CurrentWeather: Equatable {
     let visibilityMeters: Int?
     let cloudPercent: Int
     let units: WeatherUnits
+    let sunriseEpoch: Int?
+    let sunsetEpoch: Int?
 }
 
-struct HourlySlot: Equatable, Identifiable {
+struct HourlySlot: Codable, Equatable, Identifiable {
     var id: String { timeLabel }
     let timeLabel: String
     let iconCode: String
@@ -32,7 +34,7 @@ struct HourlySlot: Equatable, Identifiable {
     let units: WeatherUnits
 }
 
-struct DayForecast: Equatable, Identifiable {
+struct DayForecast: Codable, Equatable, Identifiable {
     var id: String { dateLabel }
     let dateLabel: String
     let conditionMain: String

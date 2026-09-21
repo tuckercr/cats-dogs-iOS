@@ -12,8 +12,8 @@ final class GeoLocationViewModel {
     private let geocodingRepository: GeocodingRepository
     private var suggestTask: Task<Void, Never>?
 
-    init(geocodingRepository: GeocodingRepository = GeocodingRepository()) {
-        self.geocodingRepository = geocodingRepository
+    init(geocodingRepository: GeocodingRepository? = nil) {
+        self.geocodingRepository = geocodingRepository ?? GeocodingRepository()
     }
 
     func onCityInputChange(_ value: String) {

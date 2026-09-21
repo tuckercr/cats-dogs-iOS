@@ -18,15 +18,23 @@ final class LocationPermissionViewModel: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CLLocation?, Error>?
     private var awaitingAuthorization = false
+    // Test seams; nil means use the real CLLocationManager.
+    private let authorizationStatusOverride: (() -> CLAuthorizationStatus)?
+    private let locationFetcherOverride: (() async throws -> CLLocation?)?
 
-    override init() {
+    init(
+        authorizationStatus: (() -> CLAuthorizationStatus)? = nil,
+        locationFetcher: (() async throws -> CLLocation?)? = nil
+    ) {
+        authorizationStatusOverride = authorizationStatus
+        locationFetcherOverride = locationFetcher
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
     }
 
     func hasLocationPermission() -> Bool {
-        switch manager.authorizationStatus {
+        switch authorizationStatusOverride?() ?? manager.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
             return true
         default:
@@ -71,7 +79,10 @@ final class LocationPermissionViewModel: NSObject, CLLocationManagerDelegate {
     }
 
     private func requestLocation() async throws -> CLLocation? {
-        try await withCheckedThrowingContinuation { continuation in
+        if let locationFetcherOverride {
+            return try await locationFetcherOverride()
+        }
+        return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
             manager.requestLocation()
         }

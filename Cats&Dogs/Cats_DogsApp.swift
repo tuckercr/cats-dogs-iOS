@@ -11,6 +11,7 @@ private let splashDuration: Duration = .seconds(1.5)
 
 @main
 struct Cats_DogsApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showSplash = true
 
     var body: some Scene {
@@ -27,7 +28,18 @@ struct Cats_DogsApp: App {
             } else {
                 RootView()
                     .transition(.opacity)
+                    .task {
+                        await WeatherNotificationScheduler.shared.scheduleDailyNotifications()
+                    }
             }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                WeatherBackgroundRefresher.shared.scheduleNextRefresh()
+            }
+        }
+        .backgroundTask(.appRefresh(WeatherBackgroundRefresher.taskIdentifier)) {
+            await WeatherBackgroundRefresher.shared.handleAppRefresh()
         }
     }
 }

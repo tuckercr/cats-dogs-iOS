@@ -7,6 +7,12 @@ struct CurrentWeatherResponse: Decodable {
     let wind: WindDTO
     let visibility: Int?
     let clouds: CloudsDTO?
+    let sys: SysDTO?
+}
+
+struct SysDTO: Decodable {
+    let sunrise: Int?
+    let sunset: Int?
 }
 
 struct CloudsDTO: Decodable {

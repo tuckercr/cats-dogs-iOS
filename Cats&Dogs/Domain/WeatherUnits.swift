@@ -1,6 +1,6 @@
 import Foundation
 
-enum WeatherUnits: String {
+enum WeatherUnits: String, Codable {
     case metric
     case imperial
 

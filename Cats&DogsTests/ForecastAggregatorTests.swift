@@ -1,6 +1,7 @@
 import XCTest
 @testable import Cats_Dogs
 
+@MainActor
 final class ForecastAggregatorTests: XCTestCase {
     private let utc = TimeZone(secondsFromGMT: 0)!
 
