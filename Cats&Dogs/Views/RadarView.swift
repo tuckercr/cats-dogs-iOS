@@ -1,7 +1,11 @@
 import SwiftUI
 
-private let radarZoom = 10
-private let tilePixelSize = 256
+private enum RadarTiles {
+    nonisolated static let zoom = 10
+    nonisolated static let pixelSize = 256
+}
+
+private let overlayRefreshInterval: Duration = .seconds(600)
 
 struct RadarCard: View {
     let location: SavedLocation?
@@ -30,29 +34,30 @@ struct RadarCard: View {
     }
 }
 
+private enum RadarLayer: String, CaseIterable {
+    case clouds
+    case precipitation
+}
+
 private struct RadarMapView: View {
     let latitude: Double
     let longitude: Double
 
     @State private var mapImage: CGImage?
-    @State private var overlayImage: CGImage?
-    @State private var animationFrame = 0
+    @State private var overlayImages: [RadarLayer: CGImage] = [:]
+    @State private var visibleLayer: RadarLayer = .clouds
 
     private var tileInfo: TileInfo {
-        TileInfo.from(latitude: latitude, longitude: longitude, zoom: radarZoom)
-    }
-
-    private var layerType: String {
-        animationFrame % 2 == 0 ? "clouds" : "precipitation"
+        TileInfo.from(latitude: latitude, longitude: longitude, zoom: RadarTiles.zoom)
     }
 
     var body: some View {
         Canvas { context, size in
-            let bitmapTotal = CGFloat(3 * tilePixelSize)
+            let bitmapTotal = CGFloat(3 * RadarTiles.pixelSize)
             let tileDisplay = max(size.width, size.height) / 2
-            let scale = tileDisplay / CGFloat(tilePixelSize)
-            let locationX = (1 + tileInfo.subFractionX) * CGFloat(tilePixelSize)
-            let locationY = (1 + tileInfo.subFractionY) * CGFloat(tilePixelSize)
+            let scale = tileDisplay / CGFloat(RadarTiles.pixelSize)
+            let locationX = (1 + tileInfo.subFractionX) * CGFloat(RadarTiles.pixelSize)
+            let locationY = (1 + tileInfo.subFractionY) * CGFloat(RadarTiles.pixelSize)
             let offsetX = size.width / 2 - locationX * scale
             let offsetY = size.height / 2 - locationY * scale
             let drawSize = CGSize(width: bitmapTotal * scale, height: bitmapTotal * scale)
@@ -61,28 +66,51 @@ private struct RadarMapView: View {
             if let mapImage {
                 context.draw(Image(decorative: mapImage, scale: 1), in: CGRect(origin: drawOrigin, size: drawSize))
             }
-            if let overlayImage {
+            if let overlayImage = overlayImages[visibleLayer] {
                 context.opacity = 0.7
                 context.draw(Image(decorative: overlayImage, scale: 1), in: CGRect(origin: drawOrigin, size: drawSize))
             }
         }
         .task(id: tileInfo) {
-            mapImage = await MapTileLoader.stitchTiles(tileInfo: tileInfo) { x, y in
-                "https://tile.openstreetmap.org/\(radarZoom)/\(x)/\(y).png"
+            let tile = tileInfo
+            mapImage = nil
+            let image = await MapTileLoader.stitchTiles(tileX: tile.tileX, tileY: tile.tileY) { x, y in
+                "https://tile.openstreetmap.org/\(RadarTiles.zoom)/\(x)/\(y).png"
             }
+            guard !Task.isCancelled else { return }
+            mapImage = image
         }
-        .task(id: "\(tileInfo)-\(layerType)") {
-            let apiKey = AppConfig.openWeatherApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-            overlayImage = await MapTileLoader.stitchTiles(tileInfo: tileInfo) { x, y in
-                "https://tile.openweathermap.org/map/\(layerType)/\(radarZoom)/\(x)/\(y).png?appid=\(apiKey)"
+        // Each layer is fetched once per location (then every `overlayRefreshInterval`), never per
+        // animation frame: the frame timer below only switches which loaded image is drawn.
+        .task(id: tileInfo) {
+            let tile = tileInfo
+            let apiKey = AppConfig.openWeatherApiKey
+            overlayImages = [:]
+            while !Task.isCancelled {
+                await withTaskGroup(of: Void.self) { group in
+                    for layer in RadarLayer.allCases {
+                        group.addTask {
+                            let image = await MapTileLoader.stitchTiles(tileX: tile.tileX, tileY: tile.tileY) { x, y in
+                                "https://tile.openweathermap.org/map/\(layer.rawValue)/\(RadarTiles.zoom)/\(x)/\(y).png?appid=\(apiKey)"
+                            }
+                            guard !Task.isCancelled, let image else { return }
+                            await setOverlay(image, for: layer)
+                        }
+                    }
+                }
+                try? await Task.sleep(for: overlayRefreshInterval)
             }
         }
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))
-                animationFrame = (animationFrame + 1) % 4
+                visibleLayer = visibleLayer == .clouds ? .precipitation : .clouds
             }
         }
+    }
+
+    private func setOverlay(_ image: CGImage, for layer: RadarLayer) {
+        overlayImages[layer] = image
     }
 }
 
@@ -109,8 +137,33 @@ private struct TileInfo: Equatable {
 }
 
 private enum MapTileLoader {
-    static func stitchTiles(tileInfo: TileInfo, urlBuilder: (Int, Int) -> String) async -> CGImage? {
-        let size = 3 * tilePixelSize
+    /// Loads the 3×3 block of tiles around (`tileX`, `tileY`) concurrently and stitches them together.
+    /// Returns nil when nothing loaded or the task was cancelled, so a cancelled load never yields a
+    /// half-drawn mosaic.
+    nonisolated static func stitchTiles(
+        tileX: Int,
+        tileY: Int,
+        urlBuilder: @escaping @Sendable (Int, Int) -> String
+    ) async -> CGImage? {
+        let tiles = await withTaskGroup(of: (col: Int, row: Int, image: CGImage?).self) { group in
+            for row in -1...1 {
+                for col in -1...1 {
+                    group.addTask {
+                        (col, row, await loadTile(from: urlBuilder(tileX + col, tileY + row)))
+                    }
+                }
+            }
+            var loaded: [(col: Int, row: Int, image: CGImage)] = []
+            for await tile in group {
+                if let image = tile.image {
+                    loaded.append((tile.col, tile.row, image))
+                }
+            }
+            return loaded
+        }
+        guard !Task.isCancelled, !tiles.isEmpty else { return nil }
+
+        let size = 3 * RadarTiles.pixelSize
         guard let context = CGContext(
             data: nil,
             width: size,
@@ -121,26 +174,19 @@ private enum MapTileLoader {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return nil }
 
-        var loadedAny = false
-        for row in -1...1 {
-            for col in -1...1 {
-                let x = tileInfo.tileX + col
-                let y = tileInfo.tileY + row
-                guard let image = await loadTile(from: urlBuilder(x, y)) else { continue }
-                loadedAny = true
-                // CGContext's origin is bottom-left, so the northern row (-1) goes at the top.
-                context.draw(image, in: CGRect(
-                    x: (col + 1) * tilePixelSize,
-                    y: (1 - row) * tilePixelSize,
-                    width: tilePixelSize,
-                    height: tilePixelSize
-                ))
-            }
+        for tile in tiles {
+            // CGContext's origin is bottom-left, so the northern row (-1) goes at the top.
+            context.draw(tile.image, in: CGRect(
+                x: (tile.col + 1) * RadarTiles.pixelSize,
+                y: (1 - tile.row) * RadarTiles.pixelSize,
+                width: RadarTiles.pixelSize,
+                height: RadarTiles.pixelSize
+            ))
         }
-        return loadedAny ? context.makeImage() : nil
+        return context.makeImage()
     }
 
-    private static func loadTile(from urlString: String) async -> CGImage? {
+    private nonisolated static func loadTile(from urlString: String) async -> CGImage? {
         guard let url = URL(string: urlString) else { return nil }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
