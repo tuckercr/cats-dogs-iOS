@@ -77,6 +77,7 @@ final class PreferencesStore {
     func setSavedLocations(_ locations: [SavedLocation]) {
         guard let data = try? encoder.encode(locations) else { return }
         defaults.set(data, forKey: savedLocationsKey)
+        pruneCache(keeping: locations)
     }
 
     func setActiveLocationIndex(_ index: Int) {
@@ -88,33 +89,23 @@ final class PreferencesStore {
     }
 
     func cachedWeather(for locationKey: String) -> CurrentWeather? {
-        guard let map = loadCacheMap(forKey: weatherCacheKey),
-              let raw = map[locationKey],
-              let data = raw.data(using: .utf8) else { return nil }
-        return try? decoder.decode(CurrentWeather.self, from: data)
+        loadCache(CurrentWeather.self, forKey: weatherCacheKey)[locationKey]
     }
 
     func setCachedWeather(_ weather: CurrentWeather, for locationKey: String) {
-        guard let data = try? encoder.encode(weather),
-              let json = String(data: data, encoding: .utf8) else { return }
-        var map = loadCacheMap(forKey: weatherCacheKey) ?? [:]
-        map[locationKey] = json
-        saveCacheMap(map, forKey: weatherCacheKey)
+        var cache = loadCache(CurrentWeather.self, forKey: weatherCacheKey)
+        cache[locationKey] = weather
+        saveCache(cache, forKey: weatherCacheKey)
     }
 
     func cachedForecast(for locationKey: String) -> [DayForecast]? {
-        guard let map = loadCacheMap(forKey: forecastCacheKey),
-              let raw = map[locationKey],
-              let data = raw.data(using: .utf8) else { return nil }
-        return try? decoder.decode([DayForecast].self, from: data)
+        loadCache([DayForecast].self, forKey: forecastCacheKey)[locationKey]
     }
 
     func setCachedForecast(_ forecast: [DayForecast], for locationKey: String) {
-        guard let data = try? encoder.encode(forecast),
-              let json = String(data: data, encoding: .utf8) else { return }
-        var map = loadCacheMap(forKey: forecastCacheKey) ?? [:]
-        map[locationKey] = json
-        saveCacheMap(map, forKey: forecastCacheKey)
+        var cache = loadCache([DayForecast].self, forKey: forecastCacheKey)
+        cache[locationKey] = forecast
+        saveCache(cache, forKey: forecastCacheKey)
     }
 
     func clearCache() {
@@ -122,13 +113,30 @@ final class PreferencesStore {
         defaults.removeObject(forKey: forecastCacheKey)
     }
 
-    private func loadCacheMap(forKey key: String) -> [String: String]? {
-        guard let data = defaults.data(forKey: key) else { return nil }
-        return try? decoder.decode([String: String].self, from: data)
+    /// Drops cache entries for cities that are no longer saved, so removed cities (and every spot
+    /// "My Location" has ever resolved to) don't pile up in UserDefaults.
+    private func pruneCache(keeping locations: [SavedLocation]) {
+        let keys = Set(locations.map(\.cacheKey))
+        prune(CurrentWeather.self, forKey: weatherCacheKey, keeping: keys)
+        prune([DayForecast].self, forKey: forecastCacheKey, keeping: keys)
     }
 
-    private func saveCacheMap(_ map: [String: String], forKey key: String) {
-        guard let data = try? encoder.encode(map) else { return }
+    private func prune<Value: Codable>(_ type: Value.Type, forKey key: String, keeping keys: Set<String>) {
+        let cache = loadCache(type, forKey: key)
+        let pruned = cache.filter { keys.contains($0.key) }
+        if pruned.count != cache.count {
+            saveCache(pruned, forKey: key)
+        }
+    }
+
+    /// Unreadable data (including the older string-in-a-map format) is treated as an empty cache.
+    private func loadCache<Value: Codable>(_ type: Value.Type, forKey key: String) -> [String: Value] {
+        guard let data = defaults.data(forKey: key) else { return [:] }
+        return (try? decoder.decode([String: Value].self, from: data)) ?? [:]
+    }
+
+    private func saveCache<Value: Codable>(_ cache: [String: Value], forKey key: String) {
+        guard let data = try? encoder.encode(cache) else { return }
         defaults.set(data, forKey: key)
     }
 }
