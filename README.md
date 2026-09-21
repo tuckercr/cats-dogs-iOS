@@ -155,10 +155,12 @@ Ported from Android:
 iOS only:
 
 - `WeatherBackgroundRefresherTests` — background refresh caching, notification rescheduling and retry timing
+- `PreferencesStoreTests` — per-city cache round trip, eviction when a city is removed, older cache format
+- `WeatherFormattingTests` — sunrise/sunset in the city's time zone
 
 View-model tests run against real repositories with scripted API fakes, and a `PreferencesStore` backed
 by a throwaway `UserDefaults` suite, so they never touch the app's real data. Shared helpers (including
-`Gate`, which holds a fake request open so tests can control the order responses arrive in) live in
+`Gate`, which holds fake requests open so tests can control the order responses arrive in) live in
 `ViewModelTestSupport.swift`.
 
 ## CI
