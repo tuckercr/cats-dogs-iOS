@@ -64,7 +64,6 @@ final class CityListViewModelTests: XCTestCase {
         let viewModel = makeViewModel()
 
         viewModel.addLocation(denver)
-        await waitUntil { viewModel.locations.count == 2 }
 
         XCTAssertEqual(viewModel.locations, [austin, denver])
         XCTAssertEqual(viewModel.activeLocation, denver)
@@ -78,10 +77,58 @@ final class CityListViewModelTests: XCTestCase {
         let viewModel = makeViewModel()
 
         viewModel.addLocation(SavedLocation(label: "paris", latitude: nil, longitude: nil))
-        await waitUntil { viewModel.locations.count == 1 }
+        await waitUntil { viewModel.locations.first?.latitude != nil }
 
+        let geocoded = SavedLocation(label: "paris", latitude: 48.85, longitude: 2.35)
         XCTAssertEqual(geocoding.queries, ["paris"])
-        XCTAssertEqual(viewModel.locations, [SavedLocation(label: "paris", latitude: 48.85, longitude: 2.35)])
+        XCTAssertEqual(viewModel.locations, [geocoded])
+        XCTAssertEqual(preferences.reopened().savedLocations, [geocoded])
+    }
+
+    /// Offline, geocoding can take up to the request timeout; the city must not wait for it.
+    func testNameOnlyCityAppearsImmediatelyWhileGeocodingIsStillInFlight() async {
+        let search = Gate<[GeocodingDirectDTO]>()
+        geocoding.onSearch = { _ in try await search.value() }
+        let viewModel = makeViewModel()
+
+        viewModel.addLocation(SavedLocation(label: "Paris", latitude: nil, longitude: nil))
+
+        XCTAssertEqual(viewModel.locations, [SavedLocation(label: "Paris", latitude: nil, longitude: nil)])
+        XCTAssertEqual(viewModel.activeLocation?.label, "Paris")
+
+        search.succeed([geocodingResult(name: "Paris", country: "FR", lat: 48.85, lon: 2.35)])
+        await waitUntil { viewModel.locations.first?.latitude != nil }
+    }
+
+    func testAddingTheSameCityTwiceBeforeGeocodingReturnsDoesNotDuplicateIt() async {
+        let search = Gate<[GeocodingDirectDTO]>()
+        geocoding.onSearch = { _ in try await search.value() }
+        let viewModel = makeViewModel()
+
+        viewModel.addLocation(SavedLocation(label: "Paris", latitude: nil, longitude: nil))
+        viewModel.addLocation(SavedLocation(label: "Paris", latitude: nil, longitude: nil))
+        search.succeed([geocodingResult(name: "Paris", country: "FR", lat: 48.85, lon: 2.35)])
+        await waitUntil { viewModel.locations.first?.latitude != nil }
+
+        XCTAssertEqual(viewModel.locations.count, 1)
+        XCTAssertEqual(geocoding.queries.count, 1)
+    }
+
+    func testRemovingACityWhileItIsBeingGeocodedDoesNotBringItBack() async {
+        let search = Gate<[GeocodingDirectDTO]>()
+        geocoding.onSearch = { _ in try await search.value() }
+        preferences.store.setSavedLocations([austin])
+        let viewModel = makeViewModel()
+        viewModel.addLocation(SavedLocation(label: "Paris", latitude: nil, longitude: nil))
+        await waitUntil { self.geocoding.queries.count == 1 }
+
+        viewModel.removeLocation(at: 1)
+        search.succeed([geocodingResult(name: "Paris", country: "FR", lat: 48.85, lon: 2.35)])
+        await waitUntil { self.geocoding.completedSearches == 1 }
+        await settle()
+
+        XCTAssertEqual(viewModel.locations, [austin])
+        XCTAssertEqual(preferences.reopened().savedLocations, [austin])
     }
 
     func testAddLocationWithoutCoordinatesIsStillSavedWhenGeocodingFails() async {
@@ -89,7 +136,8 @@ final class CityListViewModelTests: XCTestCase {
         let viewModel = makeViewModel()
 
         viewModel.addLocation(SavedLocation(label: "Nowhere", latitude: nil, longitude: nil))
-        await waitUntil { viewModel.locations.count == 1 }
+        await waitUntil { self.geocoding.completedSearches == 1 }
+        await settle()
 
         XCTAssertEqual(viewModel.locations, [SavedLocation(label: "Nowhere", latitude: nil, longitude: nil)])
     }
@@ -100,7 +148,6 @@ final class CityListViewModelTests: XCTestCase {
         let viewModel = makeViewModel()
 
         viewModel.addLocation(SavedLocation(label: "Austin", latitude: 1, longitude: 2))
-        await settle()
 
         XCTAssertEqual(viewModel.locations, [austin, denver])
         XCTAssertEqual(viewModel.activeIndex, 0)
@@ -111,10 +158,9 @@ final class CityListViewModelTests: XCTestCase {
         geocoding.onSearch = { _ in [geocodingResult(name: "Paris", country: "FR", lat: 48.85, lon: 2.35)] }
         let viewModel = makeViewModel()
         viewModel.addLocation(SavedLocation(label: "paris", latitude: nil, longitude: nil))
-        await waitUntil { viewModel.locations.count == 1 }
+        await waitUntil { viewModel.locations.first?.latitude != nil }
 
         viewModel.addLocation(SavedLocation(label: "paris", latitude: nil, longitude: nil))
-        await settle()
 
         XCTAssertEqual(viewModel.locations.count, 1)
         XCTAssertEqual(geocoding.queries.count, 1)

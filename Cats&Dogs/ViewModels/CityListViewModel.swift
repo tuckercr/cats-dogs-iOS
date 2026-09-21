@@ -29,34 +29,37 @@ final class CityListViewModel {
             return
         }
 
-        Task {
-            let locationToAdd: SavedLocation
-            if location.latitude == nil || location.longitude == nil {
-                let geocoded = await geocodingRepository.searchCities(query: location.label)
-                    .getOrNil()?
-                    .first
-                if let geocoded {
-                    // Keep the entered label so the duplicate check above still matches it.
-                    locationToAdd = SavedLocation(
-                        label: location.label,
-                        latitude: geocoded.weatherLat,
-                        longitude: geocoded.weatherLon,
-                        isCurrentLocation: location.isCurrentLocation
-                    )
-                } else {
-                    locationToAdd = location
-                }
-            } else {
-                locationToAdd = location
-            }
+        // Append before any await so the city shows up at once (even offline) and a second add of
+        // the same label hits the duplicate check above.
+        let updated = locations + [location]
+        let newIndex = updated.count - 1
+        locations = updated
+        activeIndex = newIndex
+        preferences.setSavedLocations(updated)
+        preferences.setActiveLocationIndex(newIndex)
 
-            let updated = locations + [locationToAdd]
-            let newIndex = updated.count - 1
-            locations = updated
-            activeIndex = newIndex
-            preferences.setSavedLocations(updated)
-            preferences.setActiveLocationIndex(newIndex)
+        if location.latitude == nil || location.longitude == nil {
+            Task { await fillInCoordinates(forLabel: location.label) }
         }
+    }
+
+    /// Geocodes a name-only entry so it gets a radar and an unambiguous forecast. The entered label
+    /// is kept so the duplicate check in `addLocation` still matches it.
+    private func fillInCoordinates(forLabel label: String) async {
+        guard let geocoded = await geocodingRepository.searchCities(query: label).getOrNil()?.first,
+              // The list may have changed while geocoding was in flight.
+              let index = locations.firstIndex(where: { $0.label == label && $0.latitude == nil })
+        else { return }
+
+        var updated = locations
+        updated[index] = SavedLocation(
+            label: label,
+            latitude: geocoded.weatherLat,
+            longitude: geocoded.weatherLon,
+            isCurrentLocation: updated[index].isCurrentLocation
+        )
+        locations = updated
+        preferences.setSavedLocations(updated)
     }
 
     func removeLocation(at index: Int) {

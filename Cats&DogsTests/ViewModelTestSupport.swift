@@ -77,6 +77,9 @@ struct WeatherRequest: Equatable {
 final class ScriptedWeatherAPI: OpenWeatherAPI, @unchecked Sendable {
     private(set) var currentRequests: [WeatherRequest] = []
     private(set) var forecastRequests: [WeatherRequest] = []
+    /// Requests that have returned or thrown — wait on these before asserting a result was ignored.
+    private(set) var completedCurrentRequests = 0
+    private(set) var completedForecastRequests = 0
 
     var onCurrent: (WeatherRequest) async throws -> CurrentWeatherResponse = { request in
         weatherResponse(name: request.cityQuery ?? "Somewhere")
@@ -94,6 +97,7 @@ final class ScriptedWeatherAPI: OpenWeatherAPI, @unchecked Sendable {
     ) async throws -> CurrentWeatherResponse {
         let request = WeatherRequest(cityQuery: cityQuery, latitude: latitude, longitude: longitude, units: units)
         currentRequests.append(request)
+        defer { completedCurrentRequests += 1 }
         return try await onCurrent(request)
     }
 
@@ -106,6 +110,7 @@ final class ScriptedWeatherAPI: OpenWeatherAPI, @unchecked Sendable {
     ) async throws -> ForecastResponse {
         let request = WeatherRequest(cityQuery: cityQuery, latitude: latitude, longitude: longitude, units: units)
         forecastRequests.append(request)
+        defer { completedForecastRequests += 1 }
         return try await onForecast(request)
     }
 
@@ -117,12 +122,15 @@ final class ScriptedWeatherAPI: OpenWeatherAPI, @unchecked Sendable {
 @MainActor
 final class ScriptedGeocodingAPI: GeocodingAPI, @unchecked Sendable {
     private(set) var queries: [String] = []
+    /// Searches that have returned or thrown — wait on this before asserting a result was ignored.
+    private(set) var completedSearches = 0
 
     var onSearch: (String) async throws -> [GeocodingDirectDTO] = { _ in [] }
 
     @MainActor
     func directSearch(query: String, limit: Int) async throws -> [GeocodingDirectDTO] {
         queries.append(query)
+        defer { completedSearches += 1 }
         return try await onSearch(query)
     }
 
