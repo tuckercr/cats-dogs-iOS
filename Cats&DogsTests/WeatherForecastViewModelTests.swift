@@ -133,6 +133,7 @@ final class WeatherForecastViewModelTests: XCTestCase {
         secondRequest.succeed(weatherResponse(name: "Denver"))
         await waitUntil { self.viewModel.currentWeather.successValue != nil }
         firstRequest.succeed(weatherResponse(name: "Austin"))
+        await waitUntil { self.api.completedCurrentRequests == 2 }
         await settle()
 
         XCTAssertEqual(api.currentRequests.map(\.cityQuery), ["Austin", "Denver"])
@@ -251,7 +252,7 @@ final class WeatherForecastViewModelTests: XCTestCase {
         api.onCurrent = { _ in throw self.offline }
 
         viewModel.backgroundRefreshCurrent(location: austin)
-        await waitUntil { self.api.currentRequests.count == 1 }
+        await waitUntil { self.api.completedCurrentRequests == 1 }
         await settle()
 
         XCTAssertEqual(viewModel.currentWeather, .idle)
@@ -270,7 +271,7 @@ final class WeatherForecastViewModelTests: XCTestCase {
         api.onForecast = { _ in throw self.offline }
 
         viewModel.backgroundRefreshForecast(location: austin)
-        await waitUntil { self.api.forecastRequests.count == 1 }
+        await waitUntil { self.api.completedForecastRequests == 1 }
         await settle()
 
         XCTAssertEqual(viewModel.forecast, .idle)
@@ -293,6 +294,7 @@ final class WeatherForecastViewModelTests: XCTestCase {
         await waitUntil { self.api.currentRequests.count == 2 }
 
         background.fail(offline)
+        await waitUntil { self.api.completedCurrentRequests == 1 }
         await settle()
         foreground.succeed(weatherResponse(name: "Austin"))
         await waitUntil { !self.viewModel.isRefreshing }
@@ -314,6 +316,7 @@ final class WeatherForecastViewModelTests: XCTestCase {
         await waitUntil { self.viewModel.currentWeather.successValue?.cityName == "Denver" }
 
         austinGate.succeed(weatherResponse(name: "Austin"))
+        await waitUntil { self.api.completedCurrentRequests == 3 }
         await settle()
 
         XCTAssertEqual(viewModel.currentWeather.successValue?.cityName, "Denver")
@@ -334,6 +337,7 @@ final class WeatherForecastViewModelTests: XCTestCase {
         await waitUntil { self.viewModel.forecast == .success(denverForecast) }
 
         austinGate.succeed(forecastResponse(temperature: -5))
+        await waitUntil { self.api.completedForecastRequests == 3 }
         await settle()
 
         XCTAssertEqual(viewModel.forecast, .success(denverForecast))

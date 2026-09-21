@@ -39,21 +39,26 @@ func waitUntil(
     }
 }
 
-/// Gives already-runnable tasks time to finish, for asserting that something did *not* happen.
+/// Lets the code that was waiting on a fake request run to completion, for asserting that something
+/// did *not* happen. A sleep alone proves nothing on a slow machine, so first `waitUntil` the fake
+/// reports the request finished (`completedCurrentRequests`, `completedSearches`, …); this then only
+/// has to cover the hop from the fake returning to the view model acting on the result.
 @MainActor
 func settle() async {
+    for _ in 0..<10 { await Task.yield() }
     try? await Task.sleep(for: .milliseconds(40))
 }
 
-/// Holds a fake request open until the test resolves it — the counterpart of `CompletableDeferred`.
+/// Holds fake requests open until the test resolves them — the counterpart of `CompletableDeferred`.
+/// Any number of requests may wait on the same gate; all are released together.
 @MainActor
 final class Gate<Value> {
-    private var continuation: CheckedContinuation<Value, Error>?
+    private var waiters: [CheckedContinuation<Value, Error>] = []
     private var result: Result<Value, Error>?
 
     func value() async throws -> Value {
         if let result { return try result.get() }
-        return try await withCheckedThrowingContinuation { continuation = $0 }
+        return try await withCheckedThrowingContinuation { waiters.append($0) }
     }
 
     func succeed(_ value: Value) { resolve(.success(value)) }
@@ -61,8 +66,8 @@ final class Gate<Value> {
 
     private func resolve(_ newResult: Result<Value, Error>) {
         result = newResult
-        continuation?.resume(with: newResult)
-        continuation = nil
+        waiters.forEach { $0.resume(with: newResult) }
+        waiters = []
     }
 }
 

@@ -58,6 +58,7 @@ final class GeoLocationViewModelTests: XCTestCase {
         secondSearch.succeed([geocodingResult(name: "Denver", state: "Colorado")])
         await waitUntil { !self.viewModel.citySuggestions.isEmpty }
         firstSearch.succeed([geocodingResult(name: "Austin", state: "Texas")])
+        await waitUntil { self.api.completedSearches == 2 }
         await settle()
 
         XCTAssertEqual(viewModel.citySuggestions.map(\.label), ["Denver, Colorado, US"])
