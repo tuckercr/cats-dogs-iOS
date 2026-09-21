@@ -1,3 +1,5 @@
+import CoreLocation
+import UserNotifications
 import XCTest
 @testable import Cats_Dogs
 
@@ -52,5 +54,87 @@ final class SettingsViewModelTests: XCTestCase {
 
         XCTAssertEqual(preferences.store.savedLocations, [austin])
         XCTAssertEqual(preferences.store.unitOverride, .imperial)
+    }
+
+    // MARK: - Permissions
+
+    func testPermissionStatusMapping() {
+        XCTAssertEqual(PermissionStatus(CLAuthorizationStatus.authorizedWhenInUse), .granted)
+        XCTAssertEqual(PermissionStatus(CLAuthorizationStatus.authorizedAlways), .granted)
+        XCTAssertEqual(PermissionStatus(CLAuthorizationStatus.notDetermined), .notDetermined)
+        XCTAssertEqual(PermissionStatus(CLAuthorizationStatus.denied), .denied)
+        XCTAssertEqual(PermissionStatus(CLAuthorizationStatus.restricted), .denied)
+
+        XCTAssertEqual(PermissionStatus(UNAuthorizationStatus.authorized), .granted)
+        XCTAssertEqual(PermissionStatus(UNAuthorizationStatus.provisional), .granted)
+        XCTAssertEqual(PermissionStatus(UNAuthorizationStatus.notDetermined), .notDetermined)
+        XCTAssertEqual(PermissionStatus(UNAuthorizationStatus.denied), .denied)
+    }
+
+    func testRefreshPermissionsReflectsSystemStatus() async {
+        let viewModel = makeViewModel(location: .denied, notifications: { .notDetermined })
+
+        await viewModel.refreshPermissions()
+
+        XCTAssertEqual(viewModel.locationPermission, .denied)
+        XCTAssertEqual(viewModel.notificationPermission, .notDetermined)
+    }
+
+    /// Regression: "Not now" during onboarding leaves the status undetermined, and iOS Settings has no
+    /// Notifications entry for the app until it has asked — so the prompt must be reachable in-app.
+    func testRequestingNotificationsWhenGrantedUpdatesStatusAndSchedulesNotifications() async {
+        var systemStatus = UNAuthorizationStatus.notDetermined
+        var prompts = 0
+        var reschedules = 0
+        let viewModel = makeViewModel(
+            notifications: { systemStatus },
+            onRequest: {
+                prompts += 1
+                systemStatus = .authorized
+                return true
+            },
+            onReschedule: { reschedules += 1 }
+        )
+        await viewModel.refreshPermissions()
+        XCTAssertEqual(viewModel.notificationPermission, .notDetermined)
+
+        await viewModel.requestNotificationPermission()
+
+        XCTAssertEqual(prompts, 1)
+        XCTAssertEqual(reschedules, 1)
+        XCTAssertEqual(viewModel.notificationPermission, .granted)
+    }
+
+    func testDecliningTheNotificationPromptMarksDeniedAndSchedulesNothing() async {
+        var systemStatus = UNAuthorizationStatus.notDetermined
+        var reschedules = 0
+        let viewModel = makeViewModel(
+            notifications: { systemStatus },
+            onRequest: {
+                systemStatus = .denied
+                return false
+            },
+            onReschedule: { reschedules += 1 }
+        )
+
+        await viewModel.requestNotificationPermission()
+
+        XCTAssertEqual(reschedules, 0)
+        XCTAssertEqual(viewModel.notificationPermission, .denied)
+    }
+
+    private func makeViewModel(
+        location: CLAuthorizationStatus = .notDetermined,
+        notifications: @escaping () -> UNAuthorizationStatus = { .notDetermined },
+        onRequest: @escaping () -> Bool = { false },
+        onReschedule: @escaping () -> Void = {}
+    ) -> SettingsViewModel {
+        SettingsViewModel(
+            preferences: preferences.store,
+            locationStatus: { location },
+            notificationStatus: { notifications() },
+            requestNotificationAuthorization: { onRequest() },
+            rescheduleNotifications: { onReschedule() }
+        )
     }
 }

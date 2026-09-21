@@ -47,7 +47,8 @@ struct RootView: View {
                             case .settings:
                                 SettingsView(
                                     settingsViewModel: settingsViewModel,
-                                    onOpenLocations: { path.append(.locations) }
+                                    onOpenLocations: { path.append(.locations) },
+                                    onLocationResolved: { cityListViewModel.addLocation($0) }
                                 )
                             case .locations:
                                 LocationsView(

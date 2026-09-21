@@ -41,7 +41,9 @@ Requires **iOS 17+**.
 6. **Add city** (＋) — search with geocoding suggestions; choosing a suggestion pins exact coordinates.
 7. **Settings** (gear):
    - Units: system, metric, or imperial
-   - Location and notification permission status, with shortcuts to the iOS Settings app
+   - Location and notification permission status. A permission that was never requested is requested
+     in-app (iOS has no Settings entry for it yet); a denied one links to the iOS Settings app.
+     Granting location here adds your current location as a city.
    - Manage locations: set active, reorder, delete
    - Clear cached weather
    - OpenWeather attribution and [privacy policy](https://fangjet.com/privacy-policy)

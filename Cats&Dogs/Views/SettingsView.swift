@@ -4,10 +4,10 @@ import UIKit
 struct SettingsView: View {
     @Bindable var settingsViewModel: SettingsViewModel
     let onOpenLocations: () -> Void
+    let onLocationResolved: (SavedLocation) -> Void
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
-    @State private var locationGranted = false
-    @State private var notificationGranted = false
+    @State private var locationViewModel = LocationPermissionViewModel()
     @State private var showCacheCleared = false
 
     var body: some View {
@@ -31,25 +31,25 @@ struct SettingsView: View {
             }
 
             Section("Location") {
-                if locationGranted {
-                    Text("Location access granted")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Button("Open Settings to enable location") {
-                        openAppSettings()
-                    }
-                }
+                permissionRow(
+                    status: settingsViewModel.locationPermission,
+                    grantedText: "Location access granted",
+                    requestTitle: "Allow location access",
+                    openSettingsTitle: "Open Settings to enable location",
+                    onRequest: { locationViewModel.requestPermission() }
+                )
             }
 
             Section("Notifications") {
-                if notificationGranted {
-                    Text("Notifications enabled")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Button("Open Settings to enable notifications") {
-                        openAppSettings()
+                permissionRow(
+                    status: settingsViewModel.notificationPermission,
+                    grantedText: "Notifications enabled",
+                    requestTitle: "Allow notifications",
+                    openSettingsTitle: "Open Settings to enable notifications",
+                    onRequest: {
+                        Task { await settingsViewModel.requestNotificationPermission() }
                     }
-                }
+                )
             }
 
             Section("Locations") {
@@ -74,11 +74,18 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await refreshPermissionState() }
+        .task { await settingsViewModel.refreshPermissions() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                Task { await refreshPermissionState() }
+                Task { await settingsViewModel.refreshPermissions() }
             }
+        }
+        .onChange(of: locationViewModel.state) { _, state in
+            // Location is only useful as a saved city, so a grant made here adds it like onboarding does.
+            if case .located(let location) = state {
+                onLocationResolved(location)
+            }
+            Task { await settingsViewModel.refreshPermissions() }
         }
         .alert("Cache cleared", isPresented: $showCacheCleared) {
             Button("OK", role: .cancel) {}
@@ -93,20 +100,36 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
+    private func permissionRow(
+        status: PermissionStatus,
+        grantedText: String,
+        requestTitle: String,
+        openSettingsTitle: String,
+        onRequest: @escaping () -> Void
+    ) -> some View {
+        switch status {
+        case .granted:
+            Text(grantedText)
+                .foregroundStyle(.secondary)
+        case .notDetermined:
+            // iOS has no Settings entry for a permission the app has never asked for.
+            Button(requestTitle, action: onRequest)
+        case .denied:
+            Button(openSettingsTitle) {
+                openAppSettings()
+            }
+        }
+    }
+
     private func openAppSettings() {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
         openURL(url)
-    }
-
-    private func refreshPermissionState() async {
-        locationGranted = LocationPermissionViewModel().hasLocationPermission()
-        let status = await WeatherNotificationScheduler.shared.authorizationStatus()
-        notificationGranted = status == .authorized || status == .provisional
     }
 }
 
 #Preview {
     NavigationStack {
-        SettingsView(settingsViewModel: SettingsViewModel(), onOpenLocations: {})
+        SettingsView(settingsViewModel: SettingsViewModel(), onOpenLocations: {}, onLocationResolved: { _ in })
     }
 }
