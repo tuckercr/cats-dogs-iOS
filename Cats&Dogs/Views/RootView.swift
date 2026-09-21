@@ -40,6 +40,7 @@ struct RootView: View {
                             cityListViewModel: cityListViewModel,
                             geoViewModel: geoViewModel,
                             weatherViewModel: weatherViewModel,
+                            unitOverride: settingsViewModel.unitOverride,
                             onOpenSettings: { path.append(.settings) }
                         )
                         .navigationDestination(for: AppScreen.self) { screen in

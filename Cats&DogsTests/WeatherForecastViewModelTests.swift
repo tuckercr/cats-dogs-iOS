@@ -66,6 +66,19 @@ final class WeatherForecastViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.currentWeather.successValue?.units, .imperial)
     }
 
+    func testRefreshAfterAUnitChangeReplacesDataCachedInTheOldUnits() async {
+        viewModel.refreshCurrent(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+        XCTAssertEqual(viewModel.currentWeather.successValue?.units, .metric)
+
+        preferences.store.setUnitOverride(.imperial)
+        viewModel.refreshCurrent(location: austin)
+        await waitUntil { self.viewModel.currentWeather.successValue?.units == .imperial }
+
+        XCTAssertEqual(api.currentRequests.map(\.units), [.metric, .imperial])
+        XCTAssertEqual(preferences.store.cachedWeather(for: austin.cacheKey)?.units, .imperial)
+    }
+
     func testCurrentLocationShowsTheCityNameDetectedByTheApi() async {
         api.onCurrent = { _ in weatherResponse(name: "Detected City") }
         let myLocation = SavedLocation(label: "My Location", latitude: 37.77, longitude: -122.42, isCurrentLocation: true)

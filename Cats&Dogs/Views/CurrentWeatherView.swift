@@ -4,6 +4,7 @@ struct CurrentWeatherView: View {
     @Bindable var cityListViewModel: CityListViewModel
     @Bindable var geoViewModel: GeoLocationViewModel
     @Bindable var weatherViewModel: WeatherForecastViewModel
+    let unitOverride: UnitOverride
     let onOpenSettings: () -> Void
 
     @Environment(\.scenePhase) private var scenePhase
@@ -46,6 +47,10 @@ struct CurrentWeatherView: View {
             }
         }
         .onChange(of: cityListViewModel.activeLocation?.cacheKey) { _, _ in
+            refreshActiveLocation()
+        }
+        .onChange(of: unitOverride) { _, _ in
+            // Cached data is in the old units, so this has to be a real refetch.
             refreshActiveLocation()
         }
         .onChange(of: scenePhase) { _, phase in
