@@ -25,6 +25,7 @@ struct CurrentWeatherView: View {
                 weatherContent
             }
         }
+        .background(Color.brandSurface)
         .navigationTitle(navigationTitle)
         // A single-line bar with the city tabs fixed beneath it, like Android's top app bar. A large
         // title under the tabs' inset is drawn blurred behind the scroll edge effect.
@@ -127,7 +128,7 @@ struct CurrentWeatherView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
         }
-        .background(.bar)
+        .background(Color.brandSurface)
     }
 
     private var emptyState: some View {
@@ -415,7 +416,7 @@ private struct CurrentWeatherContent: View {
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
-            .background(mood.skyColor, in: RoundedRectangle(cornerRadius: 16))
+            .background(mood.skyColor, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .disabled(todayForecast == nil)
@@ -483,7 +484,7 @@ private struct CurrentWeatherContent: View {
                 )
             }
         }
-        .background(.quaternary.opacity(0.5))
+        .background(Color.surfaceVariant)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
@@ -527,7 +528,7 @@ private struct HourlyStrip: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 12)
         }
-        .background(.quaternary.opacity(0.5))
+        .background(Color.surfaceVariant)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }

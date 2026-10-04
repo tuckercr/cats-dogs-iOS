@@ -12,7 +12,7 @@ struct OnboardingLocationView: View {
 
             ZStack {
                 Circle()
-                    .fill(Color.accentColor.opacity(0.15))
+                    .fill(Color.primaryContainer)
                     .frame(width: 112, height: 112)
                 if viewModel.state == .locating {
                     ProgressView()
@@ -38,16 +38,22 @@ struct OnboardingLocationView: View {
             Spacer()
 
             if viewModel.state != .locating {
-                Button("Use my location", action: requestLocation)
-                    .buttonStyle(.borderedProminent)
-                    .frame(maxWidth: .infinity)
+                Button(action: requestLocation) {
+                    Text("Use my location").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
 
-                Button("Enter a city manually", action: onSkip)
-                    .buttonStyle(.bordered)
-                    .frame(maxWidth: .infinity)
+                Button(action: onSkip) {
+                    Text("Enter a city manually").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
             }
         }
         .padding(32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.brandSurface)
         .onChange(of: viewModel.state) { _, newState in
             if case .located(let location) = newState {
                 onLocationResolved(location)

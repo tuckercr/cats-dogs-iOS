@@ -81,6 +81,8 @@ struct SettingsView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.brandSurface)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .task { await settingsViewModel.refreshPermissions() }

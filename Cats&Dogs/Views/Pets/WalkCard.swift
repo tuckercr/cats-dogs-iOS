@@ -33,7 +33,7 @@ struct WalkCard: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
+        .background(Color.surfaceVariant, in: RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .combine)
     }
 }

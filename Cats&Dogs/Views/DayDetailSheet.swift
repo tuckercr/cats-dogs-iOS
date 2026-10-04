@@ -46,6 +46,7 @@ struct DayDetailSheet: View {
         }
         // Open fully: a half-height sheet leaves almost nothing visible in landscape.
         .presentationDetents([.large])
+        .presentationBackground(Color.brandSurface)
     }
 
     private var header: some View {

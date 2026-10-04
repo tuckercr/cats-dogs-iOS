@@ -9,11 +9,15 @@ struct WelcomeView: View {
 
             ZStack {
                 Circle()
-                    .fill(Color.accentColor)
+                    .fill(Color.primaryContainer)
                     .frame(width: 112, height: 112)
-                Image(systemName: "cloud.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(.white)
+                // The mascot, as on Android's welcome screen.
+                Image("LaunchSplash")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 88, height: 88)
+                    .clipShape(Circle())
+                    .accessibilityHidden(true)
             }
 
             Text("Cats & Dogs")
@@ -28,12 +32,15 @@ struct WelcomeView: View {
 
             Spacer()
 
-            Button("Get started", action: onGetStarted)
-                .buttonStyle(.borderedProminent)
-                .frame(maxWidth: .infinity)
+            Button(action: onGetStarted) {
+                Text("Get started").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
         }
         .padding(32)
-        .background(Color.accentColor.opacity(0.12))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.brandSurface)
     }
 }
 

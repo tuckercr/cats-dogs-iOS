@@ -37,7 +37,7 @@ struct RadarCard: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: 340)
-        .background(.quaternary.opacity(0.5))
+        .background(Color.surfaceVariant)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
@@ -173,7 +173,7 @@ private struct RadarMapView: View {
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 2)
-            .background(Color(.systemBackground).opacity(0.85), in: RoundedRectangle(cornerRadius: 12))
+            .background(Color.brandSurface.opacity(0.85), in: RoundedRectangle(cornerRadius: 12))
         case .error:
             OverlayChip {
                 HStack(spacing: 8) {
@@ -250,7 +250,7 @@ private struct OverlayChip<Content: View>: View {
         content
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(Color(.systemBackground).opacity(0.85), in: RoundedRectangle(cornerRadius: 8))
+            .background(Color.brandSurface.opacity(0.85), in: RoundedRectangle(cornerRadius: 8))
     }
 }
 
@@ -270,7 +270,7 @@ private struct RadarLegend: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(Color(.systemBackground).opacity(0.85), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.brandSurface.opacity(0.85), in: RoundedRectangle(cornerRadius: 8))
     }
 }
 

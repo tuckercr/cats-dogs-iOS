@@ -9,7 +9,7 @@ struct OnboardingNotificationView: View {
 
             ZStack {
                 Circle()
-                    .fill(Color.accentColor.opacity(0.15))
+                    .fill(Color.primaryContainer)
                     .frame(width: 112, height: 112)
                 Image(systemName: "bell.fill")
                     .font(.system(size: 56))
@@ -32,25 +32,31 @@ struct OnboardingNotificationView: View {
 
             Spacer().frame(height: 48)
 
-            Button("Allow notifications") {
+            Button {
                 Task {
                     _ = await WeatherNotificationScheduler.shared.requestAuthorization()
                     await WeatherNotificationScheduler.shared.scheduleDailyNotifications()
                     onDone()
                 }
+            } label: {
+                Text("Allow notifications").frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .frame(maxWidth: .infinity)
+            .controlSize(.large)
 
             Spacer().frame(height: 12)
 
-            Button("Not now", action: onDone)
-                .buttonStyle(.bordered)
-                .frame(maxWidth: .infinity)
+            Button(action: onDone) {
+                Text("Not now").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
 
             Spacer()
         }
         .padding(32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.brandSurface)
     }
 }
 

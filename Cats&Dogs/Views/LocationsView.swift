@@ -23,6 +23,12 @@ struct LocationsView: View {
                         .font(.caption)
                     }
                 }
+                // The active city is highlighted like Android's Manage Locations list.
+                .listRowBackground(
+                    index == cityListViewModel.activeIndex
+                        ? Color.surfaceVariant
+                        : Color(.secondarySystemGroupedBackground)
+                )
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     if cityListViewModel.locations.count > 1 {
                         Button("Delete", role: .destructive) {
@@ -35,6 +41,8 @@ struct LocationsView: View {
                 cityListViewModel.reorderLocations(from: source, to: destination)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.brandSurface)
         .navigationTitle("Manage Locations")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

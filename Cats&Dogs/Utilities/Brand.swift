@@ -15,8 +15,12 @@ extension Color {
 }
 
 /// Shared brand styling, matching the Android app's theme (`ui/theme/Color.kt`, `Type.kt`).
-/// Colours live in the asset catalog: AccentColor is the brand blue, and BrandYellow (the mascot's
-/// gold, generated as `Color.brandYellow`) is used for sun-related icons.
+/// Colours live in the asset catalog, each with Android's dark-scheme value:
+/// - AccentColor: the brand blue (Android `primary`)
+/// - BrandYellow: the mascot's gold for sun-related icons (`secondary`)
+/// - BrandSurface: screen backgrounds (`background` / `surface`)
+/// - SurfaceVariant: content cards such as Today, Hourly and Radar (`surfaceVariant`)
+/// - PrimaryContainer: icon circles on the welcome and onboarding screens (`primaryContainer`)
 extension Font {
     /// Baloo 2, the rounded face that echoes the "Cats & Dogs" wordmark. Used for display and title
     /// text only; body copy stays on the system font. Scales with Dynamic Type via `style`.
