@@ -46,14 +46,14 @@ final class WeatherForecastViewModelTests: XCTestCase {
         )
     }
 
-    func testForecastWithCoordinatesPassesLatLonAndNilCityQuery() async {
+    func testForecastWithCoordinatesComesFromOpenMeteo() async {
         viewModel.refreshForecast(location: pinned)
         await waitUntil { self.viewModel.forecast.successValue != nil }
 
-        XCTAssertEqual(
-            api.forecastRequests,
-            [WeatherRequest(cityQuery: nil, latitude: 30.27, longitude: -97.74, units: .metric)]
-        )
+        // Cities with coordinates get their forecast from Open-Meteo, not OpenWeatherMap.
+        XCTAssertTrue(api.forecastRequests.isEmpty)
+        XCTAssertEqual(api.openMeteo.requests.map(\.latitude), [30.27])
+        XCTAssertEqual(api.openMeteo.requests.map(\.longitude), [-97.74])
     }
 
     func testRequestsUseTheUnitOverrideFromSettings() async {

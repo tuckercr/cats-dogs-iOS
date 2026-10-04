@@ -78,10 +78,59 @@ struct WeatherRequest: Equatable {
     let units: WeatherUnits
 }
 
+/// 2024-01-01T00:00:00Z — fixture times start here, and repositories built for tests use it as "now"
+/// so Open-Meteo's drop-past-hours filter keeps the fixture hours.
+let fixtureDayStart = 1_704_067_200
+
+/// Open-Meteo fake that returns `response` (or throws `error`) and records the coordinates asked for.
+final class StubOpenMeteoAPI: OpenMeteoAPI, @unchecked Sendable {
+    private(set) var requests: [(latitude: Double, longitude: Double, units: WeatherUnits)] = []
+    var response: OpenMeteoResponse
+    var error: Error?
+
+    init(response: OpenMeteoResponse = openMeteoResponse(), error: Error? = nil) {
+        self.response = response
+        self.error = error
+    }
+
+    func forecast(latitude: Double, longitude: Double, units: WeatherUnits) async throws -> OpenMeteoResponse {
+        requests.append((latitude, longitude, units))
+        if let error { throw error }
+        return response
+    }
+}
+
+/// A day of hourly Open-Meteo data starting at `start`, all with the same values.
+func openMeteoResponse(
+    hours: Int = 3,
+    start: Int = fixtureDayStart,
+    offset: Int = 0,
+    zone: String? = nil,
+    temperature: Double = 20,
+    weatherCode: Int = 61,
+    radiation: Double = 0,
+    isDay: Int = 1
+) -> OpenMeteoResponse {
+    OpenMeteoResponse(
+        utcOffsetSeconds: offset,
+        timezone: zone,
+        hourly: OpenMeteoHourlyDTO(
+            time: (0..<hours).map { start + $0 * 3600 },
+            temperature: Array(repeating: temperature, count: hours),
+            precipitationProbability: Array(repeating: 40, count: hours),
+            weatherCode: Array(repeating: weatherCode, count: hours),
+            uvIndex: (0..<hours).map(Double.init),
+            shortwaveRadiation: Array(repeating: radiation, count: hours),
+            isDay: Array(repeating: isDay, count: hours)
+        )
+    )
+}
+
 @MainActor
 final class ScriptedWeatherAPI: OpenWeatherAPI, @unchecked Sendable {
     private(set) var currentRequests: [WeatherRequest] = []
     private(set) var forecastRequests: [WeatherRequest] = []
+    let openMeteo = StubOpenMeteoAPI()
     /// Requests that have returned or thrown — wait on these before asserting a result was ignored.
     private(set) var completedCurrentRequests = 0
     private(set) var completedForecastRequests = 0
@@ -120,7 +169,12 @@ final class ScriptedWeatherAPI: OpenWeatherAPI, @unchecked Sendable {
     }
 
     var repository: WeatherRepository {
-        WeatherRepository(client: self, timeZone: TimeZone(identifier: "UTC")!)
+        WeatherRepository(
+            client: self,
+            openMeteo: openMeteo,
+            timeZone: TimeZone(identifier: "UTC")!,
+            now: { Date(timeIntervalSince1970: TimeInterval(fixtureDayStart)) }
+        )
     }
 }
 

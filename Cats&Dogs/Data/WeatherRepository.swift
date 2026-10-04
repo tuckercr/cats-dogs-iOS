@@ -2,11 +2,20 @@ import Foundation
 
 struct WeatherRepository {
     private let client: any OpenWeatherAPI
+    private let openMeteo: any OpenMeteoAPI
     private let timeZone: TimeZone
+    private let now: @Sendable () -> Date
 
-    init(client: any OpenWeatherAPI = OpenWeatherClient(), timeZone: TimeZone = .current) {
+    init(
+        client: any OpenWeatherAPI = OpenWeatherClient(),
+        openMeteo: any OpenMeteoAPI = OpenMeteoClient(),
+        timeZone: TimeZone = .current,
+        now: @escaping @Sendable () -> Date = { Date() }
+    ) {
         self.client = client
+        self.openMeteo = openMeteo
         self.timeZone = timeZone
+        self.now = now
     }
 
     func fetchCurrentWeather(
@@ -46,13 +55,14 @@ struct WeatherRepository {
         latitude: Double? = nil,
         longitude: Double? = nil
     ) async -> Result<[DayForecast], Error> {
+        // Prefer Open-Meteo (true hourly, UV, pavement heat) whenever there are coordinates.
         if let latitude, let longitude {
-            return await performForecastFetch(
-                units: units,
-                cityQuery: nil,
-                latitude: latitude,
-                longitude: longitude
-            )
+            do {
+                let response = try await openMeteo.forecast(latitude: latitude, longitude: longitude, units: units)
+                return .success(OpenMeteoForecast.dayForecasts(from: response, units: units, now: now()))
+            } catch {
+                return .failure(error)
+            }
         }
 
         let query = cityQuery?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
