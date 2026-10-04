@@ -4,6 +4,10 @@ private enum RadarTiles {
     // RainViewer only serves radar tiles up to zoom 7; regional zoom suits precipitation radar.
     nonisolated static let zoom = RadarTimeline.maxZoom
     nonisolated static let pixelSize = 256
+    /// Radar frames stitched at once; each one fetches 9 tiles.
+    static let concurrentFrames = 4
+    /// Waits before retrying the tiles that failed, so a network blip doesn't leave gaps for good.
+    nonisolated static let retryDelays: [Duration] = [.seconds(1), .seconds(2), .seconds(4)]
 }
 
 /// Radar precipitation legend, light (low intensity) to heavy (high intensity).
@@ -112,13 +116,24 @@ private struct RadarMapView: View {
             guard let timeline else { return }
             let tile = tileInfo
             let now = nowIndex
-            for index in timeline.frames.indices.sorted(by: { abs($0 - now) < abs($1 - now) }) {
-                let frame = timeline.frames[index]
-                let image = await MapTileLoader.stitchTiles(tileX: tile.tileX, tileY: tile.tileY) { x, y in
-                    timeline.tileURL(for: frame, z: RadarTiles.zoom, x: x, y: y)
+            let order = timeline.frames.indices.sorted { abs($0 - now) < abs($1 - now) }.map { timeline.frames[$0] }
+            await withTaskGroup(of: (path: String, image: CGImage?).self) { group in
+                var pending = order.makeIterator()
+                func startNext() {
+                    guard let frame = pending.next() else { return }
+                    group.addTask {
+                        let image = await MapTileLoader.stitchTiles(tileX: tile.tileX, tileY: tile.tileY) { x, y in
+                            timeline.tileURL(for: frame, z: RadarTiles.zoom, x: x, y: y)
+                        }
+                        return (frame.path, image)
+                    }
                 }
-                guard !Task.isCancelled else { return }
-                if let image { overlays[frame.path] = image }
+                for _ in 0 ..< RadarTiles.concurrentFrames { startNext() }
+                for await result in group {
+                    guard !Task.isCancelled else { return }
+                    if let image = result.image { overlays[result.path] = image }
+                    startNext()
+                }
             }
         }
         .task(id: PlaybackKey(playing: playing, frameCount: frames.count)) {
@@ -283,30 +298,37 @@ private struct TileInfo: Hashable {
 
 private enum MapTileLoader {
     /// Loads the 3×3 block of tiles around (`tileX`, `tileY`) concurrently and stitches them together.
-    /// Returns nil when nothing loaded or the task was cancelled, so a cancelled load never yields a
-    /// half-drawn mosaic.
+    /// Tiles that fail are retried, only those, after each of `RadarTiles.retryDelays`; after the
+    /// last try a partial image is still better than none. Returns nil when nothing loaded or the
+    /// task was cancelled, so a cancelled load never yields a half-drawn mosaic.
     nonisolated static func stitchTiles(
         tileX: Int,
         tileY: Int,
         urlBuilder: @escaping @Sendable (Int, Int) -> String
     ) async -> CGImage? {
-        let tiles = await withTaskGroup(of: (col: Int, row: Int, image: CGImage?).self) { group in
-            for row in -1...1 {
-                for col in -1...1 {
+        // Tiles are numbered 0...8, row by row from the north-west corner.
+        var loaded: [Int: CGImage] = [:]
+        let all = Array(0 ..< 9)
+        for attempt in 0 ... RadarTiles.retryDelays.count {
+            if attempt > 0 {
+                try? await Task.sleep(for: RadarTiles.retryDelays[attempt - 1])
+            }
+            guard !Task.isCancelled else { return nil }
+            let missing = all.filter { loaded[$0] == nil }
+            let fetched = await withTaskGroup(of: (Int, CGImage?).self) { group in
+                for slot in missing {
                     group.addTask {
-                        (col, row, await loadTile(from: urlBuilder(tileX + col, tileY + row)))
+                        (slot, await loadTile(from: urlBuilder(tileX + slot % 3 - 1, tileY + slot / 3 - 1)))
                     }
                 }
+                var results: [(Int, CGImage?)] = []
+                for await result in group { results.append(result) }
+                return results
             }
-            var loaded: [(col: Int, row: Int, image: CGImage)] = []
-            for await tile in group {
-                if let image = tile.image {
-                    loaded.append((tile.col, tile.row, image))
-                }
-            }
-            return loaded
+            for case let (slot, image?) in fetched { loaded[slot] = image }
+            if loaded.count == all.count { break }
         }
-        guard !Task.isCancelled, !tiles.isEmpty else { return nil }
+        guard !Task.isCancelled, !loaded.isEmpty else { return nil }
 
         let size = 3 * RadarTiles.pixelSize
         guard let context = CGContext(
@@ -319,11 +341,11 @@ private enum MapTileLoader {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return nil }
 
-        for tile in tiles {
-            // CGContext's origin is bottom-left, so the northern row (-1) goes at the top.
-            context.draw(tile.image, in: CGRect(
-                x: (tile.col + 1) * RadarTiles.pixelSize,
-                y: (1 - tile.row) * RadarTiles.pixelSize,
+        for (slot, image) in loaded {
+            // CGContext's origin is bottom-left, so the northern row (slot 0...2) goes at the top.
+            context.draw(image, in: CGRect(
+                x: (slot % 3) * RadarTiles.pixelSize,
+                y: (2 - slot / 3) * RadarTiles.pixelSize,
                 width: RadarTiles.pixelSize,
                 height: RadarTiles.pixelSize
             ))
@@ -334,7 +356,10 @@ private enum MapTileLoader {
     private nonisolated static func loadTile(from urlString: String) async -> CGImage? {
         guard let url = URL(string: urlString) else { return nil }
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await URLSession.shared.data(from: url)
+            if let http = response as? HTTPURLResponse, !(200 ... 299).contains(http.statusCode) {
+                return nil
+            }
             guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
             return CGImageSourceCreateImageAtIndex(source, 0, nil)
         } catch {
