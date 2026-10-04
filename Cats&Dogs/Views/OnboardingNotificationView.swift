@@ -19,7 +19,7 @@ struct OnboardingNotificationView: View {
             Spacer().frame(height: 32)
 
             Text("Stay in the loop")
-                .font(.title2)
+                .font(.brand(.title2))
                 .fontWeight(.semibold)
                 .multilineTextAlignment(.center)
 

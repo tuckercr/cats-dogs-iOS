@@ -25,7 +25,7 @@ struct OnboardingLocationView: View {
             }
 
             Text("Use your location?")
-                .font(.title2)
+                .font(.brand(.title2))
                 .fontWeight(.semibold)
                 .multilineTextAlignment(.center)
                 .padding(.top, 20)

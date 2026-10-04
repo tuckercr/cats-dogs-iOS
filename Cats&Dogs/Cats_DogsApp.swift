@@ -14,6 +14,10 @@ struct Cats_DogsApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var showSplash = true
 
+    init() {
+        BrandAppearance.apply()
+    }
+
     var body: some Scene {
         WindowGroup {
             if showSplash {

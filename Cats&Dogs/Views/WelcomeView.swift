@@ -17,7 +17,7 @@ struct WelcomeView: View {
             }
 
             Text("Cats & Dogs")
-                .font(.largeTitle)
+                .font(.brand(.largeTitle, weight: .bold))
                 .fontWeight(.semibold)
                 .padding(.top, 20)
 

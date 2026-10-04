@@ -47,7 +47,7 @@ struct DayDetailSheet: View {
             Spacer()
             VStack(alignment: .trailing) {
                 Text(WeatherFormatting.temperature(day.tempMax, units: day.units))
-                    .font(.title2)
+                    .font(.brand(.title2, weight: .bold))
                     .fontWeight(.bold)
                 Text(WeatherFormatting.temperature(day.tempMin, units: day.units))
                     .foregroundStyle(.secondary)

@@ -6,6 +6,10 @@
 	<array>
 		<string>com.tuckercr.Cats-Dogs.refresh</string>
 	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Baloo2.ttf</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

@@ -132,7 +132,7 @@ struct CurrentWeatherView: View {
                 .font(.system(size: 72))
                 .foregroundStyle(Color.accentColor.opacity(0.4))
             Text("No cities added yet")
-                .font(.title2)
+                .font(.brand(.title2))
                 .multilineTextAlignment(.center)
             Text("Tap the + button to add your first city and get started.")
                 .foregroundStyle(.secondary)
@@ -323,12 +323,12 @@ private struct CurrentWeatherContent: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text(weather.cityName)
-                            .font(.title3)
+                            .font(.brand(.title3))
                             .foregroundStyle(.secondary)
                     }
                 }
                 Text(WeatherFormatting.temperature(weather.temperature, units: weather.units))
-                    .font(.largeTitle)
+                    .font(.brand(.largeTitle, weight: .bold))
                     .fontWeight(.bold)
                 Text(
                     "\(WeatherFormatting.temperature(weather.tempMin, units: weather.units)) / \(WeatherFormatting.temperature(weather.tempMax, units: weather.units))"
@@ -384,7 +384,8 @@ private struct CurrentWeatherContent: View {
                 MetricIconRow(
                     icon: "sunrise.fill",
                     label: "Sunrise",
-                    value: WeatherFormatting.epochTime(sunrise, timeZone: weather.timeZone)
+                    value: WeatherFormatting.epochTime(sunrise, timeZone: weather.timeZone),
+                    iconTint: .brandYellow
                 )
             }
             if let sunset = weather.sunsetEpoch {
@@ -392,7 +393,8 @@ private struct CurrentWeatherContent: View {
                 MetricIconRow(
                     icon: "sunset.fill",
                     label: "Sunset",
-                    value: WeatherFormatting.epochTime(sunset, timeZone: weather.timeZone)
+                    value: WeatherFormatting.epochTime(sunset, timeZone: weather.timeZone),
+                    iconTint: .brandYellow
                 )
             }
         }
@@ -405,11 +407,12 @@ private struct MetricIconRow: View {
     let icon: String
     let label: String
     let value: String
+    var iconTint: Color = .accentColor
 
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(iconTint)
                 .frame(width: 20)
             Text(label)
             Spacer()
