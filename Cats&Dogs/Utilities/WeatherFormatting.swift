@@ -15,10 +15,6 @@ enum WeatherFormatting {
         }
     }
 
-    static func pressure(_ hpa: Int) -> String {
-        "\(hpa) hPa"
-    }
-
     static func visibility(_ meters: Int) -> String {
         if meters >= 1000 {
             return String(format: "%.1f km", Double(meters) / 1000.0)
@@ -37,6 +33,19 @@ enum WeatherFormatting {
         formatter.locale = .current
         formatter.dateFormat = "EEE, MMM d"
         return formatter.string(from: Date())
+    }
+
+    /// UV index with the WHO exposure category, e.g. "6 (High)".
+    static func uvIndex(_ uv: Double) -> String {
+        let value = Int(uv.rounded())
+        let level = switch value {
+        case ...2: "Low"
+        case 3...5: "Moderate"
+        case 6...7: "High"
+        case 8...10: "Very high"
+        default: "Extreme"
+        }
+        return "\(value) (\(level))"
     }
 
     static func epochTime(_ epochSeconds: Int, timeZone: TimeZone = .current) -> String {

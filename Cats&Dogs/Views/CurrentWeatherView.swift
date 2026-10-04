@@ -244,58 +244,81 @@ private struct CurrentWeatherContent: View {
     let onDaySelected: (DayForecast) -> Void
     let onForecastRetry: () -> Void
 
-    private var todayLabel: String {
-        WeatherFormatting.todayLabel(timeZone: weather.timeZone)
-    }
+    /// The hourly strip covers the next 24 hours.
+    private static let hourlyStripCount = 24
 
     private var forecastDays: [DayForecast] {
-        if case .success(let days) = forecastState { return days }
-        return []
+        forecastState.successValue ?? []
     }
 
+    /// "Today" in the city's own date, so it matches the city-local forecast labels.
     private var todayForecast: DayForecast? {
-        forecastDays.first { $0.dateLabel == todayLabel }
+        let todayLabel = WeatherFormatting.todayLabel(timeZone: weather.timeZone)
+        return forecastDays.first.flatMap { $0.dateLabel == todayLabel ? $0 : nil }
     }
 
     private var upcomingDays: [DayForecast] {
-        if todayForecast != nil {
-            return Array(forecastDays.dropFirst())
-        }
-        return forecastDays
+        todayForecast != nil ? Array(forecastDays.dropFirst()) : forecastDays
+    }
+
+    private var currentTempC: Double { weather.units.toCelsius(weather.temperature) }
+
+    private var mood: PetMood {
+        PetMood.forConditions(conditionMain: weather.conditionMain, iconCode: weather.iconCode, temperatureC: currentTempC)
+    }
+
+    /// Nil while the forecast is loading or failed, which hides the card rather than giving advice
+    /// with nothing to base it on.
+    private var walkAdvice: WalkAdvice? {
+        WalkAdvisor.advice(currentTempC: currentTempC, upcoming: forecastDays.flatMap(\.hourlySlots))
+    }
+
+    private var hourlySlots: [HourlySlot] {
+        Array(forecastDays.flatMap(\.hourlySlots).prefix(Self.hourlyStripCount))
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             heroCard
+            if let walkAdvice {
+                WalkCard(advice: walkAdvice)
+            }
+            if !hourlySlots.isEmpty {
+                SectionHeader("HOURLY")
+                HourlyStrip(slots: hourlySlots)
+            }
+            SectionHeader("TODAY")
             detailsCard
+            SectionHeader("RADAR")
             RadarCard(location: location, timeZone: weather.timeZone)
+            restOfWeek
+        }
+    }
 
-            if !upcomingDays.isEmpty || forecastState == .loading || isForecastError {
-                Text("UPCOMING")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 4)
+    @ViewBuilder
+    private var restOfWeek: some View {
+        if !upcomingDays.isEmpty || forecastState == .loading || isForecastError {
+            SectionHeader("REST OF WEEK")
 
-                if !upcomingDays.isEmpty {
-                    ForEach(upcomingDays) { day in
-                        UpcomingDayRow(day: day) {
-                            onDaySelected(day)
-                        }
+            if !upcomingDays.isEmpty {
+                ForEach(upcomingDays) { day in
+                    UpcomingDayRow(day: day) {
+                        onDaySelected(day)
                     }
-                } else if forecastState == .loading {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                            .padding(.vertical, 24)
-                        Spacer()
-                    }
-                } else if case .error(let errorKey, let canRetry) = forecastState {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(WeatherErrorMessages.message(for: errorKey))
-                            .foregroundStyle(.red)
-                        if canRetry {
-                            Button("Retry", action: onForecastRetry)
-                        }
+                }
+            } else if forecastState == .loading {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .padding(.vertical, 24)
+                    Spacer()
+                }
+            } else if case .error(let errorKey, let canRetry) = forecastState {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(WeatherErrorMessages.message(for: errorKey))
+                        .foregroundStyle(.red)
+                    if canRetry {
+                        Button("Retry", action: onForecastRetry)
                     }
                 }
             }
@@ -313,34 +336,39 @@ private struct CurrentWeatherContent: View {
                 onDaySelected(today)
             }
         } label: {
-            VStack(spacing: 8) {
-                WeatherIconView(iconCode: weather.iconCode, size: 88)
+            VStack(spacing: 4) {
+                // Kept smaller than the card so the scene doesn't dominate.
+                PetScene(mood: mood)
+                    .frame(maxWidth: 280)
+                    .containerRelativeFrame(.horizontal) { width, _ in min(width * 0.8, 280) }
                 Text(weather.description)
-                    .foregroundStyle(.secondary)
                 if location != nil {
                     HStack(spacing: 4) {
                         Image(systemName: "location.fill")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
                         Text(weather.cityName)
-                            .font(.brand(.title3))
-                            .foregroundStyle(.secondary)
+                            .font(.brand(.title2))
                     }
+                    .padding(.top, 4)
                 }
                 Text(WeatherFormatting.temperature(weather.temperature, units: weather.units))
                     .font(.brand(.largeTitle, weight: .bold))
-                    .fontWeight(.bold)
+                    // Baloo 2 reserves a lot of empty space above its digits; pull the number up
+                    // into it so it sits close under the city name.
+                    .padding(.top, -10)
                 Text(
                     "\(WeatherFormatting.temperature(weather.tempMin, units: weather.units)) / \(WeatherFormatting.temperature(weather.tempMax, units: weather.units))"
                 )
-                .foregroundStyle(.secondary)
-                Text("Feels like \(WeatherFormatting.temperature(weather.feelsLike, units: weather.units))")
-                    .foregroundStyle(.secondary)
+                Text(mood.caption())
+                    .font(.brand(.headline))
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 10)
             }
+            .foregroundStyle(mood.ink)
             .frame(maxWidth: .infinity)
-            .padding(20)
-            .background(Color.accentColor.opacity(0.15))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(mood.skyColor, in: RoundedRectangle(cornerRadius: 16))
         }
         .buttonStyle(.plain)
         .disabled(todayForecast == nil)
@@ -348,6 +376,12 @@ private struct CurrentWeatherContent: View {
 
     private var detailsCard: some View {
         VStack(spacing: 0) {
+            MetricIconRow(
+                icon: "thermometer.medium",
+                label: "Feels like",
+                value: WeatherFormatting.temperature(weather.feelsLike, units: weather.units)
+            )
+            Divider().padding(.horizontal, 16)
             MetricIconRow(
                 icon: "drop.fill",
                 label: "Humidity",
@@ -358,12 +392,6 @@ private struct CurrentWeatherContent: View {
                 icon: "wind",
                 label: "Wind",
                 value: "\(WeatherFormatting.wind(weather.windSpeed, units: weather.units))  \(WeatherFormatting.windDirection(weather.windDeg))"
-            )
-            Divider().padding(.horizontal, 16)
-            MetricIconRow(
-                icon: "gauge.with.dots.needle.33percent",
-                label: "Pressure",
-                value: WeatherFormatting.pressure(weather.pressureHpa)
             )
             if let visibility = weather.visibilityMeters {
                 Divider().padding(.horizontal, 16)
@@ -379,6 +407,16 @@ private struct CurrentWeatherContent: View {
                 label: "Cloud cover",
                 value: "\(weather.cloudPercent)%"
             )
+            // UV is always 0 after dark, so it only shows in the daytime (night icons end in "n").
+            if !weather.iconCode.hasSuffix("n"), let uv = forecastDays.first?.hourlySlots.first?.uvIndex {
+                Divider().padding(.horizontal, 16)
+                MetricIconRow(
+                    icon: "sun.max.fill",
+                    label: "UV index",
+                    value: WeatherFormatting.uvIndex(uv),
+                    iconTint: .brandYellow
+                )
+            }
             if let sunrise = weather.sunriseEpoch {
                 Divider().padding(.horizontal, 16)
                 MetricIconRow(
@@ -400,6 +438,68 @@ private struct CurrentWeatherContent: View {
         }
         .background(.quaternary.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+private struct SectionHeader: View {
+    let title: String
+
+    init(_ title: String) {
+        self.title = title
+    }
+
+    var body: some View {
+        Text(title)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.top, 4)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+private struct HourlyStrip: View {
+    let slots: [HourlySlot]
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 4) {
+                ForEach(slots) { slot in
+                    VStack(spacing: 6) {
+                        Text(slot.timeLabel)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        WeatherIconView(iconCode: slot.iconCode, size: 32)
+                        Text("\(Int(slot.temperature.rounded()))°")
+                            .fontWeight(.semibold)
+                        PrecipChance(percent: slot.precipitationChance)
+                    }
+                    .padding(.horizontal, 8)
+                    .accessibilityElement(children: .combine)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+        }
+        .background(.quaternary.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+/// Small "raindrop N%" chip; shows nothing at 0% to avoid clutter.
+private struct PrecipChance: View {
+    let percent: Int
+
+    var body: some View {
+        if percent > 0 {
+            HStack(spacing: 2) {
+                Image(systemName: "drop.fill")
+                    .font(.system(size: 9))
+                Text("\(percent)%")
+                    .font(.caption)
+            }
+            .foregroundStyle(Color.accentColor)
+            .accessibilityLabel("Chance of precipitation \(percent)%")
+        }
     }
 }
 
@@ -437,6 +537,7 @@ private struct UpcomingDayRow: View {
                     Text(day.description)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    PrecipChance(percent: day.precipitationChance)
                 }
                 Spacer()
                 Text(WeatherFormatting.temperature(day.tempMax, units: day.units))

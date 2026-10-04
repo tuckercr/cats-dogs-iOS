@@ -70,6 +70,10 @@ struct SettingsView: View {
                 Button("Weather data by OpenWeather") {
                     openURL(URL(string: "https://openweathermap.org/")!)
                 }
+                // Open-Meteo's free API is CC BY 4.0, which requires this credit.
+                Button("Forecast data by Open-Meteo.com") {
+                    openURL(URL(string: "https://open-meteo.com")!)
+                }
                 Button("Privacy policy") {
                     openURL(URL(string: "https://fangjet.com/privacy-policy")!)
                 }
