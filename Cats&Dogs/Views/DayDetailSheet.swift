@@ -3,6 +3,8 @@ import SwiftUI
 struct DayDetailSheet: View {
     let day: DayForecast
     @Environment(\.dismiss) private var dismiss
+    /// Landscape phones have little height, so the hours run sideways instead.
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     var body: some View {
         NavigationStack {
@@ -14,6 +16,14 @@ struct DayDetailSheet: View {
                         Text("Hourly data not available for this day.")
                             .foregroundStyle(.secondary)
                             .padding(.vertical, 8)
+                    } else if verticalSizeClass == .compact {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(alignment: .top, spacing: 0) {
+                                ForEach(day.hourlySlots) { slot in
+                                    HourlySlotColumn(slot: slot)
+                                }
+                            }
+                        }
                     } else {
                         columnHeader
                         Divider()
@@ -34,7 +44,8 @@ struct DayDetailSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        // Open fully: a half-height sheet leaves almost nothing visible in landscape.
+        .presentationDetents([.large])
     }
 
     private var header: some View {
@@ -103,5 +114,37 @@ private struct HourlySlotRow: View {
             }
         }
         .padding(.vertical, 8)
+    }
+}
+
+/// One hour as a vertical cell, for the sideways landscape layout.
+private struct HourlySlotColumn: View {
+    let slot: HourlySlot
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Text(slot.timeLabel)
+                .fontWeight(.medium)
+            WeatherIconView(iconCode: slot.iconCode, size: 28)
+            Text(WeatherFormatting.temperature(slot.temperature, units: slot.units))
+                .fontWeight(.semibold)
+            HStack(spacing: 2) {
+                Image(systemName: "wind")
+                    .font(.caption2)
+                Text(WeatherFormatting.wind(slot.windSpeed, units: slot.units))
+                    .font(.caption)
+            }
+            .foregroundStyle(.secondary)
+            HStack(spacing: 2) {
+                Image(systemName: "drop.fill")
+                    .font(.caption2)
+                    .foregroundStyle(Color.accentColor)
+                Text("\(slot.humidity)%")
+                    .font(.caption)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .combine)
     }
 }

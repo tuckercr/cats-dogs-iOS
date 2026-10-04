@@ -246,6 +246,13 @@ private struct CurrentWeatherContent: View {
 
     /// The hourly strip covers the next 24 hours.
     private static let hourlyStripCount = 24
+    /// Landscape phones and tablets put the hero beside today's details instead of stacking
+    /// everything in one stretched column.
+    private static let wideLayoutMinWidth: CGFloat = 600
+
+    @State private var contentWidth: CGFloat = 0
+
+    private var isWide: Bool { contentWidth >= Self.wideLayoutMinWidth }
 
     private var forecastDays: [DayForecast] {
         forecastState.successValue ?? []
@@ -279,20 +286,44 @@ private struct CurrentWeatherContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            heroCard
-            if let walkAdvice {
-                WalkCard(advice: walkAdvice)
+            if isWide {
+                HStack(alignment: .top, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 12) { heroSection }
+                    VStack(alignment: .leading, spacing: 12) { todaySection }
+                }
+            } else {
+                heroSection
             }
             if !hourlySlots.isEmpty {
                 SectionHeader("HOURLY")
                 HourlyStrip(slots: hourlySlots)
             }
-            SectionHeader("TODAY")
-            detailsCard
+            if !isWide {
+                todaySection
+            }
             SectionHeader("RADAR")
             RadarCard(location: location, timeZone: weather.timeZone)
             restOfWeek
         }
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { width in
+            contentWidth = width
+        }
+    }
+
+    @ViewBuilder
+    private var heroSection: some View {
+        heroCard
+        if let walkAdvice {
+            WalkCard(advice: walkAdvice)
+        }
+    }
+
+    @ViewBuilder
+    private var todaySection: some View {
+        SectionHeader("TODAY")
+        detailsCard
     }
 
     @ViewBuilder
@@ -301,9 +332,21 @@ private struct CurrentWeatherContent: View {
             SectionHeader("REST OF WEEK")
 
             if !upcomingDays.isEmpty {
-                ForEach(upcomingDays) { day in
-                    UpcomingDayRow(day: day) {
-                        onDaySelected(day)
+                // Wide screens show the days in two columns, with matching row heights, rather than
+                // stretched rows.
+                let columns = isWide ? 2 : 1
+                Grid(alignment: .topLeading, horizontalSpacing: 24, verticalSpacing: 0) {
+                    ForEach(Array(stride(from: 0, to: upcomingDays.count, by: columns)), id: \.self) { start in
+                        GridRow {
+                            ForEach(upcomingDays[start ..< min(start + columns, upcomingDays.count)]) { day in
+                                UpcomingDayRow(day: day) {
+                                    onDaySelected(day)
+                                }
+                            }
+                            if columns == 2, start + 1 >= upcomingDays.count {
+                                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                            }
+                        }
                     }
                 }
             } else if forecastState == .loading {
@@ -337,10 +380,10 @@ private struct CurrentWeatherContent: View {
             }
         } label: {
             VStack(spacing: 4) {
-                // Kept smaller than the card so the scene doesn't dominate.
+                // Kept smaller than the card so the scene doesn't dominate, especially on wide screens.
                 PetScene(mood: mood)
                     .frame(maxWidth: 280)
-                    .containerRelativeFrame(.horizontal) { width, _ in min(width * 0.8, 280) }
+                    .padding(.horizontal, 24)
                 Text(weather.description)
                 if location != nil {
                     HStack(spacing: 4) {
@@ -528,6 +571,14 @@ private struct UpcomingDayRow: View {
     let onTap: () -> Void
 
     var body: some View {
+        VStack(spacing: 0) {
+            dayButton
+                .frame(maxHeight: .infinity)
+            Divider()
+        }
+    }
+
+    private var dayButton: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
                 WeatherIconView(iconCode: day.iconCode, size: 36)
@@ -546,8 +597,8 @@ private struct UpcomingDayRow: View {
                     .foregroundStyle(.secondary)
             }
             .padding(.vertical, 10)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        Divider()
     }
 }
