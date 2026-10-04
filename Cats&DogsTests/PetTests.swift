@@ -137,15 +137,3 @@ final class WalkAdvisorTests: XCTestCase {
         return h % 12 + (parts[1] == "PM" ? 12 : 0)
     }
 }
-
-@MainActor
-final class WeatherFormattingUVTests: XCTestCase {
-    func testUVIndexUsesTheWHOCategories() {
-        XCTAssertEqual(WeatherFormatting.uvIndex(0.4), "0 (Low)")
-        XCTAssertEqual(WeatherFormatting.uvIndex(2.4), "2 (Low)")
-        XCTAssertEqual(WeatherFormatting.uvIndex(4.6), "5 (Moderate)")
-        XCTAssertEqual(WeatherFormatting.uvIndex(6), "6 (High)")
-        XCTAssertEqual(WeatherFormatting.uvIndex(9), "9 (Very high)")
-        XCTAssertEqual(WeatherFormatting.uvIndex(11.2), "11 (Extreme)")
-    }
-}

@@ -3,8 +3,9 @@
 Native SwiftUI port of the [Android Cats & Dogs weather app](https://github.com/tuckercr/cats-dogs).
 Features generally land on Android first and iOS catches up — see [Feature parity](#feature-parity-with-android).
 
-Save multiple cities (or use your current location) and see current conditions, an upcoming-days
-forecast, a cloud/precipitation radar, and optional daily weather notifications.
+Save multiple cities (or use your current location) and see current conditions with a cat and dog
+acting out the weather, the best time to walk the dog, an hourly and 7-day forecast, an animated
+precipitation radar, and optional daily weather notifications.
 
 ## How to run
 
@@ -31,11 +32,25 @@ Requires **iOS 17+**.
 3. **Notification onboarding** — opt in to daily weather updates, or **Not now**.
 4. **Location onboarding** — use the device location, or **Enter a city manually**.
 5. **Current weather** — the main screen for the active city:
-   - Hero card: condition icon, description, temperature, min/max, feels-like. Tap it for today's detail.
-   - Details: humidity, wind speed & direction, pressure, visibility, cloud cover, sunrise, sunset.
-   - Radar: OpenStreetMap base map with alternating OpenWeatherMap cloud and precipitation layers.
-   - Upcoming days: one row per day (sample closest to local noon); tap a row for hourly detail.
-   - City tabs appear along the top once two or more cities are saved.
+   - Hero card: the cat and dog act out one of 8 weather moods (sunny, cloudy, rain, storm, snow, hot,
+     cold, night) on a mood-coloured card, with the city, temperature, min/max and a daily caption in
+     the pets' voice. Tap it for today's hourly detail. The art is drawn in code as a placeholder,
+     isolated in `PetScene`.
+   - **Best walk time**: Great, Okay, Stay in, Paws hot or Too cold, with the first good window
+     between 7 AM and 8 PM. Hot pavement (estimated 52 °C / 125 °F) counts as paws hot even on a
+     mild day.
+   - **Hourly**: the next 24 hours, with rain chance.
+   - **Today**: feels like, humidity, wind, visibility, cloud cover, UV index (daytime only),
+     sunrise and sunset.
+   - **Radar**: RainViewer's recent radar frames animated over an OpenStreetMap base map, with the
+     frame time, a Light→Heavy legend, play/pause and a scrubber.
+   - **Rest of week**: one row per day (sample closest to local noon) with rain chance; tap a row
+     for hourly detail.
+   - All times — hours, days, sunrise/sunset, radar frames and "today" — are in the city's own time
+     zone, not the device's.
+   - On landscape phones and iPad the pets and walk card sit beside today's details, and the week
+     splits into two columns.
+   - City tabs appear under the title once two or more cities are saved.
    - Pull to refresh. Data also refreshes silently whenever the app returns to the foreground,
      and periodically in the background.
 6. **Add city** (＋) — search with geocoding suggestions; choosing a suggestion pins exact coordinates.
@@ -46,7 +61,20 @@ Requires **iOS 17+**.
      Granting location here adds your current location as a city.
    - Manage locations: set active, reorder, delete
    - Clear cached weather
-   - OpenWeather attribution and [privacy policy](https://fangjet.com/privacy-policy)
+   - OpenWeather and Open-Meteo attribution, and [privacy policy](https://fangjet.com/privacy-policy)
+
+### Where the data comes from
+
+| Data | Source |
+|---|---|
+| Current conditions, city search | OpenWeatherMap (needs the API key) |
+| Forecast for cities with coordinates | [Open-Meteo](https://open-meteo.com): true hourly data, UV index, and solar radiation for the pavement estimate. Free, no key. |
+| Forecast for name-only cities | OpenWeatherMap's 3-hourly `/forecast`, as a fallback |
+| Radar | [RainViewer](https://www.rainviewer.com/api.html) frames (free, no key) at zoom 7, the highest it serves |
+| Base map | OpenStreetMap tiles |
+
+Open-Meteo's weather codes are mapped onto OpenWeatherMap-style conditions and icons, so icons and
+pet moods work the same for both sources.
 
 ### Caching and errors
 
@@ -93,12 +121,13 @@ which Xcode merges with the generated Info.plist.
 |---|---|
 | UI | SwiftUI, `NavigationStack` |
 | State | `@Observable` view models on the main actor |
-| Networking | `URLSession` + `Codable` behind `OpenWeatherAPI` / `GeocodingAPI` protocols (faked in tests) |
+| Networking | `URLSession` + `Codable` behind `OpenWeatherAPI`, `OpenMeteoAPI` and `GeocodingAPI` protocols (faked in tests) |
 | Persistence | `UserDefaults` via `PreferencesStore` — onboarding flags, saved cities, unit override, weather cache |
 | Location | Core Location (when-in-use) |
 | Notifications | `UserNotifications` local calendar triggers |
 | Background work | `BackgroundTasks` (`BGAppRefreshTask`) via SwiftUI `.backgroundTask` |
-| API | OpenWeatherMap `/weather`, `/forecast`, Geocoding, and map tiles (free tier) |
+| APIs | OpenWeatherMap `/weather`, `/forecast` and Geocoding (free tier); Open-Meteo; RainViewer; OpenStreetMap tiles |
+| Fonts | Baloo 2 for display and title text (SIL OFL, licence bundled) |
 | Dependencies | None — Apple frameworks only |
 
 ```
@@ -108,9 +137,10 @@ Cats&Dogs/
   Domain/      Units and unit override
   Models/      Weather models, SavedLocation, LoadingState
   Services/    API clients, DTOs, forecast aggregation, notifications, background refresh
-  Utilities/   Formatting and error messages
+  Resources/   Fonts
+  Utilities/   Formatting, error messages, brand fonts and colours
   ViewModels/
-  Views/
+  Views/       Screens; Pets/ holds the pet scene, moods and walk advice
 ```
 
 ## Feature parity with Android
@@ -120,9 +150,16 @@ Cats&Dogs/
 | Welcome, notification and location onboarding | ✅ | ✅ |
 | Multiple saved cities, tabs, current location | ✅ | ✅ |
 | City search with geocoding suggestions | ✅ | ✅ |
-| Current conditions incl. sunrise / sunset | ✅ | ✅ |
-| Upcoming days + day detail sheet | ✅ | ✅ |
-| Radar (clouds / precipitation) | ✅ | ✅ |
+| Current conditions incl. sunrise / sunset and UV | ✅ | ✅ |
+| Pet hero (8 weather moods, daily caption) | ✅ | ✅ |
+| Best walk time card, incl. pavement heat | ✅ | ✅ |
+| Hourly strip and rain chance | ✅ | ✅ |
+| Open-Meteo forecast for cities with coordinates | ✅ | ✅ |
+| All times in the city's own time zone | ✅ | ✅ |
+| Rest of week + day detail sheet | ✅ | ✅ |
+| Animated RainViewer radar | ✅ speed from Remote Config | ✅ fixed 850 ms per frame |
+| Wide layout for landscape and tablets | ✅ | ✅ |
+| Branding: brand blue, gold accent, Baloo 2, themed icon | ✅ | ✅ tinted icon on iOS 18+ |
 | Per-city cache, silent refresh on foreground | ✅ | ✅ |
 | Settings: units, permissions, clear cache, about | ✅ | ✅ |
 | Manage locations: set active, reorder, delete | ✅ | ✅ |
@@ -131,6 +168,8 @@ Cats&Dogs/
 | Follows the OS temperature-unit preference | ✅ Android 14+ | ⚠️ region-based only |
 | Analytics, Crashlytics, Remote Config (Firebase) | ✅ optional | ❌ |
 | View-model unit tests | ✅ | ✅ |
+| UI tests in CI | ✅ Compose UI tests | ❌ |
+| Release minification | ✅ R8 | n/a |
 
 ## Tests
 
@@ -144,7 +183,10 @@ Ported from Android:
 - `WeatherUnitsTests` — imperial vs metric by region
 - `WeatherRepositoryTests` — repository mapping and error handling (fake API)
 - `GeocodingRepositoryTests` — suggestion formatting and validation (fake API)
-- `NotificationWorkerLogicTests` — notification content, permission and retry behaviour
+- `NotificationWorkerLogicTests` — notification content, permission and retry behaviour, "today" in the city's time zone
+- `OpenMeteoForecastTests` — hour filtering, city time zones (including half-hour zones and DST), WMO codes, UV, pavement heat
+- `RadarTests` — RainViewer timeline parsing, tile URLs, load-once and retry
+- `PetMoodTests`, `WalkAdvisorTests` — mood mapping, walk ratings including night hours and pavement heat
 - `CityListViewModelTests` — loading and legacy migration, add (with geocoding and de-duplication), remove, set active, reorder
 - `WeatherForecastViewModelTests` — request routing, cache-first display, error mapping, silent background refresh, and races between overlapping requests
 - `GeoLocationViewModelTests` — debounced search, latest-input-wins, suggestion pinning, reset
@@ -156,7 +198,7 @@ iOS only:
 
 - `WeatherBackgroundRefresherTests` — background refresh caching, notification rescheduling and retry timing
 - `PreferencesStoreTests` — per-city cache round trip, eviction when a city is removed, older cache format
-- `WeatherFormattingTests` — sunrise/sunset in the city's time zone
+- `WeatherFormattingTests` — sunrise/sunset in the city's time zone, UV categories
 
 View-model tests run against real repositories with scripted API fakes, and a `PreferencesStore` backed
 by a throwaway `UserDefaults` suite, so they never touch the app's real data. Shared helpers (including
@@ -180,5 +222,7 @@ At build time the workflow writes that value into `Secrets.plist` (the file stay
 
 ## Credits
 
-Weather data and radar layers by [OpenWeather](https://openweathermap.org/). Base map ©
-[OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
+Weather data by [OpenWeather](https://openweathermap.org/) and [Open-Meteo.com](https://open-meteo.com)
+(CC BY 4.0). Radar by [RainViewer](https://www.rainviewer.com). Base map ©
+[OpenStreetMap](https://www.openstreetmap.org/copyright) contributors. [Baloo 2](https://github.com/EkType/Baloo2)
+by Ek Type, under the SIL Open Font License.
