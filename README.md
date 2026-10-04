@@ -1,11 +1,23 @@
 # Cats & Dogs (iOS)
 
+![iOS CI](https://github.com/tuckercr/cats-dogs-iOS/actions/workflows/ios.yml/badge.svg)
+
 Native SwiftUI port of the [Android Cats & Dogs weather app](https://github.com/tuckercr/cats-dogs).
 Features generally land on Android first and iOS catches up — see [Feature parity](#feature-parity-with-android).
 
 Save multiple cities (or use your current location) and see current conditions with a cat and dog
 acting out the weather, the best time to walk the dog, an hourly and 7-day forecast, an animated
 precipitation radar, and optional daily weather notifications.
+
+## Screenshots
+
+| Pets, walk time & hourly | Radar & rest of week | Day detail | Settings & units |
+|---|---|---|---|
+| ![The cat and dog react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour detail for a day](./screenshots/day.png) | ![Settings with unit selection](./screenshots/settings.png) |
+
+On iPad and in landscape, the pets sit beside today's details and the week splits into two columns:
+
+![iPad layout with the pets beside today's details](./screenshots/tablet.png)
 
 ## How to run
 
@@ -27,7 +39,7 @@ Requires **iOS 17+**.
 
 ## App flow
 
-1. **Splash** — brief launch animation.
+1. **Splash** — a brief splash screen with the mascot.
 2. **Welcome** — first launch only; tap **Get started**.
 3. **Notification onboarding** — opt in to daily weather updates, or **Not now**.
 4. **Location onboarding** — use the device location, or **Enter a city manually**.
@@ -39,7 +51,8 @@ Requires **iOS 17+**.
    - **Best walk time**: Great, Okay, Stay in, Paws hot or Too cold, with the first good window
      between 7 AM and 8 PM. Hot pavement (estimated 52 °C / 125 °F) counts as paws hot even on a
      mild day.
-   - **Hourly**: the next 24 hours, with rain chance.
+   - **Hourly**: the next 24 hours, with rain chance. Cities without coordinates fall back to
+     OpenWeatherMap, which is 3-hourly, so the strip spans three days for them.
    - **Today**: feels like, humidity, wind, visibility, cloud cover, UV index (daytime only),
      sunrise and sunset.
    - **Radar**: RainViewer's recent radar frames animated over an OpenStreetMap base map, with the
@@ -54,12 +67,13 @@ Requires **iOS 17+**.
    - Pull to refresh. Data also refreshes silently whenever the app returns to the foreground,
      and periodically in the background.
 6. **Add city** (＋) — search with geocoding suggestions; choosing a suggestion pins exact coordinates.
+   A name added without choosing a suggestion appears straight away and is geocoded in the background.
 7. **Settings** (gear):
    - Units: system, metric, or imperial
    - Location and notification permission status. A permission that was never requested is requested
      in-app (iOS has no Settings entry for it yet); a denied one links to the iOS Settings app.
      Granting location here adds your current location as a city.
-   - Manage locations: set active, reorder, delete
+   - Manage locations: add, set active, reorder, delete
    - Clear cached weather
    - OpenWeather and Open-Meteo attribution, and [privacy policy](https://fangjet.com/privacy-policy)
 
@@ -121,7 +135,7 @@ which Xcode merges with the generated Info.plist.
 |---|---|
 | UI | SwiftUI, `NavigationStack` |
 | State | `@Observable` view models on the main actor |
-| Networking | `URLSession` + `Codable` behind `OpenWeatherAPI`, `OpenMeteoAPI` and `GeocodingAPI` protocols (faked in tests) |
+| Networking | `URLSession` + `Codable` behind `OpenWeatherAPI`, `OpenMeteoAPI` and `GeocodingAPI` protocols, plus an injectable RainViewer fetch (all faked in tests) |
 | Persistence | `UserDefaults` via `PreferencesStore` — onboarding flags, saved cities, unit override, weather cache |
 | Location | Core Location (when-in-use) |
 | Notifications | `UserNotifications` local calendar triggers |
@@ -135,7 +149,7 @@ Cats&Dogs/
   Config/      API key loading
   Data/        Repositories, PreferencesStore
   Domain/      Units and unit override
-  Models/      Weather models, SavedLocation, LoadingState
+  Models/      Weather and radar models, SavedLocation, CitySuggestion, LoadingState
   Services/    API clients, DTOs, forecast aggregation, notifications, background refresh
   Resources/   Fonts
   Utilities/   Formatting, error messages, brand fonts and colours
@@ -178,9 +192,9 @@ Test navigator.
 
 Ported from Android:
 
-- `ForecastAggregatorTests` — noon slot selection and multi-day grouping
-- `OpenWeatherParsingTests` — JSON decoding for API responses
-- `WeatherUnitsTests` — imperial vs metric by region
+- `ForecastAggregatorTests` — noon slot selection, multi-day grouping, rain chance, local hour, UV
+- `OpenWeatherParsingTests` — JSON decoding for API responses, including UTC offsets and rain chance
+- `WeatherUnitsTests` — imperial vs metric by region, Celsius conversion
 - `WeatherRepositoryTests` — repository mapping and error handling (fake API)
 - `GeocodingRepositoryTests` — suggestion formatting and validation (fake API)
 - `NotificationWorkerLogicTests` — notification content, permission and retry behaviour, "today" in the city's time zone
@@ -191,7 +205,7 @@ Ported from Android:
 - `WeatherForecastViewModelTests` — request routing, cache-first display, error mapping, silent background refresh, and races between overlapping requests
 - `GeoLocationViewModelTests` — debounced search, latest-input-wins, suggestion pinning, reset
 - `LocationPermissionViewModelTests` — denied, located and failed states
-- `SettingsViewModelTests` — unit override persistence, clear cache
+- `SettingsViewModelTests` — unit override persistence, clear cache, permission requests
 - `WelcomeViewModelTests` — onboarding flags, including installs that predate the notification step
 
 iOS only:
@@ -209,7 +223,8 @@ by a throwaway `UserDefaults` suite, so they never touch the app's real data. Sh
 
 GitHub Actions runs on every push and pull request to `main` (see [`.github/workflows/ios.yml`](.github/workflows/ios.yml)).
 
-The workflow builds the app, runs unit tests on an iOS Simulator, and uploads the `.xcresult` bundle if you need to inspect failures.
+The workflow builds the app with Xcode 16.4, runs the unit tests on an iOS 18 simulator, and uploads
+the `.xcresult` bundle as an artifact for inspecting failures.
 
 The app targets **iOS 17+** so unit tests can run on the simulator runtimes preinstalled on GitHub-hosted Mac runners.
 
