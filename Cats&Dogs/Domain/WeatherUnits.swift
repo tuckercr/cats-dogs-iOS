@@ -6,6 +6,22 @@ enum WeatherUnits: String, Codable {
 
     var apiValue: String { rawValue }
 
+    /// Converts a temperature in these units to Celsius.
+    func toCelsius(_ value: Double) -> Double {
+        switch self {
+        case .metric: value
+        case .imperial: (value - 32) * 5 / 9
+        }
+    }
+
+    /// Converts a Celsius temperature to these units.
+    func fromCelsius(_ celsius: Double) -> Double {
+        switch self {
+        case .metric: celsius
+        case .imperial: celsius * 9 / 5 + 32
+        }
+    }
+
     static var current: WeatherUnits {
         fromRegionCode(Locale.current.region?.identifier ?? "")
     }

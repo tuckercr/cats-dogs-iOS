@@ -24,7 +24,8 @@ struct NotificationWorkerLogic {
     let hasNotificationPermission: () -> Bool
     let postNotification: (_ title: String, _ body: String) -> Void
     /// Overridable for tests; nil means today's label on this device.
-    var todayLabel: (() -> String)? = nil
+    /// Today's label in the city's time zone. Overridable for tests; nil means the real date.
+    var todayLabel: ((TimeZone) -> String)? = nil
 
     func doWork() async -> NotificationWorkerResult {
         let locations = await getSavedLocations()
@@ -49,7 +50,7 @@ struct NotificationWorkerLogic {
             location.longitude
         )
         let todayForecast = (try? forecastResult.get()).flatMap {
-            forecastForToday(in: $0, todayLabel: todayLabel?())
+            forecastForToday(in: $0, timeZone: weather.timeZone, todayLabel: todayLabel?(weather.timeZone))
         }
 
         guard hasNotificationPermission() else { return .success }
@@ -62,8 +63,12 @@ struct NotificationWorkerLogic {
 
 /// `/forecast` starts at the next 3-hour slot, so late in the day its first entry is tomorrow, and a
 /// stale cache starts with yesterday. Only an entry that is actually today may supply the high/low.
-func forecastForToday(in days: [DayForecast], todayLabel: String? = nil) -> DayForecast? {
-    let todayLabel = todayLabel ?? WeatherFormatting.todayLabel()
+func forecastForToday(
+    in days: [DayForecast],
+    timeZone: TimeZone,
+    todayLabel: String? = nil
+) -> DayForecast? {
+    let todayLabel = todayLabel ?? WeatherFormatting.todayLabel(timeZone: timeZone)
     return days.first { $0.dateLabel == todayLabel }
 }
 

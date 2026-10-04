@@ -5,6 +5,43 @@ import XCTest
 final class OpenWeatherParsingTests: XCTestCase {
     private let decoder = JSONDecoder()
 
+    func testParsesUTCOffsetFromCurrentWeatherAndForecastPayloads() throws {
+        let current = """
+        {
+          "name": "Denver",
+          "weather": [ { "main": "Clear", "description": "clear sky", "icon": "01d" } ],
+          "main": { "temp": 10.0, "feels_like": 9.0, "humidity": 40 },
+          "wind": { "speed": 1.0 },
+          "timezone": -21600
+        }
+        """
+        let forecast = """
+        { "list": [], "city": { "name": "London", "timezone": 3600 } }
+        """
+
+        // Mountain Daylight Time is UTC-6h.
+        XCTAssertEqual(try decoder.decode(CurrentWeatherResponse.self, from: Data(current.utf8)).timezone, -21600)
+        XCTAssertEqual(try decoder.decode(ForecastResponse.self, from: Data(forecast.utf8)).city?.timezone, 3600)
+    }
+
+    func testParsesPrecipitationProbabilityAndDefaultsWhenAbsent() throws {
+        let json = """
+        { "list": [
+          { "dt": 1, "main": { "temp": 1, "feels_like": 1, "humidity": 1 },
+            "weather": [ { "main": "Rain", "description": "rain", "icon": "10d" } ],
+            "wind": { "speed": 1 }, "pop": 0.62 },
+          { "dt": 2, "main": { "temp": 1, "feels_like": 1, "humidity": 1 },
+            "weather": [ { "main": "Clear", "description": "clear", "icon": "01d" } ],
+            "wind": { "speed": 1 } }
+        ] }
+        """
+
+        let parsed = try decoder.decode(ForecastResponse.self, from: Data(json.utf8))
+
+        XCTAssertEqual(parsed.list[0].pop, 0.62)
+        XCTAssertNil(parsed.list[1].pop)
+    }
+
     func testParsesCurrentWeatherPayload() throws {
         let json = """
         {

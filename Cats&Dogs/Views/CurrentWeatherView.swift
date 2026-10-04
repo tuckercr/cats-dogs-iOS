@@ -245,7 +245,7 @@ private struct CurrentWeatherContent: View {
     let onForecastRetry: () -> Void
 
     private var todayLabel: String {
-        WeatherFormatting.todayLabel()
+        WeatherFormatting.todayLabel(timeZone: weather.timeZone)
     }
 
     private var forecastDays: [DayForecast] {

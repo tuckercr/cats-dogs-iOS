@@ -41,7 +41,9 @@ final class WeatherNotificationScheduler {
         let activeIndex = min(preferences.activeLocationIndex, locations.count - 1)
         let location = locations[activeIndex]
         let weather = preferences.cachedWeather(for: location.cacheKey)
-        let todayForecast = preferences.cachedForecast(for: location.cacheKey).flatMap { forecastForToday(in: $0) }
+        let todayForecast = preferences.cachedForecast(for: location.cacheKey).flatMap {
+            forecastForToday(in: $0, timeZone: weather?.timeZone ?? .current)
+        }
 
         let content: (title: String, body: String)
         if let weather {

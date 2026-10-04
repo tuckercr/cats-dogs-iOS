@@ -164,11 +164,14 @@ struct WeatherRepository {
                     windSpeed: item.wind.speed,
                     windDeg: item.wind.deg,
                     humidity: item.main.humidity,
-                    pressure: item.main.pressure
+                    pressure: item.main.pressure,
+                    pop: item.pop ?? 0
                 )
             )
         }
-        return ForecastAggregator.aggregate(slots: slots, timeZone: timeZone, units: units)
+        // Group and label in the city's own local time, so a remote city's days and hours read on its clock.
+        let cityTimeZone = response.city?.timezone.flatMap { TimeZone(secondsFromGMT: $0) } ?? timeZone
+        return ForecastAggregator.aggregate(slots: slots, timeZone: cityTimeZone, units: units)
     }
 }
 

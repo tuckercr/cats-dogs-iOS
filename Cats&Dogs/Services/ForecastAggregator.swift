@@ -14,6 +14,10 @@ enum ForecastAggregator {
         let windDeg: Int
         let humidity: Int
         let pressure: Int
+        /// Probability of precipitation, 0.0...1.0.
+        let pop: Double
+        let uvIndex: Double?
+        let pavementTemperature: Double?
 
         init(
             epochSeconds: Int,
@@ -27,7 +31,10 @@ enum ForecastAggregator {
             windSpeed: Double = 0,
             windDeg: Int = 0,
             humidity: Int = 0,
-            pressure: Int = 0
+            pressure: Int = 0,
+            pop: Double = 0,
+            uvIndex: Double? = nil,
+            pavementTemperature: Double? = nil
         ) {
             self.epochSeconds = epochSeconds
             self.temperature = temperature
@@ -41,6 +48,9 @@ enum ForecastAggregator {
             self.windDeg = windDeg
             self.humidity = humidity
             self.pressure = pressure
+            self.pop = pop
+            self.uvIndex = uvIndex
+            self.pavementTemperature = pavementTemperature
         }
     }
 
@@ -98,7 +108,12 @@ enum ForecastAggregator {
                         windDeg: slot.windDeg,
                         humidity: slot.humidity,
                         pressure: slot.pressure,
-                        units: units
+                        units: units,
+                        precipitationChance: percent(slot.pop),
+                        uvIndex: slot.uvIndex,
+                        pavementTemperature: slot.pavementTemperature,
+                        localHour: calendar.component(.hour, from: date),
+                        epochSeconds: slot.epochSeconds
                     )
                 }
 
@@ -112,9 +127,15 @@ enum ForecastAggregator {
                 tempMin: dailyMin,
                 tempMax: dailyMax,
                 units: units,
-                hourlySlots: hourlySlots
+                hourlySlots: hourlySlots,
+                precipitationChance: percent(daySlots.map(\.pop).max() ?? 0),
+                uvIndexMax: daySlots.compactMap(\.uvIndex).max()
             )
         }
+    }
+
+    private static func percent(_ probability: Double) -> Int {
+        Int((probability * 100).rounded())
     }
 
     private static func minutesFromNoon(_ epochSeconds: Int, calendar: Calendar) -> Int {

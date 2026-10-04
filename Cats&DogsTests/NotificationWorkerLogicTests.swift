@@ -97,7 +97,7 @@ final class NotificationWorkerLogicTests: XCTestCase {
             },
             postNotification: { posted.append(($0, $1)) }
         )
-        logic.todayLabel = { "Mon, Jan 1" }
+        logic.todayLabel = { _ in "Mon, Jan 1" }
 
         _ = await logic.doWork()
 
@@ -113,11 +113,31 @@ final class NotificationWorkerLogicTests: XCTestCase {
             },
             postNotification: { posted.append(($0, $1)) }
         )
-        logic.todayLabel = { "Mon, Jan 1" }
+        logic.todayLabel = { _ in "Mon, Jan 1" }
 
         _ = await logic.doWork()
 
         XCTAssertEqual(posted.first?.1, "18°/10° • Clear Sky")
+    }
+
+    func testTodayIsResolvedInTheCitysTimeZone() async {
+        var capturedTimeZone: TimeZone?
+        var logic = makeLogic(
+            fetchCurrentWeather: { _, _, _, _ in
+                var weather = Self.sampleWeather()
+                weather.timezoneOffsetSeconds = -21600
+                return .success(weather)
+            }
+        )
+        logic.todayLabel = { timeZone in
+            capturedTimeZone = timeZone
+            return "Mon, Jan 1"
+        }
+
+        _ = await logic.doWork()
+
+        // Mountain Daylight Time (UTC-6h), not the device's zone.
+        XCTAssertEqual(capturedTimeZone?.secondsFromGMT(), -21600)
     }
 
     private static func forecast(dateLabel: String, tempMin: Double, tempMax: Double) -> DayForecast {

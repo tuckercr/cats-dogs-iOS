@@ -23,6 +23,13 @@ struct CloudsDTO: Decodable {
 
 struct ForecastResponse: Decodable {
     let list: [ForecastListItemDTO]
+    var city: CityDTO? = nil
+}
+
+struct CityDTO: Decodable {
+    let name: String?
+    /// The city's offset from UTC, in seconds.
+    var timezone: Int? = nil
 }
 
 struct ForecastListItemDTO: Decodable {
@@ -30,6 +37,8 @@ struct ForecastListItemDTO: Decodable {
     let main: MainDTO
     let weather: [WeatherDescDTO]
     let wind: WindDTO
+    /// Probability of precipitation, 0.0...1.0. Absent on some payloads.
+    var pop: Double? = nil
 }
 
 struct WeatherDescDTO: Decodable {
