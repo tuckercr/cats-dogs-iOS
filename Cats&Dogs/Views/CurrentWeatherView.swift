@@ -26,6 +26,9 @@ struct CurrentWeatherView: View {
             }
         }
         .navigationTitle(navigationTitle)
+        // A single-line bar with the city tabs fixed beneath it, like Android's top app bar. A large
+        // title under the tabs' inset is drawn blurred behind the scroll edge effect.
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
