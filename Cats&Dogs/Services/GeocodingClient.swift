@@ -1,6 +1,6 @@
 import Foundation
 
-struct GeocodingClient {
+struct GeocodingClient: Sendable {
     private let session: URLSession
     private let apiKey: String
     private let baseURL = URL(string: "https://api.openweathermap.org/")!

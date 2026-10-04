@@ -8,7 +8,7 @@ enum OpenWeatherClientError: Error, Equatable {
     case invalidPayload
 }
 
-struct OpenWeatherClient {
+struct OpenWeatherClient: Sendable {
     private let session: URLSession
     private let apiKey: String
     private let baseURL = URL(string: "https://api.openweathermap.org/")!
