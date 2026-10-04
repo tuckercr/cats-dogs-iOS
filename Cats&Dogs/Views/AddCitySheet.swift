@@ -60,6 +60,7 @@ struct AddCitySheet: View {
                                     Text(suggestion.label)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.vertical, 10)
+                                        .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
                                 Divider()

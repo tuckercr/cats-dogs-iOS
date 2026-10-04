@@ -119,6 +119,7 @@ struct CurrentWeatherView: View {
                                 : Color.clear
                         )
                         .clipShape(Capsule())
+                        .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
                 }

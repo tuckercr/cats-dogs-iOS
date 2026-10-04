@@ -25,6 +25,8 @@ struct SettingsView: View {
                                     .foregroundStyle(Color.accentColor)
                             }
                         }
+                        // A plain button only hit-tests what it draws; make the whole row tappable.
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
