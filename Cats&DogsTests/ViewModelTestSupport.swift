@@ -234,13 +234,6 @@ func geocodingResult(
     GeocodingDirectDTO(name: name, lat: lat, lon: lon, country: country, state: state)
 }
 
-extension LoadingState {
-    var successValue: T? {
-        if case .success(let value) = self { return value }
-        return nil
-    }
-}
-
 /// Builds domain models through the real repository mapping rather than hand-rolled initialisers.
 @MainActor
 func makeCurrentWeather(

@@ -268,7 +268,7 @@ private struct CurrentWeatherContent: View {
         VStack(alignment: .leading, spacing: 12) {
             heroCard
             detailsCard
-            RadarCard(location: location)
+            RadarCard(location: location, timeZone: weather.timeZone)
 
             if !upcomingDays.isEmpty || forecastState == .loading || isForecastError {
                 Text("UPCOMING")
