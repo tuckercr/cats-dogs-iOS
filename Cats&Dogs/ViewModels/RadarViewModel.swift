@@ -8,14 +8,18 @@ import Observation
 final class RadarViewModel {
     static let shared = RadarViewModel()
 
-    /// Delay between animation frames. Android reads this from Remote Config (default 850 ms).
-    nonisolated static let frameInterval: Duration = .milliseconds(850)
+    /// Delay between animation frames, from Remote Config (default 850 ms).
+    let frameInterval: Duration
 
     private(set) var timeline: LoadingState<RadarTimeline> = .idle
 
     private let fetchTimeline: @Sendable () async throws -> RadarTimeline
 
-    init(fetchTimeline: (@Sendable () async throws -> RadarTimeline)? = nil) {
+    init(
+        frameInterval: Duration? = nil,
+        fetchTimeline: (@Sendable () async throws -> RadarTimeline)? = nil
+    ) {
+        self.frameInterval = frameInterval ?? RemoteConfigRepository.shared.radarFrameInterval
         self.fetchTimeline = fetchTimeline ?? { try await RadarRepository().timeline() }
     }
 

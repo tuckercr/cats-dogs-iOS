@@ -1,0 +1,39 @@
+import XCTest
+@testable import Cats_Dogs
+
+final class RemoteConfigRepositoryTests: XCTestCase {
+    func testRefreshIntervalDefaultsToThirtyMinutes() {
+        XCTAssertEqual(RemoteConfigRepository.refreshInterval(minutes: nil), 30 * 60)
+    }
+
+    func testRefreshIntervalUsesTheRemoteValue() {
+        XCTAssertEqual(RemoteConfigRepository.refreshInterval(minutes: 60), 60 * 60)
+    }
+
+    func testRefreshIntervalNeverGoesBelowFifteenMinutes() {
+        XCTAssertEqual(RemoteConfigRepository.refreshInterval(minutes: 5), 15 * 60)
+        XCTAssertEqual(RemoteConfigRepository.refreshInterval(minutes: 0), 15 * 60)
+    }
+
+    func testRadarFrameIntervalDefaultsTo850Milliseconds() {
+        XCTAssertEqual(RemoteConfigRepository.radarFrameInterval(milliseconds: nil), .milliseconds(850))
+    }
+
+    func testRadarFrameIntervalUsesAnInRangeRemoteValue() {
+        XCTAssertEqual(RemoteConfigRepository.radarFrameInterval(milliseconds: 100), .milliseconds(100))
+        XCTAssertEqual(RemoteConfigRepository.radarFrameInterval(milliseconds: 5000), .milliseconds(5000))
+    }
+
+    func testOutOfRangeRadarFrameIntervalFallsBackToTheDefault() {
+        XCTAssertEqual(RemoteConfigRepository.radarFrameInterval(milliseconds: 99), .milliseconds(850))
+        XCTAssertEqual(RemoteConfigRepository.radarFrameInterval(milliseconds: 5001), .milliseconds(850))
+        XCTAssertEqual(RemoteConfigRepository.radarFrameInterval(milliseconds: 0), .milliseconds(850))
+    }
+
+    @MainActor
+    func testWithoutFirebaseTheDefaultsApply() {
+        XCTAssertFalse(FirebaseSetup.isConfigured)
+        XCTAssertEqual(RemoteConfigRepository.shared.refreshInterval, 30 * 60)
+        XCTAssertEqual(RemoteConfigRepository.shared.radarFrameInterval, .milliseconds(850))
+    }
+}

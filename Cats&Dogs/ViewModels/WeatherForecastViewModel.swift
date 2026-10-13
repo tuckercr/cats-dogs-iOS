@@ -10,6 +10,8 @@ final class WeatherForecastViewModel {
 
     private let preferences: PreferencesStore
     private let weatherRepository: WeatherRepository
+    private let onError: @MainActor (_ errorKey: String) -> Void
+    private let onSettingsOpened: @MainActor () -> Void
 
     private var currentFetchGeneration = 0
     private var forecastFetchGeneration = 0
@@ -20,10 +22,18 @@ final class WeatherForecastViewModel {
 
     init(
         preferences: PreferencesStore? = nil,
-        weatherRepository: WeatherRepository? = nil
+        weatherRepository: WeatherRepository? = nil,
+        onError: @escaping @MainActor (_ errorKey: String) -> Void = {
+            AnalyticsRepository.shared.logWeatherError($0)
+        },
+        onSettingsOpened: @escaping @MainActor () -> Void = {
+            AnalyticsRepository.shared.logSettingsOpened()
+        }
     ) {
         self.preferences = preferences ?? .shared
         self.weatherRepository = weatherRepository ?? WeatherRepository()
+        self.onError = onError
+        self.onSettingsOpened = onSettingsOpened
     }
 
     func backgroundRefreshCurrent(location: SavedLocation) {
@@ -72,9 +82,12 @@ final class WeatherForecastViewModel {
                 preferences.setCachedWeather(weather, for: location.cacheKey)
                 currentWeather = .success(weather)
             case .failure(let error):
+                let errorKey = WeatherErrorMessages.errorKey(for: error)
+                onError(errorKey)
+                // Keep cached data visible if there is any; only show the error when there's nothing.
                 if cached == nil {
                     currentWeather = .error(
-                        errorKey: WeatherErrorMessages.errorKey(for: error),
+                        errorKey: errorKey,
                         canRetry: WeatherErrorMessages.canRetry(for: error)
                     )
                 }
@@ -107,9 +120,12 @@ final class WeatherForecastViewModel {
                 preferences.setCachedForecast(days, for: location.cacheKey)
                 forecast = .success(days)
             case .failure(let error):
+                let errorKey = WeatherErrorMessages.errorKey(for: error)
+                onError(errorKey)
+                // Keep cached data visible if there is any; only show the error when there's nothing.
                 if cached == nil {
                     forecast = .error(
-                        errorKey: WeatherErrorMessages.errorKey(for: error),
+                        errorKey: errorKey,
                         canRetry: WeatherErrorMessages.canRetry(for: error)
                     )
                 }
@@ -120,6 +136,10 @@ final class WeatherForecastViewModel {
                 updateRefreshingState()
             }
         }
+    }
+
+    func logSettingsOpened() {
+        onSettingsOpened()
     }
 
     func clearCurrentError() {

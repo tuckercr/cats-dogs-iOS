@@ -11,12 +11,21 @@ final class WeatherForecastViewModelTests: XCTestCase {
     private var preferences: IsolatedPreferences!
     private var api: ScriptedWeatherAPI!
     private var viewModel: WeatherForecastViewModel!
+    private var loggedErrors: [String] = []
+    private var settingsOpenedCount = 0
 
     override func setUp() async throws {
         preferences = IsolatedPreferences()
         preferences.store.setUnitOverride(.metric)
         api = ScriptedWeatherAPI()
-        viewModel = WeatherForecastViewModel(preferences: preferences.store, weatherRepository: api.repository)
+        loggedErrors = []
+        settingsOpenedCount = 0
+        viewModel = WeatherForecastViewModel(
+            preferences: preferences.store,
+            weatherRepository: api.repository,
+            onError: { [unowned self] in loggedErrors.append($0) },
+            onSettingsOpened: { [unowned self] in settingsOpenedCount += 1 }
+        )
     }
 
     override func tearDown() async throws {
@@ -214,6 +223,34 @@ final class WeatherForecastViewModelTests: XCTestCase {
         await waitUntil { !self.viewModel.isRefreshing }
 
         XCTAssertEqual(viewModel.currentWeather.successValue?.temperature, 5)
+    }
+
+    // MARK: - Analytics
+
+    func testFailuresAreReportedEvenWhenCachedDataHidesThem() async {
+        preferences.store.setCachedWeather(await makeCurrentWeather(temperature: 5), for: austin.cacheKey)
+        api.onCurrent = { _ in throw self.offline }
+        api.onForecast = { _ in throw self.offline }
+
+        viewModel.refreshCurrent(location: austin)
+        viewModel.refreshForecast(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+
+        XCTAssertEqual(loggedErrors, ["offline", "offline"])
+    }
+
+    func testSuccessfulRefreshReportsNoError() async {
+        viewModel.refreshCurrent(location: austin)
+        viewModel.refreshForecast(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+
+        XCTAssertEqual(loggedErrors, [])
+    }
+
+    func testLogSettingsOpenedReportsTheEvent() {
+        viewModel.logSettingsOpened()
+
+        XCTAssertEqual(settingsOpenedCount, 1)
     }
 
     func testNetworkErrorIsSuppressedWhenCachedForecastIsAvailable() async {

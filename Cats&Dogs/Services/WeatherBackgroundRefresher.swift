@@ -12,10 +12,10 @@ final class WeatherBackgroundRefresher {
 
     /// Must match `BGTaskSchedulerPermittedIdentifiers` in Info.plist.
     nonisolated static let taskIdentifier = "com.tuckercr.Cats-Dogs.refresh"
-    /// Matches Android's default `weather_refresh_interval_minutes`. iOS treats it as a minimum.
-    nonisolated static let refreshInterval: TimeInterval = 30 * 60
     nonisolated static let retryInterval: TimeInterval = 15 * 60
 
+    /// Remote Config's `weather_refresh_interval_minutes`, as on Android. iOS treats it as a minimum.
+    private let refreshInterval: () -> TimeInterval
     private let preferences: PreferencesStore
     private let weatherRepository: WeatherRepository
     private let notificationsAuthorized: () async -> Bool
@@ -23,6 +23,7 @@ final class WeatherBackgroundRefresher {
     private let submitRefreshRequest: (_ earliestBegin: Date) -> Void
 
     init(
+        refreshInterval: @escaping () -> TimeInterval = { RemoteConfigRepository.shared.refreshInterval },
         preferences: PreferencesStore? = nil,
         weatherRepository: WeatherRepository? = nil,
         notificationsAuthorized: @escaping () async -> Bool = {
@@ -38,6 +39,7 @@ final class WeatherBackgroundRefresher {
             try? BGTaskScheduler.shared.submit(request)
         }
     ) {
+        self.refreshInterval = refreshInterval
         self.preferences = preferences ?? .shared
         self.weatherRepository = weatherRepository ?? WeatherRepository()
         self.notificationsAuthorized = notificationsAuthorized
@@ -46,8 +48,8 @@ final class WeatherBackgroundRefresher {
     }
 
     /// Asks iOS for the next refresh. A new request replaces any pending one.
-    func scheduleNextRefresh(after interval: TimeInterval = WeatherBackgroundRefresher.refreshInterval) {
-        submitRefreshRequest(Date(timeIntervalSinceNow: interval))
+    func scheduleNextRefresh(after interval: TimeInterval? = nil) {
+        submitRefreshRequest(Date(timeIntervalSinceNow: interval ?? refreshInterval()))
     }
 
     /// Entry point for the `BGAppRefreshTask`.

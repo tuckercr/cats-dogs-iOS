@@ -5,6 +5,7 @@ import XCTest
 final class WeatherBackgroundRefresherTests: XCTestCase {
     private let london = SavedLocation(label: "London, GB", latitude: 51.5074, longitude: -0.1278)
     private let nameOnly = SavedLocation(label: "Paris", latitude: nil, longitude: nil)
+    private let refreshInterval: TimeInterval = 45 * 60
 
     private var suiteName: String!
     private var preferences: PreferencesStore!
@@ -77,7 +78,7 @@ final class WeatherBackgroundRefresherTests: XCTestCase {
         XCTAssertNotNil(preferences.cachedWeather(for: london.cacheKey))
         XCTAssertEqual(scheduled, 0)
         XCTAssertEqual(requestedDelays.count, 2)
-        XCTAssertEqual(requestedDelays[0], WeatherBackgroundRefresher.refreshInterval, accuracy: 5)
+        XCTAssertEqual(requestedDelays[0], refreshInterval, accuracy: 5)
         XCTAssertEqual(requestedDelays[1], WeatherBackgroundRefresher.retryInterval, accuracy: 5)
     }
 
@@ -89,7 +90,7 @@ final class WeatherBackgroundRefresherTests: XCTestCase {
         await refresher.handleAppRefresh()
 
         XCTAssertEqual(requestedDelays.count, 1)
-        XCTAssertEqual(requestedDelays[0], WeatherBackgroundRefresher.refreshInterval, accuracy: 5)
+        XCTAssertEqual(requestedDelays[0], refreshInterval, accuracy: 5)
     }
 
     func testNoSavedLocationsDoesNoNetworkWork() async {
@@ -109,6 +110,7 @@ final class WeatherBackgroundRefresherTests: XCTestCase {
         onSubmit: @escaping (Date) -> Void = { _ in }
     ) -> WeatherBackgroundRefresher {
         WeatherBackgroundRefresher(
+            refreshInterval: { [refreshInterval] in refreshInterval },
             preferences: preferences,
             weatherRepository: WeatherRepository(
                 client: api ?? FakeOpenWeatherAPI(),

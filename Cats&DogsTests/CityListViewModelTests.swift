@@ -153,6 +153,21 @@ final class CityListViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.activeIndex, 0)
     }
 
+    func testOnlyANewCityIsReportedAsAdded() {
+        preferences.store.setSavedLocations([austin])
+        var added = 0
+        let viewModel = CityListViewModel(
+            preferences: preferences.store,
+            geocodingRepository: geocoding.repository,
+            onCityAdded: { added += 1 }
+        )
+
+        viewModel.addLocation(denver)
+        viewModel.addLocation(SavedLocation(label: "Austin", latitude: 1, longitude: 2))
+
+        XCTAssertEqual(added, 1)
+    }
+
     /// Regression: the geocoded label used to replace the typed one, defeating the duplicate check.
     func testReAddingAGeocodedNameOnlyCityDoesNotDuplicateIt() async {
         geocoding.onSearch = { _ in [geocodingResult(name: "Paris", country: "FR", lat: 48.85, lon: 2.35)] }
@@ -295,6 +310,6 @@ final class CityListViewModelTests: XCTestCase {
     }
 
     private func makeViewModel() -> CityListViewModel {
-        CityListViewModel(preferences: preferences.store, geocodingRepository: geocoding.repository)
+        CityListViewModel(preferences: preferences.store, geocodingRepository: geocoding.repository, onCityAdded: {})
     }
 }

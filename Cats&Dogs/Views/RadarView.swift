@@ -139,7 +139,7 @@ private struct RadarMapView: View {
         .task(id: PlaybackKey(playing: playing, frameCount: frames.count)) {
             guard playing, !frames.isEmpty else { return }
             while !Task.isCancelled {
-                try? await Task.sleep(for: RadarViewModel.frameInterval)
+                try? await Task.sleep(for: radar.frameInterval)
                 guard !Task.isCancelled, !frames.isEmpty else { return }
                 frameIndex = (frameIndex + 1) % frames.count
             }

@@ -16,6 +16,9 @@ struct Cats_DogsApp: App {
 
     init() {
         BrandAppearance.apply()
+        FirebaseSetup.configureIfAvailable()
+        // Start the Remote Config fetch early so the values are ready by the next launch.
+        _ = RemoteConfigRepository.shared
     }
 
     var body: some Scene {
