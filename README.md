@@ -206,7 +206,7 @@ Ported from Android:
 - `NotificationWorkerLogicTests` — notification content, permission and retry behaviour, "today" in the city's time zone
 - `OpenMeteoForecastTests` — hour filtering, city time zones (including half-hour zones and DST), WMO codes, UV, pavement heat
 - `RadarTests` — RainViewer timeline parsing, tile URLs, load-once and retry
-- `PetMoodTests`, `WalkAdvisorTests` — mood mapping, walk ratings including night hours and pavement heat
+- `PetMoodTests`, `WalkAdvisorTests` — mood mapping, walk ratings including night hours and pavement heat, Remote Config thresholds
 - `CityListViewModelTests` — loading and legacy migration, add (with geocoding and de-duplication), remove, set active, reorder
 - `WeatherForecastViewModelTests` — request routing, cache-first display, error mapping, silent background refresh, and races between overlapping requests
 - `GeoLocationViewModelTests` — debounced search, latest-input-wins, suggestion pinning, reset
@@ -220,7 +220,8 @@ iOS only:
 - `PreferencesStoreTests` — per-city cache round trip, eviction when a city is removed, older cache format
 - `WeatherFormattingTests` — sunrise/sunset in the city's time zone, UV categories
 - `AnalyticsRepositoryTests` — the three analytics gates and pushing the opt-out into the SDK
-- `RemoteConfigRepositoryTests` — defaults, the refresh-interval floor and radar-speed limits
+- `RemoteConfigRepositoryTests` — defaults, the refresh-interval floor, radar-speed and foreground-refresh limits
+- `PetWeatherThresholdsTests` — walk and pet threshold ranges and pair checks
 
 View-model tests run against real repositories with scripted API fakes, and a `PreferencesStore` backed
 by a throwaway `UserDefaults` suite, so they never touch the app's real data. Shared helpers (including
@@ -267,6 +268,16 @@ Remote Config parameters are defined and deployed from the Android repo
 | `analytics_enabled` | true | Kill switch for every analytics event, and SDK collection |
 | `radar_enabled` | true | Hides the radar card if RainViewer or the OpenStreetMap tiles become unavailable |
 | `walk_card_enabled` | true | Hides the "time to walk the dog" card |
+| `daily_weather_notifications_enabled` | true | Only the daily 9 / 13 / 19 weather summaries; off removes the pending ones. Future notification types get their own switches |
+| `foreground_refresh_min_minutes` | 0 (0–1440) | Skips the silent refresh on returning to the app if that city was fetched this recently. Pull-to-refresh and city changes are never skipped |
+| `walk_hot_pavement_c` | 52 (40–70) | Pavement temperature that triggers the hot-paws warning |
+| `walk_max_rain_chance` | 30 (0–100) | Rain chance at or above which an hour isn't suggested for a walk |
+| `walk_comfort_min_c` / `walk_comfort_max_c` | 3 (−20–20) / 27 (15–40) | Comfortable walking temperatures |
+| `walk_hours_start` / `walk_hours_end` | 7 / 20 (0–23) | Local hours walks are suggested in, inclusive |
+| `pet_hot_threshold_c` / `pet_cold_threshold_c` | 30 (20–45) / 0 (−20–10) | Switch the pets to their hot and cold moods, and the walk card to "paws hot" and "too cold" |
+
+Walk and pet values are Celsius whatever units the user picked. If a pair ends up inverted (minimum
+not below maximum), both fall back to their defaults.
 | `open_meteo_enabled` | true | Off sends forecasts for cities with coordinates to OpenWeatherMap (3-hourly) instead of Open-Meteo |
 
 A missing or unreadable value always falls back to the default, so a console mistake can't break the

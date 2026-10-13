@@ -276,13 +276,22 @@ private struct CurrentWeatherContent: View {
     private var currentTempC: Double { weather.units.toCelsius(weather.temperature) }
 
     private var mood: PetMood {
-        PetMood.forConditions(conditionMain: weather.conditionMain, iconCode: weather.iconCode, temperatureC: currentTempC)
+        PetMood.forConditions(
+            conditionMain: weather.conditionMain,
+            iconCode: weather.iconCode,
+            temperatureC: currentTempC,
+            thresholds: RemoteConfigRepository.shared.petWeatherThresholds
+        )
     }
 
     /// Nil while the forecast is loading or failed, which hides the card rather than giving advice
     /// with nothing to base it on.
     private var walkAdvice: WalkAdvice? {
-        WalkAdvisor.advice(currentTempC: currentTempC, upcoming: forecastDays.flatMap(\.hourlySlots))
+        WalkAdvisor.advice(
+            currentTempC: currentTempC,
+            upcoming: forecastDays.flatMap(\.hourlySlots),
+            thresholds: RemoteConfigRepository.shared.petWeatherThresholds
+        )
     }
 
     private var hourlySlots: [HourlySlot] {

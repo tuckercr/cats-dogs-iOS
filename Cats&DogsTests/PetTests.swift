@@ -26,6 +26,14 @@ final class PetMoodTests: XCTestCase {
         XCTAssertEqual(mood("Mist", "50d", 12), .cloudy)
     }
 
+    func testRemoteConfigThresholdsMoveTheHotAndColdMoods() {
+        let thresholds = PetWeatherThresholds.validated(petHotC: 25, petColdC: 5)
+
+        XCTAssertEqual(PetMood.forConditions(conditionMain: "Clear", iconCode: "01d", temperatureC: 26, thresholds: thresholds), .hot)
+        XCTAssertEqual(PetMood.forConditions(conditionMain: "Clear", iconCode: "01d", temperatureC: 4, thresholds: thresholds), .cold)
+        XCTAssertEqual(mood("Clear", "01d", 26), .sunny)
+    }
+
     func testCaptionIsStableForADayAndEveryMoodHasOne() {
         let date = Date(timeIntervalSince1970: TimeInterval(fixtureDayStart))
         for mood in PetMood.allCases {
@@ -103,6 +111,19 @@ final class WalkAdvisorTests: XCTestCase {
             upcoming: [slot("2 PM", 79, rain: 0, units: .imperial, pavement: 120)]
         )
         XCTAssertEqual(advice?.rating, .great)
+    }
+
+    func testRemoteConfigThresholdsChangeTheWalkAdvice() {
+        let strict = PetWeatherThresholds.validated(maxRainChance: 5)
+        let slots = [slot("3 PM", 18, rain: 10), slot("6 PM", 16, rain: 0)]
+
+        XCTAssertEqual(WalkAdvisor.advice(currentTempC: 18, upcoming: slots)?.rating, .great)
+        XCTAssertEqual(WalkAdvisor.advice(currentTempC: 18, upcoming: slots, thresholds: strict)?.bestTimeLabel, "6 PM")
+
+        let lowerPavementLimit = PetWeatherThresholds.validated(hotPavementC: 45)
+        let warmPavement = [slot("3 PM", 20, rain: 0, pavement: 48)]
+        XCTAssertEqual(WalkAdvisor.advice(currentTempC: 20, upcoming: warmPavement)?.rating, .great)
+        XCTAssertEqual(WalkAdvisor.advice(currentTempC: 20, upcoming: warmPavement, thresholds: lowerPavementLimit)?.rating, .pawsHot)
     }
 
     private func slot(

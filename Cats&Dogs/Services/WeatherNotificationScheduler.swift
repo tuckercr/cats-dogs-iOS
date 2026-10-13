@@ -7,6 +7,7 @@ final class WeatherNotificationScheduler {
 
     private let center = UNUserNotificationCenter.current()
     private let notificationHours = [9, 13, 19]
+    private var requestIdentifiers: [String] { notificationHours.map { "weather_daily_\($0)" } }
 
     private init() {}
 
@@ -34,7 +35,7 @@ final class WeatherNotificationScheduler {
         let preferences = preferences ?? .shared
         let locations = preferences.savedLocations
         guard !locations.isEmpty, await isAuthorized() else {
-            center.removeAllPendingNotificationRequests()
+            removePendingDailyNotifications()
             return
         }
 
@@ -55,10 +56,11 @@ final class WeatherNotificationScheduler {
         await scheduleDailyNotifications(title: content.title, body: content.body)
     }
 
-    /// Replaces the pending 9 AM / 1 PM / 7 PM notifications with the given text.
+    /// Replaces the pending 9 AM / 1 PM / 7 PM notifications with the given text. When Remote Config
+    /// switches them off, the pending ones are removed so none fire.
     func scheduleDailyNotifications(title: String, body: String) async {
-        center.removeAllPendingNotificationRequests()
-        guard await isAuthorized() else { return }
+        removePendingDailyNotifications()
+        guard RemoteConfigRepository.shared.dailyWeatherNotificationsEnabled, await isAuthorized() else { return }
 
         for hour in notificationHours {
             var dateComponents = DateComponents()
@@ -78,5 +80,10 @@ final class WeatherNotificationScheduler {
             )
             try? await center.add(request)
         }
+    }
+
+    /// Only this app's daily weather requests, so future notification types are left alone.
+    private func removePendingDailyNotifications() {
+        center.removePendingNotificationRequests(withIdentifiers: requestIdentifiers)
     }
 }

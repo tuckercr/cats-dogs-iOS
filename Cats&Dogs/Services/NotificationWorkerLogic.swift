@@ -23,6 +23,8 @@ struct NotificationWorkerLogic {
     ) async -> Result<[DayForecast], Error>
     let hasNotificationPermission: () -> Bool
     let postNotification: (_ title: String, _ body: String) -> Void
+    /// Remote Config `daily_weather_notifications_enabled`. Off still refreshes, but posts nothing.
+    var dailyNotificationsEnabled: () -> Bool = { true }
     /// Overridable for tests; nil means today's label on this device.
     /// Today's label in the city's time zone. Overridable for tests; nil means the real date.
     var todayLabel: ((TimeZone) -> String)? = nil
@@ -53,7 +55,7 @@ struct NotificationWorkerLogic {
             forecastForToday(in: $0, timeZone: weather.timeZone, todayLabel: todayLabel?(weather.timeZone))
         }
 
-        guard hasNotificationPermission() else { return .success }
+        guard hasNotificationPermission(), dailyNotificationsEnabled() else { return .success }
 
         let content = buildNotificationContent(weather: weather, todayForecast: todayForecast)
         postNotification(content.title, content.body)

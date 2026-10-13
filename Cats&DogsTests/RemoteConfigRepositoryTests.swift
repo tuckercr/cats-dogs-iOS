@@ -30,6 +30,20 @@ final class RemoteConfigRepositoryTests: XCTestCase {
         XCTAssertEqual(RemoteConfigRepository.radarFrameInterval(milliseconds: 0), .milliseconds(850))
     }
 
+    func testForegroundRefreshWindowDefaultsToOff() {
+        XCTAssertEqual(RemoteConfigRepository.foregroundRefreshMinInterval(minutes: nil), 0)
+    }
+
+    func testForegroundRefreshWindowUsesAnInRangeValue() {
+        XCTAssertEqual(RemoteConfigRepository.foregroundRefreshMinInterval(minutes: 10), 10 * 60)
+        XCTAssertEqual(RemoteConfigRepository.foregroundRefreshMinInterval(minutes: 1440), 1440 * 60)
+    }
+
+    func testOutOfRangeForegroundRefreshWindowFallsBackToOff() {
+        XCTAssertEqual(RemoteConfigRepository.foregroundRefreshMinInterval(minutes: -5), 0)
+        XCTAssertEqual(RemoteConfigRepository.foregroundRefreshMinInterval(minutes: 1441), 0)
+    }
+
     @MainActor
     func testWithoutFirebaseTheDefaultsApply() {
         XCTAssertFalse(FirebaseSetup.isConfigured)
@@ -39,5 +53,8 @@ final class RemoteConfigRepositoryTests: XCTestCase {
         XCTAssertTrue(RemoteConfigRepository.shared.radarEnabled)
         XCTAssertTrue(RemoteConfigRepository.shared.walkCardEnabled)
         XCTAssertTrue(RemoteConfigRepository.openMeteoEnabled)
+        XCTAssertTrue(RemoteConfigRepository.shared.dailyWeatherNotificationsEnabled)
+        XCTAssertEqual(RemoteConfigRepository.shared.foregroundRefreshMinInterval, 0)
+        XCTAssertEqual(RemoteConfigRepository.shared.petWeatherThresholds, .standard)
     }
 }

@@ -105,7 +105,8 @@ final class WeatherBackgroundRefresher {
                 return result
             },
             hasNotificationPermission: { authorized },
-            postNotification: { title, body in pendingContent = (title, body) }
+            postNotification: { title, body in pendingContent = (title, body) },
+            dailyNotificationsEnabled: { RemoteConfigRepository.shared.dailyWeatherNotificationsEnabled }
         )
 
         let result = await logic.doWork()

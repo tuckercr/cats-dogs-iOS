@@ -23,6 +23,24 @@ final class RemoteConfigRepository {
 
     /// Hides the radar card if RainViewer or the OpenStreetMap tiles become unavailable.
     nonisolated static let keyRadarEnabled = "radar_enabled"
+    /// Only the daily 9 AM / 1 PM / 7 PM weather summaries. Other notification types get their own.
+    nonisolated static let keyDailyWeatherNotificationsEnabled = "daily_weather_notifications_enabled"
+
+    /// Skips the silent refresh on returning to the foreground if the city was fetched this recently.
+    nonisolated static let keyForegroundRefreshMinMinutes = "foreground_refresh_min_minutes"
+    nonisolated static let defaultForegroundRefreshMinMinutes = 0
+    nonisolated static let foregroundRefreshMinMinutesRange = 0 ... 1440
+
+    /// Walk advice and pet moods, all Celsius. See `PetWeatherThresholds` for ranges.
+    nonisolated static let keyWalkHotPavementC = "walk_hot_pavement_c"
+    nonisolated static let keyWalkMaxRainChance = "walk_max_rain_chance"
+    nonisolated static let keyWalkComfortMinC = "walk_comfort_min_c"
+    nonisolated static let keyWalkComfortMaxC = "walk_comfort_max_c"
+    nonisolated static let keyWalkHoursStart = "walk_hours_start"
+    nonisolated static let keyWalkHoursEnd = "walk_hours_end"
+    nonisolated static let keyPetHotThresholdC = "pet_hot_threshold_c"
+    nonisolated static let keyPetColdThresholdC = "pet_cold_threshold_c"
+
     /// Hides the "time to walk the dog" card.
     nonisolated static let keyWalkCardEnabled = "walk_card_enabled"
     /// Off sends forecasts for cities with coordinates to OpenWeatherMap instead of Open-Meteo.
@@ -46,7 +64,17 @@ final class RemoteConfigRepository {
             Self.keyAnalyticsEnabled: NSNumber(value: Self.defaultAnalyticsEnabled),
             Self.keyRadarEnabled: NSNumber(value: true),
             Self.keyWalkCardEnabled: NSNumber(value: true),
+            Self.keyDailyWeatherNotificationsEnabled: NSNumber(value: true),
+            Self.keyForegroundRefreshMinMinutes: NSNumber(value: Self.defaultForegroundRefreshMinMinutes),
             Self.keyOpenMeteoEnabled: NSNumber(value: true),
+            Self.keyWalkHotPavementC: NSNumber(value: PetWeatherThresholds.standard.hotPavementC),
+            Self.keyWalkMaxRainChance: NSNumber(value: PetWeatherThresholds.standard.maxRainChance),
+            Self.keyWalkComfortMinC: NSNumber(value: PetWeatherThresholds.standard.comfortC.lowerBound),
+            Self.keyWalkComfortMaxC: NSNumber(value: PetWeatherThresholds.standard.comfortC.upperBound),
+            Self.keyWalkHoursStart: NSNumber(value: PetWeatherThresholds.standard.walkHours.lowerBound),
+            Self.keyWalkHoursEnd: NSNumber(value: PetWeatherThresholds.standard.walkHours.upperBound),
+            Self.keyPetHotThresholdC: NSNumber(value: PetWeatherThresholds.standard.petHotC),
+            Self.keyPetColdThresholdC: NSNumber(value: PetWeatherThresholds.standard.petColdC),
         ])
         // Activated values apply from the next read; this launch keeps what was last activated.
         remoteConfig.fetchAndActivate()
@@ -69,6 +97,32 @@ final class RemoteConfigRepository {
 
     var walkCardEnabled: Bool { Self.flag(Self.keyWalkCardEnabled) }
 
+    var petWeatherThresholds: PetWeatherThresholds {
+        PetWeatherThresholds.validated(
+            hotPavementC: number(Self.keyWalkHotPavementC)?.doubleValue,
+            maxRainChance: number(Self.keyWalkMaxRainChance)?.intValue,
+            comfortMinC: number(Self.keyWalkComfortMinC)?.doubleValue,
+            comfortMaxC: number(Self.keyWalkComfortMaxC)?.doubleValue,
+            walkHoursStart: number(Self.keyWalkHoursStart)?.intValue,
+            walkHoursEnd: number(Self.keyWalkHoursEnd)?.intValue,
+            petHotC: number(Self.keyPetHotThresholdC)?.doubleValue,
+            petColdC: number(Self.keyPetColdThresholdC)?.doubleValue
+        )
+    }
+
+    /// Nil when Firebase is off or the key has no value at all, which would otherwise read as 0.
+    private func number(_ key: String) -> NSNumber? {
+        guard let value = remoteConfig?[key], value.source != .static else { return nil }
+        return value.numberValue
+    }
+
+    var dailyWeatherNotificationsEnabled: Bool { Self.flag(Self.keyDailyWeatherNotificationsEnabled) }
+
+    var foregroundRefreshMinInterval: TimeInterval {
+        let minutes = remoteConfig?[Self.keyForegroundRefreshMinMinutes].numberValue.intValue
+        return Self.foregroundRefreshMinInterval(minutes: minutes)
+    }
+
     /// Read from the forecast fetch, which isn't on the main actor. Remote Config is thread-safe.
     nonisolated static var openMeteoEnabled: Bool { flag(keyOpenMeteoEnabled) }
 
@@ -82,6 +136,13 @@ final class RemoteConfigRepository {
 
     nonisolated static func refreshInterval(minutes: Int?) -> TimeInterval {
         TimeInterval(max(minutes ?? defaultRefreshIntervalMinutes, minRefreshIntervalMinutes) * 60)
+    }
+
+    nonisolated static func foregroundRefreshMinInterval(minutes: Int?) -> TimeInterval {
+        guard let minutes, foregroundRefreshMinMinutesRange.contains(minutes) else {
+            return TimeInterval(defaultForegroundRefreshMinMinutes * 60)
+        }
+        return TimeInterval(minutes * 60)
     }
 
     /// Out-of-range values fall back to the default rather than the nearest limit, as on Android.
