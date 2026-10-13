@@ -105,13 +105,121 @@ final class WalkAdvisorTests: XCTestCase {
         XCTAssertEqual(advice?.rating, .great)
     }
 
+    // MARK: - Today or tomorrow
+
+    /// 2026-10-13 12:00 in New York (UTC-4), as a UTC epoch.
+    private let noonInNewYork = 1_791_907_200
+    private let newYork = TimeZone(identifier: "America/New_York")!
+
+    func testABestTimeLaterTodayIsNotMarkedTomorrow() {
+        let now = Date(timeIntervalSince1970: TimeInterval(noonInNewYork))
+        let advice = WalkAdvisor.advice(
+            currentTempC: 18,
+            upcoming: [slot("12 PM", 18, rain: 90, epoch: noonInNewYork), slot("5 PM", 18, rain: 0, epoch: noonInNewYork + 5 * 3600)],
+            now: now,
+            timeZone: newYork
+        )
+
+        XCTAssertEqual(advice?.bestTimeLabel, "5 PM")
+        XCTAssertEqual(advice?.bestTimeIsTomorrow, false)
+    }
+
+    func testABestTimeTomorrowMorningIsMarkedTomorrow() {
+        let now = Date(timeIntervalSince1970: TimeInterval(noonInNewYork))
+        let advice = WalkAdvisor.advice(
+            currentTempC: 18,
+            upcoming: [slot("12 PM", 18, rain: 90, epoch: noonInNewYork), slot("7 AM", 18, rain: 0, epoch: noonInNewYork + 19 * 3600)],
+            now: now,
+            timeZone: newYork
+        )
+
+        XCTAssertEqual(advice?.bestTimeLabel, "7 AM")
+        XCTAssertEqual(advice?.bestTimeIsTomorrow, true)
+    }
+
+    func testTodayAndTomorrowAreTheCitysNotTheDevices() {
+        // 11 PM in Tokyo is 10 AM in New York and 2 PM UTC; 1 AM Tokyo is still the same day in both
+        // of those, but tomorrow in Tokyo.
+        let elevenPMTokyo = noonInNewYork - 2 * 3600
+        let advice = WalkAdvisor.advice(
+            currentTempC: 18,
+            upcoming: [
+                slot("11 PM", 18, rain: 90, hour: 12, epoch: elevenPMTokyo),
+                slot("1 AM", 18, rain: 0, hour: 12, epoch: elevenPMTokyo + 2 * 3600),
+            ],
+            now: Date(timeIntervalSince1970: TimeInterval(elevenPMTokyo)),
+            timeZone: TimeZone(identifier: "Asia/Tokyo")!
+        )
+
+        XCTAssertEqual(advice?.bestTimeIsTomorrow, true)
+    }
+
+    func testSlotsMoreThanADayAheadAreIgnored() {
+        // Three-hourly slots: only one dry slot, 27 hours out.
+        let advice = WalkAdvisor.advice(
+            currentTempC: 18,
+            upcoming: [
+                slot("12 PM", 18, rain: 90, epoch: noonInNewYork),
+                slot("3 PM", 18, rain: 90, epoch: noonInNewYork + 3 * 3600),
+                slot("3 PM", 18, rain: 0, epoch: noonInNewYork + 27 * 3600),
+            ],
+            now: Date(timeIntervalSince1970: TimeInterval(noonInNewYork)),
+            timeZone: newYork
+        )
+
+        XCTAssertEqual(advice?.rating, .poor)
+        XCTAssertNil(advice?.bestTimeLabel)
+    }
+
+    func testASlotWithoutATimestampIsNeverMarkedTomorrow() {
+        let advice = WalkAdvisor.advice(
+            currentTempC: 18,
+            upcoming: [slot("12 PM", 18, rain: 90), slot("7 AM", 18, rain: 0)],
+            now: Date(timeIntervalSince1970: TimeInterval(noonInNewYork)),
+            timeZone: newYork
+        )
+
+        XCTAssertEqual(advice?.bestTimeIsTomorrow, false)
+    }
+
+    // MARK: - Dropping past slots
+
+    func testPastSlotsAreDroppedAndTheOneInProgressIsKept() {
+        let slots = (0 ..< 5).map { slot("\($0)", 18, rain: 0, hour: 12, epoch: noonInNewYork + ($0 - 2) * 3600) }
+
+        let upcoming = slots.upcoming(from: Date(timeIntervalSince1970: TimeInterval(noonInNewYork + 1800)))
+
+        XCTAssertEqual(upcoming.map(\.timeLabel), ["2", "3", "4"])
+    }
+
+    func testThreeHourlySlotsKeepTheBlockInProgress() {
+        let slots = (0 ..< 4).map { slot("\($0)", 18, rain: 0, hour: 12, epoch: noonInNewYork + $0 * 3 * 3600) }
+
+        let upcoming = slots.upcoming(from: Date(timeIntervalSince1970: TimeInterval(noonInNewYork + 4 * 3600)))
+
+        XCTAssertEqual(upcoming.map(\.timeLabel), ["1", "2", "3"])
+    }
+
+    func testAForecastThatHasNotStartedYetIsKeptWhole() {
+        let slots = (0 ..< 3).map { slot("\($0)", 18, rain: 0, hour: 12, epoch: noonInNewYork + $0 * 3600) }
+
+        XCTAssertEqual(slots.upcoming(from: Date(timeIntervalSince1970: TimeInterval(noonInNewYork - 600))), slots)
+    }
+
+    func testSlotsWithoutTimestampsAreKept() {
+        let slots = [slot("3 PM", 18, rain: 0), slot("6 PM", 18, rain: 0)]
+
+        XCTAssertEqual(slots.upcoming(from: Date()), slots)
+    }
+
     private func slot(
         _ label: String,
         _ temp: Double,
         rain: Int,
         units: WeatherUnits = .metric,
         pavement: Double? = nil,
-        hour: Int? = nil
+        hour: Int? = nil,
+        epoch: Int? = nil
     ) -> HourlySlot {
         HourlySlot(
             timeLabel: label,
@@ -126,7 +234,8 @@ final class WalkAdvisorTests: XCTestCase {
             units: units,
             precipitationChance: rain,
             pavementTemperature: pavement,
-            localHour: hour ?? Self.hourOf(label)
+            localHour: hour ?? Self.hourOf(label),
+            epochSeconds: epoch
         )
     }
 

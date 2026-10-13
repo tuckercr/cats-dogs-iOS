@@ -49,8 +49,10 @@ Requires **iOS 17+**.
      the pets' voice. Tap it for today's hourly detail. The art is drawn in code as a placeholder,
      isolated in `PetScene`.
    - **Best walk time**: Great, Okay, Stay in, Paws hot or Too cold, with the first good window
-     between 7 AM and 8 PM. Hot pavement (estimated 52 °C / 125 °F) counts as paws hot even on a
-     mild day.
+     between 7 AM and 8 PM in the next 24 hours, marked "Tomorrow" when it falls on the city's next
+     day. Hot pavement (estimated 52 °C / 125 °F) counts as paws hot even on a mild day. Hours that
+     have already passed are dropped when the screen is drawn, so an older cached forecast never
+     suggests a time in the past.
    - **Hourly**: the next 24 hours, with rain chance. Cities without coordinates fall back to
      OpenWeatherMap, which is 3-hourly, so the strip spans three days for them.
    - **Today**: feels like, humidity, wind, visibility, cloud cover, UV index (daytime only),
@@ -200,7 +202,7 @@ Ported from Android:
 - `NotificationWorkerLogicTests` — notification content, permission and retry behaviour, "today" in the city's time zone
 - `OpenMeteoForecastTests` — hour filtering, city time zones (including half-hour zones and DST), WMO codes, UV, pavement heat
 - `RadarTests` — RainViewer timeline parsing, tile URLs, load-once and retry
-- `PetMoodTests`, `WalkAdvisorTests` — mood mapping, walk ratings including night hours and pavement heat
+- `PetMoodTests`, `WalkAdvisorTests` — mood mapping, walk ratings including night hours and pavement heat, today vs tomorrow in the city's time zone, dropping past hours
 - `CityListViewModelTests` — loading and legacy migration, add (with geocoding and de-duplication), remove, set active, reorder
 - `WeatherForecastViewModelTests` — request routing, cache-first display, error mapping, silent background refresh, and races between overlapping requests
 - `GeoLocationViewModelTests` — debounced search, latest-input-wins, suggestion pinning, reset

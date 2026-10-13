@@ -7,3 +7,6 @@ xcuserdata/
 
 # Reference clone (local only)
 .android-reference/
+
+# Firebase config — download from the Firebase console; Firebase stays off without it
+Cats&Dogs/GoogleService-Info.plist
