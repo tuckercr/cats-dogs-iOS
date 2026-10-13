@@ -6,7 +6,9 @@ struct WalkCard: View {
 
     private var detail: String {
         if advice.rating == .great { return "Now is a great time" }
-        if let best = advice.bestTimeLabel { return "Around \(best)" }
+        if let best = advice.bestTimeLabel {
+            return advice.bestTimeIsTomorrow ? "Tomorrow around \(best)" : "Around \(best)"
+        }
         return "No good window soon"
     }
 

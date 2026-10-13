@@ -67,3 +67,15 @@ struct DayForecast: Codable, Equatable, Identifiable {
     /// Peak UV index across the day's slots; nil when the source doesn't provide UV.
     var uvIndexMax: Double? = nil
 }
+
+extension Array where Element == HourlySlot {
+    /// Drops slots that are already over, keeping the one in progress. Past hours are only removed
+    /// when a forecast is downloaded, so a cached forecast, a failed refresh or an app left open for
+    /// hours would otherwise start in the past. Keeping from the last slot that started at or before
+    /// `now` works for hourly and 3-hourly data alike. Slots without a timestamp are kept.
+    func upcoming(from now: Date) -> [HourlySlot] {
+        let nowEpoch = Int(now.timeIntervalSince1970)
+        guard let current = lastIndex(where: { ($0.epochSeconds ?? .max) <= nowEpoch }) else { return self }
+        return Array(self[current...])
+    }
+}
