@@ -67,6 +67,11 @@ final class RadarTests: XCTestCase {
         frames: [RadarFrame(timeEpochSeconds: 1, path: "/a", isForecast: false)]
     )
 
+    private let laterTimeline = RadarTimeline(
+        host: "https://example.com",
+        frames: [RadarFrame(timeEpochSeconds: 2, path: "/b", isForecast: false)]
+    )
+
     func testLoadsTheTimelineOnceAndIgnoresLaterLoads() async {
         let calls = Counter()
         let timeline = sampleTimeline
@@ -84,6 +89,52 @@ final class RadarTests: XCTestCase {
         XCTAssertEqual(viewModel.timeline, .success(sampleTimeline))
         let count = await calls.value
         XCTAssertEqual(count, 1)
+    }
+
+    func testAFreshTimelineIsNotFetchedAgain() async {
+        let source = TimelineSource([sampleTimeline, laterTimeline])
+        var clock = Date(timeIntervalSince1970: 1_000_000)
+        let viewModel = RadarViewModel(fetchTimeline: { try await source.next() }, now: { clock })
+        viewModel.load()
+        await waitUntil { viewModel.timeline.successValue != nil }
+
+        clock += RadarViewModel.staleAfter - 1
+        viewModel.load()
+        await settle()
+
+        XCTAssertEqual(viewModel.timeline, .success(sampleTimeline))
+        XCTAssertEqual(source.calls, 1)
+    }
+
+    func testAStaleTimelineIsRefreshedWhileTheOldOneStaysOnScreen() async {
+        let source = TimelineSource([sampleTimeline, laterTimeline])
+        var clock = Date(timeIntervalSince1970: 1_000_000)
+        let viewModel = RadarViewModel(fetchTimeline: { try await source.next() }, now: { clock })
+        viewModel.load()
+        await waitUntil { viewModel.timeline.successValue != nil }
+
+        clock += 5 * 3600
+        viewModel.load()
+
+        XCTAssertEqual(viewModel.timeline, .success(sampleTimeline), "No loading state while refreshing")
+        await waitUntil { viewModel.timeline == .success(self.laterTimeline) }
+    }
+
+    func testAFailedRefreshKeepsTheOldTimelineAndTriesAgainLater() async {
+        let source = TimelineSource([sampleTimeline, nil, laterTimeline])
+        var clock = Date(timeIntervalSince1970: 1_000_000)
+        let viewModel = RadarViewModel(fetchTimeline: { try await source.next() }, now: { clock })
+        viewModel.load()
+        await waitUntil { viewModel.timeline.successValue != nil }
+
+        clock += RadarViewModel.staleAfter
+        viewModel.load()
+        await waitUntil { source.calls == 2 }
+        await settle()
+        XCTAssertEqual(viewModel.timeline, .success(sampleTimeline))
+
+        viewModel.load()
+        await waitUntil { viewModel.timeline == .success(self.laterTimeline) }
     }
 
     func testAFailedLoadShowsARetryableErrorAndRetryRecovers() async {
@@ -113,4 +164,19 @@ private actor Flag {
     private(set) var value: Bool
     init(_ value: Bool) { self.value = value }
     func set(_ newValue: Bool) { value = newValue }
+}
+
+/// Serves timelines in order; nil throws, as a network failure would.
+@MainActor
+private final class TimelineSource {
+    private var queue: [RadarTimeline?]
+    private(set) var calls = 0
+
+    init(_ queue: [RadarTimeline?]) { self.queue = queue }
+
+    func next() throws -> RadarTimeline {
+        calls += 1
+        guard !queue.isEmpty, let timeline = queue.removeFirst() else { throw RadarError.network }
+        return timeline
+    }
 }
