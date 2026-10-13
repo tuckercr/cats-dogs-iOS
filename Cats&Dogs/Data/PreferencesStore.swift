@@ -14,6 +14,7 @@ final class PreferencesStore {
     private let weatherCacheKey = "weather_cache"
     private let forecastCacheKey = "forecast_cache"
     private let unitOverrideKey = "unit_override"
+    private let shareUsageStatisticsKey = "share_usage_statistics"
 
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -58,6 +59,11 @@ final class PreferencesStore {
         return UnitOverride(rawValue: raw) ?? .system
     }
 
+    /// The user's analytics opt-out. On until they turn it off.
+    var shareUsageStatistics: Bool {
+        defaults.object(forKey: shareUsageStatisticsKey) as? Bool ?? true
+    }
+
     func setHasSeenWelcome(_ value: Bool) {
         defaults.set(value, forKey: hasSeenWelcomeKey)
     }
@@ -86,6 +92,10 @@ final class PreferencesStore {
 
     func setUnitOverride(_ override: UnitOverride) {
         defaults.set(override.rawValue, forKey: unitOverrideKey)
+    }
+
+    func setShareUsageStatistics(_ value: Bool) {
+        defaults.set(value, forKey: shareUsageStatisticsKey)
     }
 
     func cachedWeather(for locationKey: String) -> CurrentWeather? {

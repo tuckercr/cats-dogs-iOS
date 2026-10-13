@@ -35,6 +35,9 @@ New API keys can take up to two hours to activate.
 
 `Secrets.plist` is gitignored so your key is never committed.
 
+Firebase is optional. Without `GoogleService-Info.plist` the app builds and runs normally, with
+analytics off and Remote Config on its built-in defaults. See [Firebase](#firebase).
+
 Requires **iOS 17+**.
 
 ## App flow
@@ -142,15 +145,16 @@ which Xcode merges with the generated Info.plist.
 | Background work | `BackgroundTasks` (`BGAppRefreshTask`) via SwiftUI `.backgroundTask` |
 | APIs | OpenWeatherMap `/weather`, `/forecast` and Geocoding (free tier); Open-Meteo; RainViewer; OpenStreetMap tiles |
 | Fonts | Baloo 2 for display and title text (SIL OFL, licence bundled) |
-| Dependencies | None — Apple frameworks only |
+| Analytics and config | Firebase Analytics (`FirebaseAnalyticsCore`) and Remote Config via Swift Package Manager, both optional |
+| Dependencies | Firebase iOS SDK 12.x; everything else is Apple frameworks |
 
 ```
 Cats&Dogs/
   Config/      API key loading
-  Data/        Repositories, PreferencesStore
+  Data/        Repositories, PreferencesStore, Remote Config
   Domain/      Units and unit override
   Models/      Weather and radar models, SavedLocation, CitySuggestion, LoadingState
-  Services/    API clients, DTOs, forecast aggregation, notifications, background refresh
+  Services/    API clients, DTOs, forecast aggregation, notifications, background refresh, analytics
   Resources/   Fonts
   Utilities/   Formatting, error messages, brand fonts and colours
   ViewModels/
@@ -171,16 +175,18 @@ Cats&Dogs/
 | Open-Meteo forecast for cities with coordinates | ✅ | ✅ |
 | All times in the city's own time zone | ✅ | ✅ |
 | Rest of week + day detail sheet | ✅ | ✅ |
-| Animated RainViewer radar | ✅ speed from Remote Config | ✅ fixed 850 ms per frame |
+| Animated RainViewer radar | ✅ speed from Remote Config | ✅ speed from Remote Config |
 | Wide layout for landscape and tablets | ✅ | ✅ |
 | Branding: brand blue, gold accent, Baloo 2, themed icon | ✅ | ✅ tinted icon on iOS 18+ |
 | Per-city cache, silent refresh on foreground | ✅ | ✅ |
 | Settings: units, permissions, clear cache, about | ✅ | ✅ |
 | Manage locations: set active, reorder, delete | ✅ | ✅ |
 | Daily notifications at 9 / 13 / 19 | ✅ fetched at send time | ✅ text from the latest background refresh |
-| Periodic background weather refresh | ✅ WorkManager, every 30 min | ✅ `BGAppRefreshTask`, when iOS allows |
+| Periodic background weather refresh | ✅ WorkManager, every 30 min (Remote Config) | ✅ `BGAppRefreshTask`, no sooner than the Remote Config interval |
 | Follows the OS temperature-unit preference | ✅ Android 14+ | ⚠️ region-based only |
-| Analytics, Crashlytics, Remote Config (Firebase) | ✅ optional | ❌ |
+| Firebase Analytics, with kill switch and user opt-out | ✅ optional | ✅ optional |
+| Firebase Remote Config | ✅ optional | ✅ optional |
+| Crashlytics | ✅ optional | ❌ Xcode Organizer crash reports instead |
 | View-model unit tests | ✅ | ✅ |
 | UI tests in CI | ✅ Compose UI tests | ❌ |
 | Release minification | ✅ R8 | n/a |
@@ -205,14 +211,16 @@ Ported from Android:
 - `WeatherForecastViewModelTests` — request routing, cache-first display, error mapping, silent background refresh, and races between overlapping requests
 - `GeoLocationViewModelTests` — debounced search, latest-input-wins, suggestion pinning, reset
 - `LocationPermissionViewModelTests` — denied, located and failed states
-- `SettingsViewModelTests` — unit override persistence, clear cache, permission requests
-- `WelcomeViewModelTests` — onboarding flags, including installs that predate the notification step
+- `SettingsViewModelTests` — unit override persistence, clear cache, permission requests, usage-sharing opt-out
+- `WelcomeViewModelTests` — onboarding flags, including installs that predate the notification step, and the onboarding-complete event
 
 iOS only:
 
 - `WeatherBackgroundRefresherTests` — background refresh caching, notification rescheduling and retry timing
 - `PreferencesStoreTests` — per-city cache round trip, eviction when a city is removed, older cache format
 - `WeatherFormattingTests` — sunrise/sunset in the city's time zone, UV categories
+- `AnalyticsRepositoryTests` — the three analytics gates and pushing the opt-out into the SDK
+- `RemoteConfigRepositoryTests` — defaults, the refresh-interval floor and radar-speed limits
 
 View-model tests run against real repositories with scripted API fakes, and a `PreferencesStore` backed
 by a throwaway `UserDefaults` suite, so they never touch the app's real data. Shared helpers (including
@@ -234,6 +242,55 @@ Add the same OpenWeather API key used for Android as a repository secret:
 2. Create secret **`OWM_API_KEY`** with your key
 
 At build time the workflow writes that value into `Secrets.plist` (the file stays gitignored locally).
+
+Optionally add **`GOOGLE_SERVICE_INFO_PLIST`**, the base64 of `GoogleService-Info.plist`
+(`base64 -i "Cats&Dogs/GoogleService-Info.plist" | pbcopy`), to build CI with Firebase included.
+Without it CI builds with Firebase switched off. Unit tests never start Firebase either way.
+
+## Firebase
+
+Both apps share the Firebase project **`cats-dogs-weather`** ("Cats and Dogs"), with Google Analytics
+linked. The iOS app is registered as `com.tuckercr.Cats-Dogs`.
+
+To build with Firebase, download `GoogleService-Info.plist` for the iOS app (Firebase console →
+Project settings → Your apps, or `firebase apps:sdkconfig IOS <app id> --project cats-dogs-weather`)
+and put it in `Cats&Dogs/`. It is git-ignored; the synchronized folder picks it up with no project
+change. Without it, Firebase is never started.
+
+Remote Config parameters are defined and deployed from the Android repo
+(`firebase/remoteconfig.template.json`), so both platforms read the same values:
+
+| Key | Default | Used for |
+|---|---|---|
+| `weather_refresh_interval_minutes` | 30 (minimum 15) | Earliest next background refresh |
+| `radar_frame_interval_ms` | 850 (100–5000, otherwise the default) | Radar animation speed |
+| `analytics_enabled` | true | Kill switch for every analytics event |
+
+### Analytics
+
+The events and parameters match Android, so both platforms report into the same dashboards:
+
+| Event | Parameters | When |
+|---|---|---|
+| `onboarding_complete` | — | The last onboarding step (location) finished or was skipped |
+| `city_added` | — | A new city was saved (re-adding an existing one doesn't count) |
+| `settings_opened` | — | Settings opened from the gear |
+| `weather_error` | `error_key` (e.g. `offline`, `city_not_found`) | A current-weather or forecast fetch failed, even if cached data hid the error |
+
+An event is sent only when all three gates are open:
+
+1. Firebase is configured.
+2. The Remote Config kill switch `analytics_enabled` is on.
+3. The user hasn't turned off **Settings → Privacy → Share usage statistics** (on by default). This
+   is also enforced in the SDK with `setAnalyticsCollectionEnabled`, so Firebase's automatic events
+   stop too. Changing it isn't tracked, and clearing the cache keeps the choice.
+
+The app links `FirebaseAnalyticsCore`, so no advertising identifier or ads SDK is included, and
+`GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS` is off. Firebase ships its own privacy
+manifests; the App Store privacy answers should declare product interaction data, not linked to
+identity and not used for tracking.
+
+Firebase 13 needs Xcode 26.1 (Swift 6.2.1). The project stays on 12.x until CI moves off Xcode 16.4.
 
 ## Credits
 

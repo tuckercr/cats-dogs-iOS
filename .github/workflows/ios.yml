@@ -41,6 +41,17 @@ jobs:
             /usr/libexec/PlistBuddy -c "Set :OWM_API_KEY $OWM_API_KEY" "Cats&Dogs/Secrets.plist"
           fi
 
+      # GoogleService-Info.plist is git-ignored. Firebase is optional, so builds without the secret
+      # simply run with analytics and Remote Config switched off.
+      # To encode: base64 -i "Cats&Dogs/GoogleService-Info.plist" | pbcopy
+      - name: Restore GoogleService-Info.plist
+        env:
+          GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+        run: |
+          if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > "Cats&Dogs/GoogleService-Info.plist"
+          fi
+
       - name: Build and test
         run: |
           set -o pipefail

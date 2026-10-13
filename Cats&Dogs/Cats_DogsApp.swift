@@ -17,6 +17,7 @@ struct Cats_DogsApp: App {
     init() {
         BrandAppearance.apply()
         FirebaseSetup.configureIfAvailable()
+        AnalyticsRepository.shared.applyUsageSharingPreference()
         // Start the Remote Config fetch early so the values are ready by the next launch.
         _ = RemoteConfigRepository.shared
     }

@@ -34,6 +34,29 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(preferences.reopened().unitOverride, .metric)
     }
 
+    func testUsageSharingIsOnByDefault() {
+        XCTAssertTrue(SettingsViewModel(preferences: preferences.store).shareUsageStatistics)
+    }
+
+    func testTurningOffUsageSharingPersistsAndAppliesIt() {
+        var applied = 0
+        let viewModel = SettingsViewModel(preferences: preferences.store, applyUsageSharing: { applied += 1 })
+
+        viewModel.setShareUsageStatistics(false)
+
+        XCTAssertFalse(viewModel.shareUsageStatistics)
+        XCTAssertFalse(preferences.reopened().shareUsageStatistics)
+        XCTAssertEqual(applied, 1)
+    }
+
+    func testClearCacheKeepsTheUsageSharingChoice() {
+        preferences.store.setShareUsageStatistics(false)
+
+        SettingsViewModel(preferences: preferences.store).clearCache()
+
+        XCTAssertFalse(preferences.reopened().shareUsageStatistics)
+    }
+
     func testClearCacheRemovesCachedWeatherAndForecast() async {
         preferences.store.setCachedWeather(await makeCurrentWeather(), for: "austin")
         preferences.store.setCachedForecast(await makeForecast(), for: "austin")
@@ -134,7 +157,8 @@ final class SettingsViewModelTests: XCTestCase {
             locationStatus: { location },
             notificationStatus: { notifications() },
             requestNotificationAuthorization: { onRequest() },
-            rescheduleNotifications: { onReschedule() }
+            rescheduleNotifications: { onReschedule() },
+            applyUsageSharing: {}
         )
     }
 }

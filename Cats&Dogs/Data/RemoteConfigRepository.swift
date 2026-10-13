@@ -16,6 +16,10 @@ final class RemoteConfigRepository {
     nonisolated static let defaultRadarFrameIntervalMs = 850
     nonisolated static let radarFrameIntervalRangeMs = 100 ... 5000
 
+    /// Kill switch: false drops every analytics event on every install, without an app update.
+    nonisolated static let keyAnalyticsEnabled = "analytics_enabled"
+    nonisolated static let defaultAnalyticsEnabled = true
+
     private let remoteConfig: RemoteConfig?
 
     private init() {
@@ -31,6 +35,7 @@ final class RemoteConfigRepository {
         remoteConfig.setDefaults([
             Self.keyRefreshInterval: NSNumber(value: Self.defaultRefreshIntervalMinutes),
             Self.keyRadarFrameInterval: NSNumber(value: Self.defaultRadarFrameIntervalMs),
+            Self.keyAnalyticsEnabled: NSNumber(value: Self.defaultAnalyticsEnabled),
         ])
         // Activated values apply from the next read; this launch keeps what was last activated.
         remoteConfig.fetchAndActivate()
@@ -45,6 +50,14 @@ final class RemoteConfigRepository {
     var radarFrameInterval: Duration {
         let milliseconds = remoteConfig?[Self.keyRadarFrameInterval].numberValue.intValue
         return Self.radarFrameInterval(milliseconds: milliseconds)
+    }
+
+    var analyticsEnabled: Bool {
+        // A key with no value at all reads as false; treat that as "not set" rather than "off".
+        guard let value = remoteConfig?[Self.keyAnalyticsEnabled], value.source != .static else {
+            return Self.defaultAnalyticsEnabled
+        }
+        return value.boolValue
     }
 
     nonisolated static func refreshInterval(minutes: Int?) -> TimeInterval {

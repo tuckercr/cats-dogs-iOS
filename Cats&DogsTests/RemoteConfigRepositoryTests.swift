@@ -35,5 +35,6 @@ final class RemoteConfigRepositoryTests: XCTestCase {
         XCTAssertFalse(FirebaseSetup.isConfigured)
         XCTAssertEqual(RemoteConfigRepository.shared.refreshInterval, 30 * 60)
         XCTAssertEqual(RemoteConfigRepository.shared.radarFrameInterval, .milliseconds(850))
+        XCTAssertTrue(RemoteConfigRepository.shared.analyticsEnabled)
     }
 }
