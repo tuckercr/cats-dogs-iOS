@@ -23,6 +23,8 @@ final class RemoteConfigRepository {
 
     /// Hides the radar card if RainViewer or the OpenStreetMap tiles become unavailable.
     nonisolated static let keyRadarEnabled = "radar_enabled"
+    /// Hides the "time to walk the dog" card.
+    nonisolated static let keyWalkCardEnabled = "walk_card_enabled"
     /// Off sends forecasts for cities with coordinates to OpenWeatherMap instead of Open-Meteo.
     nonisolated static let keyOpenMeteoEnabled = "open_meteo_enabled"
 
@@ -43,6 +45,7 @@ final class RemoteConfigRepository {
             Self.keyRadarFrameInterval: NSNumber(value: Self.defaultRadarFrameIntervalMs),
             Self.keyAnalyticsEnabled: NSNumber(value: Self.defaultAnalyticsEnabled),
             Self.keyRadarEnabled: NSNumber(value: true),
+            Self.keyWalkCardEnabled: NSNumber(value: true),
             Self.keyOpenMeteoEnabled: NSNumber(value: true),
         ])
         // Activated values apply from the next read; this launch keeps what was last activated.
@@ -63,6 +66,8 @@ final class RemoteConfigRepository {
     var analyticsEnabled: Bool { Self.flag(Self.keyAnalyticsEnabled) }
 
     var radarEnabled: Bool { Self.flag(Self.keyRadarEnabled) }
+
+    var walkCardEnabled: Bool { Self.flag(Self.keyWalkCardEnabled) }
 
     /// Read from the forecast fetch, which isn't on the main actor. Remote Config is thread-safe.
     nonisolated static var openMeteoEnabled: Bool { flag(keyOpenMeteoEnabled) }

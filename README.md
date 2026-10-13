@@ -266,6 +266,7 @@ Remote Config parameters are defined and deployed from the Android repo
 | `radar_frame_interval_ms` | 850 (100–5000, otherwise the default) | Radar animation speed |
 | `analytics_enabled` | true | Kill switch for every analytics event, and SDK collection |
 | `radar_enabled` | true | Hides the radar card if RainViewer or the OpenStreetMap tiles become unavailable |
+| `walk_card_enabled` | true | Hides the "time to walk the dog" card |
 | `open_meteo_enabled` | true | Off sends forecasts for cities with coordinates to OpenWeatherMap (3-hourly) instead of Open-Meteo |
 
 A missing or unreadable value always falls back to the default, so a console mistake can't break the

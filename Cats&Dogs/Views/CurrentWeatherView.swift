@@ -322,7 +322,7 @@ private struct CurrentWeatherContent: View {
     @ViewBuilder
     private var heroSection: some View {
         heroCard
-        if let walkAdvice {
+        if RemoteConfigRepository.shared.walkCardEnabled, let walkAdvice {
             WalkCard(advice: walkAdvice)
         }
     }
