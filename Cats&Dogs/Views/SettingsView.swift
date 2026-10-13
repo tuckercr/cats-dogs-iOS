@@ -68,6 +68,20 @@ struct SettingsView: View {
                 }
             }
 
+            Section {
+                Toggle(
+                    "Share usage statistics",
+                    isOn: Binding(
+                        get: { settingsViewModel.shareUsageStatistics },
+                        set: { settingsViewModel.setShareUsageStatistics($0) }
+                    )
+                )
+            } header: {
+                Text("Privacy")
+            } footer: {
+                Text("Anonymous counts of which features get used, to help improve Cats & Dogs. Never your location.")
+            }
+
             Section("About") {
                 Button("Weather data by OpenWeather") {
                     openURL(URL(string: "https://openweathermap.org/")!)

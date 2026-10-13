@@ -11,12 +11,27 @@ final class WeatherForecastViewModelTests: XCTestCase {
     private var preferences: IsolatedPreferences!
     private var api: ScriptedWeatherAPI!
     private var viewModel: WeatherForecastViewModel!
+    private var loggedErrors: [String] = []
+    private var settingsOpenedCount = 0
+    private var foregroundRefreshWindow: TimeInterval = 0
+    private var clock = Date(timeIntervalSince1970: 1_700_000_000)
 
     override func setUp() async throws {
         preferences = IsolatedPreferences()
         preferences.store.setUnitOverride(.metric)
         api = ScriptedWeatherAPI()
-        viewModel = WeatherForecastViewModel(preferences: preferences.store, weatherRepository: api.repository)
+        loggedErrors = []
+        settingsOpenedCount = 0
+        foregroundRefreshWindow = 0
+        clock = Date(timeIntervalSince1970: 1_700_000_000)
+        viewModel = WeatherForecastViewModel(
+            preferences: preferences.store,
+            weatherRepository: api.repository,
+            onError: { [unowned self] in loggedErrors.append($0) },
+            onSettingsOpened: { [unowned self] in settingsOpenedCount += 1 },
+            foregroundRefreshMinInterval: { [unowned self] in foregroundRefreshWindow },
+            now: { [unowned self] in clock }
+        )
     }
 
     override func tearDown() async throws {
@@ -214,6 +229,96 @@ final class WeatherForecastViewModelTests: XCTestCase {
         await waitUntil { !self.viewModel.isRefreshing }
 
         XCTAssertEqual(viewModel.currentWeather.successValue?.temperature, 5)
+    }
+
+    // MARK: - Foreground refresh throttle
+
+    func testForegroundRefreshSkipsACityFetchedWithinTheWindow() async {
+        foregroundRefreshWindow = 10 * 60
+        viewModel.refreshCurrent(location: austin)
+        viewModel.refreshForecast(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+        clock += 9 * 60
+
+        viewModel.backgroundRefreshCurrent(location: austin)
+        viewModel.backgroundRefreshForecast(location: austin)
+        await settle()
+
+        XCTAssertEqual(api.currentRequests.count, 1)
+        XCTAssertEqual(api.forecastRequests.count, 1)
+    }
+
+    func testForegroundRefreshRunsOnceTheWindowHasPassed() async {
+        foregroundRefreshWindow = 10 * 60
+        viewModel.refreshCurrent(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+        clock += 11 * 60
+
+        viewModel.backgroundRefreshCurrent(location: austin)
+        await waitUntil { self.api.completedCurrentRequests == 2 }
+
+        XCTAssertEqual(api.currentRequests.count, 2)
+    }
+
+    func testForegroundRefreshIsNeverSkippedWithAZeroWindow() async {
+        viewModel.refreshCurrent(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+
+        viewModel.backgroundRefreshCurrent(location: austin)
+        await waitUntil { self.api.completedCurrentRequests == 2 }
+
+        XCTAssertEqual(api.currentRequests.count, 2)
+    }
+
+    func testExplicitRefreshIsNeverSkipped() async {
+        foregroundRefreshWindow = 10 * 60
+        viewModel.refreshCurrent(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+
+        viewModel.refreshCurrent(location: austin)
+        await waitUntil { self.api.completedCurrentRequests == 2 }
+
+        XCTAssertEqual(api.currentRequests.count, 2)
+    }
+
+    func testAFailedFetchDoesNotStartTheWindow() async {
+        foregroundRefreshWindow = 10 * 60
+        api.onCurrent = { _ in throw self.offline }
+        viewModel.refreshCurrent(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+
+        viewModel.backgroundRefreshCurrent(location: austin)
+        await waitUntil { self.api.completedCurrentRequests == 2 }
+
+        XCTAssertEqual(api.currentRequests.count, 2)
+    }
+
+    // MARK: - Analytics
+
+    func testFailuresAreReportedEvenWhenCachedDataHidesThem() async {
+        preferences.store.setCachedWeather(await makeCurrentWeather(temperature: 5), for: austin.cacheKey)
+        api.onCurrent = { _ in throw self.offline }
+        api.onForecast = { _ in throw self.offline }
+
+        viewModel.refreshCurrent(location: austin)
+        viewModel.refreshForecast(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+
+        XCTAssertEqual(loggedErrors, ["offline", "offline"])
+    }
+
+    func testSuccessfulRefreshReportsNoError() async {
+        viewModel.refreshCurrent(location: austin)
+        viewModel.refreshForecast(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+
+        XCTAssertEqual(loggedErrors, [])
+    }
+
+    func testLogSettingsOpenedReportsTheEvent() {
+        viewModel.logSettingsOpened()
+
+        XCTAssertEqual(settingsOpenedCount, 1)
     }
 
     func testNetworkErrorIsSuppressedWhenCachedForecastIsAvailable() async {

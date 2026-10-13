@@ -13,13 +13,16 @@ final class CityListViewModel {
 
     private let preferences: PreferencesStore
     private let geocodingRepository: GeocodingRepository
+    private let onCityAdded: @MainActor () -> Void
 
     init(
         preferences: PreferencesStore? = nil,
-        geocodingRepository: GeocodingRepository? = nil
+        geocodingRepository: GeocodingRepository? = nil,
+        onCityAdded: @escaping @MainActor () -> Void = { AnalyticsRepository.shared.logCityAdded() }
     ) {
         self.preferences = preferences ?? .shared
         self.geocodingRepository = geocodingRepository ?? GeocodingRepository()
+        self.onCityAdded = onCityAdded
         loadFromPreferences()
     }
 
@@ -35,6 +38,7 @@ final class CityListViewModel {
         let newIndex = updated.count - 1
         locations = updated
         activeIndex = newIndex
+        onCityAdded()
         preferences.setSavedLocations(updated)
         preferences.setActiveLocationIndex(newIndex)
 

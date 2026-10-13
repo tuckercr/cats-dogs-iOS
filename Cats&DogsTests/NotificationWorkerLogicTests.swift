@@ -65,6 +65,17 @@ final class NotificationWorkerLogicTests: XCTestCase {
         XCTAssertTrue(posted.isEmpty)
     }
 
+    func testRemoteConfigCanSwitchOffTheDailyNotificationsWithoutFailingTheRefresh() async {
+        var posted: [(String, String)] = []
+        var logic = makeLogic(postNotification: { posted.append(($0, $1)) })
+        logic.dailyNotificationsEnabled = { false }
+
+        let result = await logic.doWork()
+
+        XCTAssertEqual(result, .success)
+        XCTAssertTrue(posted.isEmpty)
+    }
+
     func testBuildNotificationContentUsesForecastHighLow() {
         let weather = Self.sampleWeather()
         let forecast = DayForecast(

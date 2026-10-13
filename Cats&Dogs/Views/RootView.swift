@@ -41,7 +41,10 @@ struct RootView: View {
                             geoViewModel: geoViewModel,
                             weatherViewModel: weatherViewModel,
                             unitOverride: settingsViewModel.unitOverride,
-                            onOpenSettings: { path.append(.settings) }
+                            onOpenSettings: {
+                                weatherViewModel.logSettingsOpened()
+                                path.append(.settings)
+                            }
                         )
                         .navigationDestination(for: AppScreen.self) { screen in
                             switch screen {

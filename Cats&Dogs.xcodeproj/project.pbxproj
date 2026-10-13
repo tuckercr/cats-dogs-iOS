@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C6F1BA032FF1000000A1B2C3 /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = C6F1BA012FF1000000A1B2C3 /* FirebaseAnalyticsCore */; };
+		C6F1BA042FF1000000A1B2C3 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = C6F1BA022FF1000000A1B2C3 /* FirebaseRemoteConfig */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		C6ACE5E72FD1E5C4008E6E91 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -53,6 +58,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C6F1BA032FF1000000A1B2C3 /* FirebaseAnalyticsCore in Frameworks */,
+				C6F1BA042FF1000000A1B2C3 /* FirebaseRemoteConfig in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -105,6 +112,8 @@
 			);
 			name = "Cats&Dogs";
 			packageProductDependencies = (
+				C6F1BA012FF1000000A1B2C3 /* FirebaseAnalyticsCore */,
+				C6F1BA022FF1000000A1B2C3 /* FirebaseRemoteConfig */,
 			);
 			productName = "Cats&Dogs";
 			productReference = C6ACE5D02FD1E5C2008E6E91 /* Cats&Dogs.app */;
@@ -161,6 +170,9 @@
 			);
 			mainGroup = C6ACE5C72FD1E5C2008E6E91;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C6F1BA002FF1000000A1B2C3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C6ACE5D12FD1E5C2008E6E91 /* Products */;
 			projectDirPath = "";
@@ -369,6 +381,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				OTHER_LDFLAGS = "-ObjC";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.tuckercr.Cats-Dogs";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -424,6 +437,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				OTHER_LDFLAGS = "-ObjC";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.tuckercr.Cats-Dogs";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -514,6 +528,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C6F1BA002FF1000000A1B2C3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.19.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C6F1BA012FF1000000A1B2C3 /* FirebaseAnalyticsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6F1BA002FF1000000A1B2C3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsCore;
+		};
+		C6F1BA022FF1000000A1B2C3 /* FirebaseRemoteConfig */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6F1BA002FF1000000A1B2C3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseRemoteConfig;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C6ACE5C82FD1E5C2008E6E91 /* Project object */;
 }

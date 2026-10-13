@@ -63,6 +63,18 @@ final class WelcomeViewModelTests: XCTestCase {
         XCTAssertTrue(preferences.reopened().locationOnboardingDone)
     }
 
+    func testOnlyTheLastOnboardingStepReportsOnboardingComplete() {
+        var completions = 0
+        let viewModel = WelcomeViewModel(preferences: preferences.store, onOnboardingComplete: { completions += 1 })
+
+        viewModel.completeWelcome()
+        viewModel.completeNotificationOnboarding()
+        XCTAssertEqual(completions, 0)
+
+        viewModel.completeLocationOnboarding()
+        XCTAssertEqual(completions, 1)
+    }
+
     /// Installs from before the notification step existed must not be sent back through onboarding.
     func testLegacyInstallThatFinishedLocationOnboardingSkipsNotificationStep() {
         preferences.store.setHasSeenWelcome(true)

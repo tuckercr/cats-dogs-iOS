@@ -9,8 +9,8 @@ import Observation
 final class RadarViewModel {
     static let shared = RadarViewModel()
 
-    /// Delay between animation frames. Android reads this from Remote Config (default 850 ms).
-    nonisolated static let frameInterval: Duration = .milliseconds(850)
+    /// Delay between animation frames, from Remote Config (default 850 ms).
+    let frameInterval: Duration
 
     /// RainViewer publishes a new frame every 10 minutes, and keeps only about two hours of them.
     nonisolated static let staleAfter: TimeInterval = 10 * 60
@@ -25,9 +25,11 @@ final class RadarViewModel {
     private var isRefreshing = false
 
     init(
+        frameInterval: Duration? = nil,
         fetchTimeline: (@Sendable () async throws -> RadarTimeline)? = nil,
         now: @escaping () -> Date = { Date() }
     ) {
+        self.frameInterval = frameInterval ?? RemoteConfigRepository.shared.radarFrameInterval
         self.fetchTimeline = fetchTimeline ?? { try await RadarRepository().timeline() }
         self.now = now
     }

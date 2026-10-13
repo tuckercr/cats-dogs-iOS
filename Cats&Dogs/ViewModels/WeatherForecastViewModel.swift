@@ -10,6 +10,14 @@ final class WeatherForecastViewModel {
 
     private let preferences: PreferencesStore
     private let weatherRepository: WeatherRepository
+    private let onError: @MainActor (_ errorKey: String) -> Void
+    private let onSettingsOpened: @MainActor () -> Void
+    private let foregroundRefreshMinInterval: () -> TimeInterval
+    private let now: () -> Date
+
+    /// When each city's data last arrived, for throttling the silent foreground refresh.
+    private var currentFetchedAt: [String: Date] = [:]
+    private var forecastFetchedAt: [String: Date] = [:]
 
     private var currentFetchGeneration = 0
     private var forecastFetchGeneration = 0
@@ -20,18 +28,36 @@ final class WeatherForecastViewModel {
 
     init(
         preferences: PreferencesStore? = nil,
-        weatherRepository: WeatherRepository? = nil
+        weatherRepository: WeatherRepository? = nil,
+        onError: @escaping @MainActor (_ errorKey: String) -> Void = {
+            AnalyticsRepository.shared.logWeatherError($0)
+        },
+        onSettingsOpened: @escaping @MainActor () -> Void = {
+            AnalyticsRepository.shared.logSettingsOpened()
+        },
+        foregroundRefreshMinInterval: @escaping () -> TimeInterval = {
+            RemoteConfigRepository.shared.foregroundRefreshMinInterval
+        },
+        now: @escaping () -> Date = { Date() }
     ) {
         self.preferences = preferences ?? .shared
         self.weatherRepository = weatherRepository ?? WeatherRepository()
+        self.onError = onError
+        self.onSettingsOpened = onSettingsOpened
+        self.foregroundRefreshMinInterval = foregroundRefreshMinInterval
+        self.now = now
     }
 
+    /// The silent refresh on returning to the foreground. Remote Config can make it skip a city that
+    /// was fetched recently; explicit refreshes are never skipped.
     func backgroundRefreshCurrent(location: SavedLocation) {
+        guard !wasFetchedRecently(currentFetchedAt[location.cacheKey]) else { return }
         Task {
             let units = resolvedUnits()
             let result = await fetchCurrent(for: location, units: units)
             if let target = currentTargetKey, target != location.cacheKey { return }
             if case .success(let weather) = result {
+                currentFetchedAt[location.cacheKey] = now()
                 currentWeather = .success(weather)
                 preferences.setLastCity(weather.cityName)
                 preferences.setCachedWeather(weather, for: location.cacheKey)
@@ -40,11 +66,13 @@ final class WeatherForecastViewModel {
     }
 
     func backgroundRefreshForecast(location: SavedLocation) {
+        guard !wasFetchedRecently(forecastFetchedAt[location.cacheKey]) else { return }
         Task {
             let units = resolvedUnits()
             let result = await fetchForecast(for: location, units: units)
             if let target = forecastTargetKey, target != location.cacheKey { return }
             if case .success(let days) = result {
+                forecastFetchedAt[location.cacheKey] = now()
                 forecast = .success(days)
                 preferences.setCachedForecast(days, for: location.cacheKey)
             }
@@ -71,10 +99,14 @@ final class WeatherForecastViewModel {
                 preferences.setLastCity(weather.cityName)
                 preferences.setCachedWeather(weather, for: location.cacheKey)
                 currentWeather = .success(weather)
+                currentFetchedAt[location.cacheKey] = now()
             case .failure(let error):
+                let errorKey = WeatherErrorMessages.errorKey(for: error)
+                onError(errorKey)
+                // Keep cached data visible if there is any; only show the error when there's nothing.
                 if cached == nil {
                     currentWeather = .error(
-                        errorKey: WeatherErrorMessages.errorKey(for: error),
+                        errorKey: errorKey,
                         canRetry: WeatherErrorMessages.canRetry(for: error)
                     )
                 }
@@ -106,10 +138,14 @@ final class WeatherForecastViewModel {
             case .success(let days):
                 preferences.setCachedForecast(days, for: location.cacheKey)
                 forecast = .success(days)
+                forecastFetchedAt[location.cacheKey] = now()
             case .failure(let error):
+                let errorKey = WeatherErrorMessages.errorKey(for: error)
+                onError(errorKey)
+                // Keep cached data visible if there is any; only show the error when there's nothing.
                 if cached == nil {
                     forecast = .error(
-                        errorKey: WeatherErrorMessages.errorKey(for: error),
+                        errorKey: errorKey,
                         canRetry: WeatherErrorMessages.canRetry(for: error)
                     )
                 }
@@ -122,6 +158,10 @@ final class WeatherForecastViewModel {
         }
     }
 
+    func logSettingsOpened() {
+        onSettingsOpened()
+    }
+
     func clearCurrentError() {
         if case .error = currentWeather {
             currentWeather = .idle
@@ -132,6 +172,12 @@ final class WeatherForecastViewModel {
         if case .error = forecast {
             forecast = .idle
         }
+    }
+
+    private func wasFetchedRecently(_ fetchedAt: Date?) -> Bool {
+        guard let fetchedAt else { return false }
+        let window = foregroundRefreshMinInterval()
+        return window > 0 && now().timeIntervalSince(fetchedAt) < window
     }
 
     private func resolvedUnits() -> WeatherUnits {

@@ -5,17 +5,20 @@ struct WeatherRepository {
     private let openMeteo: any OpenMeteoAPI
     private let timeZone: TimeZone
     private let now: @Sendable () -> Date
+    private let useOpenMeteo: @Sendable () -> Bool
 
     init(
         client: any OpenWeatherAPI = OpenWeatherClient(),
         openMeteo: any OpenMeteoAPI = OpenMeteoClient(),
         timeZone: TimeZone = .current,
-        now: @escaping @Sendable () -> Date = { Date() }
+        now: @escaping @Sendable () -> Date = { Date() },
+        useOpenMeteo: @escaping @Sendable () -> Bool = { RemoteConfigRepository.openMeteoEnabled }
     ) {
         self.client = client
         self.openMeteo = openMeteo
         self.timeZone = timeZone
         self.now = now
+        self.useOpenMeteo = useOpenMeteo
     }
 
     func fetchCurrentWeather(
@@ -55,8 +58,12 @@ struct WeatherRepository {
         latitude: Double? = nil,
         longitude: Double? = nil
     ) async -> Result<[DayForecast], Error> {
-        // Prefer Open-Meteo (true hourly, UV, pavement heat) whenever there are coordinates.
+        // Prefer Open-Meteo (true hourly, UV, pavement heat) whenever there are coordinates, unless
+        // Remote Config has switched it off; then OpenWeatherMap's 3-hourly forecast by coordinates.
         if let latitude, let longitude {
+            guard useOpenMeteo() else {
+                return await performForecastFetch(units: units, cityQuery: nil, latitude: latitude, longitude: longitude)
+            }
             do {
                 let response = try await openMeteo.forecast(latitude: latitude, longitude: longitude, units: units)
                 return .success(OpenMeteoForecast.dayForecasts(from: response, units: units, now: now()))
