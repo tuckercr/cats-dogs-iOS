@@ -1,3 +1,4 @@
+import FirebaseCore
 import FirebaseRemoteConfig
 import Foundation
 
@@ -20,6 +21,11 @@ final class RemoteConfigRepository {
     nonisolated static let keyAnalyticsEnabled = "analytics_enabled"
     nonisolated static let defaultAnalyticsEnabled = true
 
+    /// Hides the radar card if RainViewer or the OpenStreetMap tiles become unavailable.
+    nonisolated static let keyRadarEnabled = "radar_enabled"
+    /// Off sends forecasts for cities with coordinates to OpenWeatherMap instead of Open-Meteo.
+    nonisolated static let keyOpenMeteoEnabled = "open_meteo_enabled"
+
     private let remoteConfig: RemoteConfig?
 
     private init() {
@@ -36,6 +42,8 @@ final class RemoteConfigRepository {
             Self.keyRefreshInterval: NSNumber(value: Self.defaultRefreshIntervalMinutes),
             Self.keyRadarFrameInterval: NSNumber(value: Self.defaultRadarFrameIntervalMs),
             Self.keyAnalyticsEnabled: NSNumber(value: Self.defaultAnalyticsEnabled),
+            Self.keyRadarEnabled: NSNumber(value: true),
+            Self.keyOpenMeteoEnabled: NSNumber(value: true),
         ])
         // Activated values apply from the next read; this launch keeps what was last activated.
         remoteConfig.fetchAndActivate()
@@ -52,12 +60,19 @@ final class RemoteConfigRepository {
         return Self.radarFrameInterval(milliseconds: milliseconds)
     }
 
-    var analyticsEnabled: Bool {
-        // A key with no value at all reads as false; treat that as "not set" rather than "off".
-        guard let value = remoteConfig?[Self.keyAnalyticsEnabled], value.source != .static else {
-            return Self.defaultAnalyticsEnabled
-        }
-        return value.boolValue
+    var analyticsEnabled: Bool { Self.flag(Self.keyAnalyticsEnabled) }
+
+    var radarEnabled: Bool { Self.flag(Self.keyRadarEnabled) }
+
+    /// Read from the forecast fetch, which isn't on the main actor. Remote Config is thread-safe.
+    nonisolated static var openMeteoEnabled: Bool { flag(keyOpenMeteoEnabled) }
+
+    /// Every flag defaults to on. A key with no value at all reads as false, so that counts as
+    /// "not set" rather than "off".
+    private nonisolated static func flag(_ key: String) -> Bool {
+        guard FirebaseApp.app() != nil else { return true }
+        let value = RemoteConfig.remoteConfig()[key]
+        return value.source == .static ? true : value.boolValue
     }
 
     nonisolated static func refreshInterval(minutes: Int?) -> TimeInterval {

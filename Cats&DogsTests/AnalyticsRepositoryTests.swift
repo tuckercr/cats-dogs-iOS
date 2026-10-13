@@ -59,6 +59,12 @@ final class AnalyticsRepositoryTests: XCTestCase {
         XCTAssertEqual(collectionSettings, [true, false])
     }
 
+    func testKillSwitchAlsoTurnsOffSdkCollection() {
+        makeRepository(remotelyEnabled: false).applyUsageSharingPreference()
+
+        XCTAssertEqual(collectionSettings, [false])
+    }
+
     func testUsageSharingPreferenceIsNotPushedWithoutFirebase() {
         makeRepository(configured: false).applyUsageSharingPreference()
 

@@ -36,5 +36,7 @@ final class RemoteConfigRepositoryTests: XCTestCase {
         XCTAssertEqual(RemoteConfigRepository.shared.refreshInterval, 30 * 60)
         XCTAssertEqual(RemoteConfigRepository.shared.radarFrameInterval, .milliseconds(850))
         XCTAssertTrue(RemoteConfigRepository.shared.analyticsEnabled)
+        XCTAssertTrue(RemoteConfigRepository.shared.radarEnabled)
+        XCTAssertTrue(RemoteConfigRepository.openMeteoEnabled)
     }
 }

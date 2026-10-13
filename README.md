@@ -201,7 +201,7 @@ Ported from Android:
 - `ForecastAggregatorTests` — noon slot selection, multi-day grouping, rain chance, local hour, UV
 - `OpenWeatherParsingTests` — JSON decoding for API responses, including UTC offsets and rain chance
 - `WeatherUnitsTests` — imperial vs metric by region, Celsius conversion
-- `WeatherRepositoryTests` — repository mapping and error handling (fake API)
+- `WeatherRepositoryTests` — repository mapping and error handling (fake API), Open-Meteo switched off by Remote Config
 - `GeocodingRepositoryTests` — suggestion formatting and validation (fake API)
 - `NotificationWorkerLogicTests` — notification content, permission and retry behaviour, "today" in the city's time zone
 - `OpenMeteoForecastTests` — hour filtering, city time zones (including half-hour zones and DST), WMO codes, UV, pavement heat
@@ -264,7 +264,13 @@ Remote Config parameters are defined and deployed from the Android repo
 |---|---|---|
 | `weather_refresh_interval_minutes` | 30 (minimum 15) | Earliest next background refresh |
 | `radar_frame_interval_ms` | 850 (100–5000, otherwise the default) | Radar animation speed |
-| `analytics_enabled` | true | Kill switch for every analytics event |
+| `analytics_enabled` | true | Kill switch for every analytics event, and SDK collection |
+| `radar_enabled` | true | Hides the radar card if RainViewer or the OpenStreetMap tiles become unavailable |
+| `open_meteo_enabled` | true | Off sends forecasts for cities with coordinates to OpenWeatherMap (3-hourly) instead of Open-Meteo |
+
+A missing or unreadable value always falls back to the default, so a console mistake can't break the
+app. New values are fetched at most hourly; most apply on the next read, the analytics SDK switch on
+the next launch.
 
 ### Analytics
 
@@ -281,9 +287,11 @@ An event is sent only when all three gates are open:
 
 1. Firebase is configured.
 2. The Remote Config kill switch `analytics_enabled` is on.
-3. The user hasn't turned off **Settings → Privacy → Share usage statistics** (on by default). This
-   is also enforced in the SDK with `setAnalyticsCollectionEnabled`, so Firebase's automatic events
-   stop too. Changing it isn't tracked, and clearing the cache keeps the choice.
+3. The user hasn't turned off **Settings → Privacy → Share usage statistics** (on by default).
+   Changing it isn't tracked, and clearing the cache keeps the choice.
+
+Gates 2 and 3 are also enforced in the SDK with `setAnalyticsCollectionEnabled`, so Firebase's
+automatic events (sessions, screen views) stop too.
 
 The app links `FirebaseAnalyticsCore`, so no advertising identifier or ads SDK is included, and
 `GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS` is off. Firebase ships its own privacy

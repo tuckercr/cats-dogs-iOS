@@ -121,6 +121,25 @@ final class WeatherRepositoryTests: XCTestCase {
         XCTAssertEqual(slot?.uvIndex, 0)
     }
 
+    func testFetchForecastWithCoordinatesUsesOpenWeatherWhenOpenMeteoIsSwitchedOff() async {
+        let api = FakeOpenWeatherAPI()
+        let openMeteo = StubOpenMeteoAPI()
+        let repository = WeatherRepository(
+            client: api,
+            openMeteo: openMeteo,
+            timeZone: utc,
+            useOpenMeteo: { false }
+        )
+
+        _ = await repository.fetchForecast(units: .metric, latitude: 30.2672, longitude: -97.7431)
+
+        XCTAssertTrue(openMeteo.requests.isEmpty)
+        XCTAssertEqual(api.forecastCallCount, 1)
+        XCTAssertNil(api.lastForecastCityQuery)
+        XCTAssertEqual(api.lastForecastLatitude ?? 0, 30.2672, accuracy: 0.0001)
+        XCTAssertEqual(api.lastForecastLongitude ?? 0, -97.7431, accuracy: 0.0001)
+    }
+
     func testFetchForecastWithCoordinatesWorksWithoutAnOpenWeatherKey() async {
         let repository = WeatherRepository(
             client: OpenWeatherClient(apiKey: "   "),

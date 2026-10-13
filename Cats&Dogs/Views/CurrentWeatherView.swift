@@ -306,8 +306,10 @@ private struct CurrentWeatherContent: View {
             if !isWide {
                 todaySection
             }
-            SectionHeader("RADAR")
-            RadarCard(location: location, timeZone: weather.timeZone)
+            if RemoteConfigRepository.shared.radarEnabled {
+                SectionHeader("RADAR")
+                RadarCard(location: location, timeZone: weather.timeZone)
+            }
             restOfWeek
         }
         .onGeometryChange(for: CGFloat.self) { proxy in

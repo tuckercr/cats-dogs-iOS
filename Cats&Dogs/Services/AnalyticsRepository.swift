@@ -7,8 +7,9 @@ import Foundation
 /// An event is only sent when all three gates are open, as on Android:
 /// 1. Firebase is configured (`GoogleService-Info.plist` is bundled).
 /// 2. The Remote Config kill switch `analytics_enabled` is on.
-/// 3. The user hasn't turned off "Share usage statistics". That one is also enforced in the SDK, so
-///    Firebase's automatic events (sessions, screen views) stop too.
+/// 3. The user hasn't turned off "Share usage statistics".
+/// The last two are also enforced in the SDK, so Firebase's automatic events (sessions, screen views)
+/// stop too.
 @MainActor
 final class AnalyticsRepository {
     static let shared = AnalyticsRepository()
@@ -51,10 +52,11 @@ final class AnalyticsRepository {
         log(Self.eventWeatherError, parameters: [Self.paramErrorKey: errorKey])
     }
 
-    /// Pushes the user's choice into the SDK. Run at launch and whenever the setting changes.
+    /// Pushes the user's choice and the kill switch into the SDK. Run at launch and whenever the
+    /// setting changes.
     func applyUsageSharingPreference() {
         guard isConfigured() else { return }
-        setCollectionEnabled(preferences.shareUsageStatistics)
+        setCollectionEnabled(preferences.shareUsageStatistics && remotelyEnabled())
     }
 
     private func log(_ event: String, parameters: [String: Any]? = nil) {
