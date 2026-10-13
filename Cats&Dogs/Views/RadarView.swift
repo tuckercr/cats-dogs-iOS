@@ -57,9 +57,12 @@ private struct RadarMapView: View {
 
     private let radar = RadarViewModel.shared
 
+    @Environment(\.scenePhase) private var scenePhase
     @State private var baseMap: CGImage?
     /// Stitched radar overlays keyed by frame path, kept so replays are smooth.
     @State private var overlays: [String: CGImage] = [:]
+    /// The map tile the overlays were stitched for, so a new location starts from scratch.
+    @State private var overlaysTile: TileInfo?
     @State private var frameIndex = 0
     @State private var playing = true
 
@@ -97,7 +100,17 @@ private struct RadarMapView: View {
             }
             .padding(8)
         }
-        .task { radar.load() }
+        // Load now, then keep the frames current while the radar is on screen.
+        .task {
+            while !Task.isCancelled {
+                radar.load()
+                try? await Task.sleep(for: RadarViewModel.recheckInterval)
+            }
+        }
+        // Coming back after hours in the background: refresh before anyone reads an old "Now".
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { radar.load() }
+        }
         .task(id: tileInfo) {
             let tile = tileInfo
             baseMap = nil
@@ -108,15 +121,25 @@ private struct RadarMapView: View {
             baseMap = image
         }
         // Prefetch every frame's overlay once per location and timeline, keyed on those rather than
-        // the current frame, so autoplay never cancels a load. Frames nearest "now" load first.
+        // the current frame, so autoplay never cancels a load. Frames nearest "now" load first. A
+        // refreshed timeline keeps the overlays it shares with the old one and drops the rest.
         .task(id: OverlayKey(tile: tileInfo, timeline: timeline)) {
-            overlays = [:]
-            frameIndex = nowIndex
-            playing = true
-            guard let timeline else { return }
             let tile = tileInfo
+            if overlaysTile != tile {
+                overlays = [:]
+                overlaysTile = tile
+                playing = true
+            } else {
+                let paths = Set(frames.map(\.path))
+                overlays = overlays.filter { paths.contains($0.key) }
+            }
+            frameIndex = nowIndex
+            guard let timeline else { return }
             let now = nowIndex
-            let order = timeline.frames.indices.sorted { abs($0 - now) < abs($1 - now) }.map { timeline.frames[$0] }
+            let order = timeline.frames.indices
+                .sorted { abs($0 - now) < abs($1 - now) }
+                .map { timeline.frames[$0] }
+                .filter { overlays[$0.path] == nil }
             await withTaskGroup(of: (path: String, image: CGImage?).self) { group in
                 var pending = order.makeIterator()
                 func startNext() {

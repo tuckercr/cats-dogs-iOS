@@ -289,13 +289,19 @@ private struct CurrentWeatherContent: View {
     private var walkAdvice: WalkAdvice? {
         WalkAdvisor.advice(
             currentTempC: currentTempC,
-            upcoming: forecastDays.flatMap(\.hourlySlots),
+            upcoming: upcomingSlots,
+            timeZone: weather.timeZone,
             thresholds: RemoteConfigRepository.shared.petWeatherThresholds
         )
     }
 
+    /// From the hour in progress on, however old the forecast on screen is.
+    private var upcomingSlots: [HourlySlot] {
+        forecastDays.flatMap(\.hourlySlots).upcoming(from: Date())
+    }
+
     private var hourlySlots: [HourlySlot] {
-        Array(forecastDays.flatMap(\.hourlySlots).prefix(Self.hourlyStripCount))
+        Array(upcomingSlots.prefix(Self.hourlyStripCount))
     }
 
     var body: some View {
@@ -467,7 +473,7 @@ private struct CurrentWeatherContent: View {
                 value: "\(weather.cloudPercent)%"
             )
             // UV is always 0 after dark, so it only shows in the daytime (night icons end in "n").
-            if !weather.iconCode.hasSuffix("n"), let uv = forecastDays.first?.hourlySlots.first?.uvIndex {
+            if !weather.iconCode.hasSuffix("n"), let uv = upcomingSlots.first?.uvIndex {
                 Divider().padding(.horizontal, 16)
                 MetricIconRow(
                     icon: "sun.max.fill",
