@@ -31,6 +31,7 @@ enum PermissionStatus: Equatable {
 @Observable
 final class SettingsViewModel {
     private(set) var unitOverride: UnitOverride
+    private(set) var shareUsageStatistics: Bool
     private(set) var locationPermission: PermissionStatus = .notDetermined
     private(set) var notificationPermission: PermissionStatus = .notDetermined
 
@@ -39,13 +40,15 @@ final class SettingsViewModel {
     private let notificationStatus: () async -> UNAuthorizationStatus
     private let requestNotificationAuthorization: () async -> Bool
     private let rescheduleNotifications: () async -> Void
+    private let applyUsageSharing: () -> Void
 
     init(
         preferences: PreferencesStore? = nil,
         locationStatus: (() -> CLAuthorizationStatus)? = nil,
         notificationStatus: (() async -> UNAuthorizationStatus)? = nil,
         requestNotificationAuthorization: (() async -> Bool)? = nil,
-        rescheduleNotifications: (() async -> Void)? = nil
+        rescheduleNotifications: (() async -> Void)? = nil,
+        applyUsageSharing: (() -> Void)? = nil
     ) {
         let preferences = preferences ?? .shared
         self.preferences = preferences
@@ -59,12 +62,23 @@ final class SettingsViewModel {
         self.rescheduleNotifications = rescheduleNotifications ?? {
             await WeatherNotificationScheduler.shared.scheduleDailyNotifications()
         }
+        self.applyUsageSharing = applyUsageSharing ?? {
+            AnalyticsRepository.shared.applyUsageSharingPreference()
+        }
         unitOverride = preferences.unitOverride
+        shareUsageStatistics = preferences.shareUsageStatistics
     }
 
     func setUnitOverride(_ override: UnitOverride) {
         unitOverride = override
         preferences.setUnitOverride(override)
+    }
+
+    /// Deliberately not tracked itself.
+    func setShareUsageStatistics(_ enabled: Bool) {
+        shareUsageStatistics = enabled
+        preferences.setShareUsageStatistics(enabled)
+        applyUsageSharing()
     }
 
     func clearCache() {

@@ -276,13 +276,23 @@ private struct CurrentWeatherContent: View {
     private var currentTempC: Double { weather.units.toCelsius(weather.temperature) }
 
     private var mood: PetMood {
-        PetMood.forConditions(conditionMain: weather.conditionMain, iconCode: weather.iconCode, temperatureC: currentTempC)
+        PetMood.forConditions(
+            conditionMain: weather.conditionMain,
+            iconCode: weather.iconCode,
+            temperatureC: currentTempC,
+            thresholds: RemoteConfigRepository.shared.petWeatherThresholds
+        )
     }
 
     /// Nil while the forecast is loading or failed, which hides the card rather than giving advice
     /// with nothing to base it on.
     private var walkAdvice: WalkAdvice? {
-        WalkAdvisor.advice(currentTempC: currentTempC, upcoming: upcomingSlots, timeZone: weather.timeZone)
+        WalkAdvisor.advice(
+            currentTempC: currentTempC,
+            upcoming: upcomingSlots,
+            timeZone: weather.timeZone,
+            thresholds: RemoteConfigRepository.shared.petWeatherThresholds
+        )
     }
 
     /// From the hour in progress on, however old the forecast on screen is.
@@ -311,8 +321,10 @@ private struct CurrentWeatherContent: View {
             if !isWide {
                 todaySection
             }
-            SectionHeader("RADAR")
-            RadarCard(location: location, timeZone: weather.timeZone)
+            if RemoteConfigRepository.shared.radarEnabled {
+                SectionHeader("RADAR")
+                RadarCard(location: location, timeZone: weather.timeZone)
+            }
             restOfWeek
         }
         .onGeometryChange(for: CGFloat.self) { proxy in
@@ -325,7 +337,7 @@ private struct CurrentWeatherContent: View {
     @ViewBuilder
     private var heroSection: some View {
         heroCard
-        if let walkAdvice {
+        if RemoteConfigRepository.shared.walkCardEnabled, let walkAdvice {
             WalkCard(advice: walkAdvice)
         }
     }

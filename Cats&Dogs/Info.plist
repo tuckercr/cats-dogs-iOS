@@ -6,6 +6,8 @@
 	<array>
 		<string>com.tuckercr.Cats-Dogs.refresh</string>
 	</array>
+	<key>GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS</key>
+	<false/>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Baloo2.ttf</string>
