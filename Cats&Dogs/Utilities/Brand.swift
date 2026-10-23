@@ -22,7 +22,7 @@ extension Color {
 /// - SurfaceVariant: content cards such as Today, Hourly and Radar (`surfaceVariant`)
 /// - PrimaryContainer: icon circles on the welcome and onboarding screens (`primaryContainer`)
 extension Font {
-    /// Baloo 2, the rounded face that echoes the "Cats & Dogs" wordmark. Used for display and title
+    /// Baloo 2, the rounded face that echoes the "Furcast Weather" wordmark. Used for display and title
     /// text only; body copy stays on the system font. Scales with Dynamic Type via `style`.
     static func brand(_ style: Font.TextStyle, weight: BrandWeight = .semibold) -> Font {
         .custom(weight.postScriptName, size: BrandWeight.pointSize(for: style), relativeTo: style)

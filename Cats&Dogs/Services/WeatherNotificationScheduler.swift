@@ -50,7 +50,7 @@ final class WeatherNotificationScheduler {
         if let weather {
             content = buildNotificationContent(weather: weather, todayForecast: todayForecast)
         } else {
-            content = ("Cats & Dogs", "Tap to see your weather update.")
+            content = ("Furcast Weather", "Tap to see your weather update.")
         }
 
         await scheduleDailyNotifications(title: content.title, body: content.body)

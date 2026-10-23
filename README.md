@@ -1,8 +1,8 @@
-# Cats & Dogs (iOS)
+# Furcast Weather (iOS)
 
 ![iOS CI](https://github.com/tuckercr/cats-dogs-iOS/actions/workflows/ios.yml/badge.svg)
 
-Native SwiftUI port of the [Android Cats & Dogs weather app](https://github.com/tuckercr/cats-dogs).
+Native SwiftUI port of the [Android Furcast Weather app](https://github.com/tuckercr/cats-dogs).
 Features generally land on Android first and iOS catches up — see [Feature parity](#feature-parity-with-android).
 
 Save multiple cities (or use your current location) and see current conditions with a cat and dog
@@ -252,7 +252,7 @@ Without it CI builds with Firebase switched off. Unit tests never start Firebase
 
 ## Firebase
 
-Both apps share the Firebase project **`cats-dogs-weather`** ("Cats and Dogs"), with Google Analytics
+Both apps share the Firebase project **`cats-dogs-weather`**, with Google Analytics
 linked. The iOS app is registered as `com.tuckercr.Cats-Dogs`.
 
 To build with Firebase, download `GoogleService-Info.plist` for the iOS app (Firebase console →
