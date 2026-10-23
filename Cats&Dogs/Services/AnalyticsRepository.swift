@@ -28,18 +28,16 @@ final class AnalyticsRepository {
 
     init(
         preferences: PreferencesStore? = nil,
-        isConfigured: @escaping () -> Bool = { FirebaseSetup.isConfigured },
-        remotelyEnabled: @escaping () -> Bool = { RemoteConfigRepository.shared.analyticsEnabled },
-        sendEvent: @escaping (_ name: String, _ parameters: [String: Any]?) -> Void = {
-            Analytics.logEvent($0, parameters: $1)
-        },
-        setCollectionEnabled: @escaping (Bool) -> Void = { Analytics.setAnalyticsCollectionEnabled($0) }
+        isConfigured: (() -> Bool)? = nil,
+        remotelyEnabled: (() -> Bool)? = nil,
+        sendEvent: ((_ name: String, _ parameters: [String: Any]?) -> Void)? = nil,
+        setCollectionEnabled: ((Bool) -> Void)? = nil
     ) {
         self.preferences = preferences ?? .shared
-        self.isConfigured = isConfigured
-        self.remotelyEnabled = remotelyEnabled
-        self.sendEvent = sendEvent
-        self.setCollectionEnabled = setCollectionEnabled
+        self.isConfigured = isConfigured ?? { FirebaseSetup.isConfigured }
+        self.remotelyEnabled = remotelyEnabled ?? { RemoteConfigRepository.shared.analyticsEnabled }
+        self.sendEvent = sendEvent ?? { Analytics.logEvent($0, parameters: $1) }
+        self.setCollectionEnabled = setCollectionEnabled ?? { Analytics.setAnalyticsCollectionEnabled($0) }
     }
 
     func logOnboardingComplete() { log(Self.eventOnboardingComplete) }

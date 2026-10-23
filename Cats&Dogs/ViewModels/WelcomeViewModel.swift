@@ -17,13 +17,11 @@ final class WelcomeViewModel {
 
     init(
         preferences: PreferencesStore? = nil,
-        onOnboardingComplete: @escaping @MainActor () -> Void = {
-            AnalyticsRepository.shared.logOnboardingComplete()
-        }
+        onOnboardingComplete: (@MainActor () -> Void)? = nil
     ) {
         let preferences = preferences ?? .shared
         self.preferences = preferences
-        self.onOnboardingComplete = onOnboardingComplete
+        self.onOnboardingComplete = onOnboardingComplete ?? { AnalyticsRepository.shared.logOnboardingComplete() }
         onboardingState = OnboardingState(
             hasSeenWelcome: preferences.hasSeenWelcome,
             notificationOnboardingDone: preferences.notificationOnboardingDone,

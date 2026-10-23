@@ -27,11 +27,11 @@ final class RadarViewModel {
     init(
         frameInterval: Duration? = nil,
         fetchTimeline: (@Sendable () async throws -> RadarTimeline)? = nil,
-        now: @escaping () -> Date = { Date() }
+        now: (() -> Date)? = nil
     ) {
         self.frameInterval = frameInterval ?? RemoteConfigRepository.shared.radarFrameInterval
         self.fetchTimeline = fetchTimeline ?? { try await RadarRepository().timeline() }
-        self.now = now
+        self.now = now ?? { Date() }
     }
 
     /// Fetches the timeline the first time, and refreshes it once it's stale. Safe to call often:

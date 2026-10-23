@@ -29,23 +29,21 @@ final class WeatherForecastViewModel {
     init(
         preferences: PreferencesStore? = nil,
         weatherRepository: WeatherRepository? = nil,
-        onError: @escaping @MainActor (_ errorKey: String) -> Void = {
-            AnalyticsRepository.shared.logWeatherError($0)
-        },
-        onSettingsOpened: @escaping @MainActor () -> Void = {
-            AnalyticsRepository.shared.logSettingsOpened()
-        },
-        foregroundRefreshMinInterval: @escaping () -> TimeInterval = {
-            RemoteConfigRepository.shared.foregroundRefreshMinInterval
-        },
-        now: @escaping () -> Date = { Date() }
+        onError: (@MainActor (_ errorKey: String) -> Void)? = nil,
+        onSettingsOpened: (@MainActor () -> Void)? = nil,
+        foregroundRefreshMinInterval: (() -> TimeInterval)? = nil,
+        now: (() -> Date)? = nil
     ) {
+        // Optional closures filled in here rather than closure default values: Swift 6.1 (CI's
+        // Xcode 16.4) crashes emitting the module for isolated closure defaults.
         self.preferences = preferences ?? .shared
         self.weatherRepository = weatherRepository ?? WeatherRepository()
-        self.onError = onError
-        self.onSettingsOpened = onSettingsOpened
-        self.foregroundRefreshMinInterval = foregroundRefreshMinInterval
-        self.now = now
+        self.onError = onError ?? { AnalyticsRepository.shared.logWeatherError($0) }
+        self.onSettingsOpened = onSettingsOpened ?? { AnalyticsRepository.shared.logSettingsOpened() }
+        self.foregroundRefreshMinInterval = foregroundRefreshMinInterval ?? {
+            RemoteConfigRepository.shared.foregroundRefreshMinInterval
+        }
+        self.now = now ?? { Date() }
     }
 
     /// The silent refresh on returning to the foreground. Remote Config can make it skip a city that
