@@ -18,11 +18,11 @@ final class CityListViewModel {
     init(
         preferences: PreferencesStore? = nil,
         geocodingRepository: GeocodingRepository? = nil,
-        onCityAdded: @escaping @MainActor () -> Void = { AnalyticsRepository.shared.logCityAdded() }
+        onCityAdded: (@MainActor () -> Void)? = nil
     ) {
         self.preferences = preferences ?? .shared
         self.geocodingRepository = geocodingRepository ?? GeocodingRepository()
-        self.onCityAdded = onCityAdded
+        self.onCityAdded = onCityAdded ?? { AnalyticsRepository.shared.logCityAdded() }
         loadFromPreferences()
     }
 

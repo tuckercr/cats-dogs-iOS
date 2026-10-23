@@ -12,13 +12,13 @@ struct WeatherRepository {
         openMeteo: any OpenMeteoAPI = OpenMeteoClient(),
         timeZone: TimeZone = .current,
         now: @escaping @Sendable () -> Date = { Date() },
-        useOpenMeteo: @escaping @Sendable () -> Bool = { RemoteConfigRepository.openMeteoEnabled }
+        useOpenMeteo: (@Sendable () -> Bool)? = nil
     ) {
         self.client = client
         self.openMeteo = openMeteo
         self.timeZone = timeZone
         self.now = now
-        self.useOpenMeteo = useOpenMeteo
+        self.useOpenMeteo = useOpenMeteo ?? { RemoteConfigRepository.openMeteoEnabled }
     }
 
     func fetchCurrentWeather(

@@ -23,7 +23,7 @@ final class WeatherBackgroundRefresher {
     private let submitRefreshRequest: (_ earliestBegin: Date) -> Void
 
     init(
-        refreshInterval: @escaping () -> TimeInterval = { RemoteConfigRepository.shared.refreshInterval },
+        refreshInterval: (() -> TimeInterval)? = nil,
         preferences: PreferencesStore? = nil,
         weatherRepository: WeatherRepository? = nil,
         notificationsAuthorized: @escaping () async -> Bool = {
@@ -39,7 +39,7 @@ final class WeatherBackgroundRefresher {
             try? BGTaskScheduler.shared.submit(request)
         }
     ) {
-        self.refreshInterval = refreshInterval
+        self.refreshInterval = refreshInterval ?? { RemoteConfigRepository.shared.refreshInterval }
         self.preferences = preferences ?? .shared
         self.weatherRepository = weatherRepository ?? WeatherRepository()
         self.notificationsAuthorized = notificationsAuthorized
