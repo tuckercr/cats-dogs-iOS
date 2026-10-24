@@ -91,7 +91,7 @@ struct SettingsView: View {
                     openURL(URL(string: "https://open-meteo.com")!)
                 }
                 Button("Privacy policy") {
-                    openURL(URL(string: "https://fangjet.com/privacy-policy")!)
+                    openURL(URL(string: "https://fangjet.com/weather")!)
                 }
             }
         }

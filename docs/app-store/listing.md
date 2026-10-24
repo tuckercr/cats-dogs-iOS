@@ -55,7 +55,7 @@ Copy each field into App Store Connect. Character counts are checked against App
 |---|---|
 | Support URL | https://fangjet.com/contact |
 | Marketing URL (optional) | https://furcastweather.app (once registered) |
-| Privacy policy URL | https://fangjet.com/privacy-policy (needs a Furcast Weather section first; see below) |
+| Privacy policy URL | https://fangjet.com/weather |
 
 **Screenshots**: 6.9-inch iPhone from `screenshots/app-store/`, suggested order 03, 04, 02, 05, 06 (01 optional). iPad 13-inch: `screenshots/tablet.png` plus new captures if wanted.
 
