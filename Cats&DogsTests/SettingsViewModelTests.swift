@@ -38,6 +38,18 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertTrue(SettingsViewModel(preferences: preferences.store).shareUsageStatistics)
     }
 
+    func testUsageSharingDefaultsToOffWhereConsentIsNeededAndCanBeTurnedOn() {
+        let suiteName = "SettingsViewModelTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
+        let germany = PreferencesStore(defaults: defaults, region: "DE")
+        XCTAssertFalse(germany.shareUsageStatistics)
+        XCTAssertTrue(PreferencesStore(defaults: defaults, region: "US").shareUsageStatistics)
+
+        germany.setShareUsageStatistics(true)
+        XCTAssertTrue(germany.shareUsageStatistics)
+    }
+
     func testTurningOffUsageSharingPersistsAndAppliesIt() {
         var applied = 0
         let viewModel = SettingsViewModel(preferences: preferences.store, applyUsageSharing: { applied += 1 })

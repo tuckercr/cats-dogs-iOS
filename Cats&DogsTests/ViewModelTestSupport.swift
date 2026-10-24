@@ -8,12 +8,12 @@ final class IsolatedPreferences {
     private let suiteName = "CatsDogsTests-\(UUID().uuidString)"
 
     init() {
-        store = PreferencesStore(defaults: UserDefaults(suiteName: suiteName)!)
+        store = PreferencesStore(defaults: UserDefaults(suiteName: suiteName)!, region: "US")
     }
 
     /// A second store over the same suite, to prove values were persisted rather than held in memory.
     func reopened() -> PreferencesStore {
-        PreferencesStore(defaults: UserDefaults(suiteName: suiteName)!)
+        PreferencesStore(defaults: UserDefaults(suiteName: suiteName)!, region: "US")
     }
 
     func destroy() {

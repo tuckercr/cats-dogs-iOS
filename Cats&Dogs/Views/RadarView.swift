@@ -338,6 +338,18 @@ private struct TileInfo: Hashable {
 }
 
 private enum MapTileLoader {
+    /// OpenStreetMap's tile policy asks for a User-Agent that names the app (not the CFNetwork
+    /// default) and for tiles to be cached per their headers, so tiles get their own session with
+    /// an identifying User-Agent and a disk cache big enough to hold them.
+    private nonisolated static let session: URLSession = {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+        let configuration = URLSessionConfiguration.default
+        configuration.httpAdditionalHeaders = ["User-Agent": "FurcastWeather/\(version) (+https://fangjet.com/weather)"]
+        configuration.urlCache = URLCache(memoryCapacity: 8 * 1024 * 1024, diskCapacity: 100 * 1024 * 1024)
+        configuration.requestCachePolicy = .useProtocolCachePolicy
+        return URLSession(configuration: configuration)
+    }()
+
     /// Loads the 3×3 block of tiles around (`tileX`, `tileY`) concurrently and stitches them together.
     /// Tiles that fail are retried, only those, after each of `RadarTiles.retryDelays`; after the
     /// last try a partial image is still better than none. Returns nil when nothing loaded or the
@@ -347,7 +359,10 @@ private enum MapTileLoader {
         tileY: Int,
         urlBuilder: @escaping @Sendable (Int, Int) -> String
     ) async -> CGImage? {
-        // Tiles are numbered 0...8, row by row from the north-west corner.
+        // Tiles are numbered 0...8, row by row from the north-west corner. Columns wrap around the
+        // antimeridian, so a city near 180° still gets real tiles on both sides.
+        let columns = 1 << RadarTiles.zoom
+        func column(_ slot: Int) -> Int { ((tileX + slot % 3 - 1) % columns + columns) % columns }
         var loaded: [Int: CGImage] = [:]
         let all = Array(0 ..< 9)
         for attempt in 0 ... RadarTiles.retryDelays.count {
@@ -359,7 +374,7 @@ private enum MapTileLoader {
             let fetched = await withTaskGroup(of: (Int, CGImage?).self) { group in
                 for slot in missing {
                     group.addTask {
-                        (slot, await loadTile(from: urlBuilder(tileX + slot % 3 - 1, tileY + slot / 3 - 1)))
+                        (slot, await loadTile(from: urlBuilder(column(slot), tileY + slot / 3 - 1)))
                     }
                 }
                 var results: [(Int, CGImage?)] = []
@@ -397,7 +412,7 @@ private enum MapTileLoader {
     private nonisolated static func loadTile(from urlString: String) async -> CGImage? {
         guard let url = URL(string: urlString) else { return nil }
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await session.data(from: url)
             if let http = response as? HTTPURLResponse, !(200 ... 299).contains(http.statusCode) {
                 return nil
             }

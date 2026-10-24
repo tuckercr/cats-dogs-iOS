@@ -88,7 +88,8 @@ scheme and bundle ID (`com.tuckercr.Cats-Dogs`) keep the original Cats&Dogs name
      Granting location here adds your current location as a city.
    - Manage locations: add, set active, reorder, delete
    - Clear cached weather
-   - Privacy: **Share usage statistics** (on by default) turns analytics off
+   - Privacy: **Share usage statistics** turns analytics on or off. It starts on, except in the EU,
+     EEA, UK and Switzerland, where it starts off until the user turns it on
    - OpenWeather and Open-Meteo attribution, and [privacy policy](https://fangjet.com/weather)
 
 ### Where the data comes from
@@ -320,8 +321,12 @@ An event is sent only when all three gates are open:
 
 1. Firebase is configured.
 2. The Remote Config kill switch `analytics_enabled` is on.
-3. The user hasn't turned off **Settings → Privacy → Share usage statistics** (on by default).
-   Changing it isn't tracked, and clearing the cache keeps the choice.
+3. **Settings → Privacy → Share usage statistics** is on. It starts on, except in the EU, EEA, UK
+   and Switzerland (by the device's region), where analytics need opt-in consent, so it starts off
+   until the user turns it on. Changing it isn't tracked, and clearing the cache keeps the choice.
+
+`FIREBASE_ANALYTICS_COLLECTION_ENABLED` is false in `Info.plist`, so Firebase collects nothing until
+the app has applied that choice at launch.
 
 Gates 2 and 3 are also enforced in the SDK with `setAnalyticsCollectionEnabled`, so Firebase's
 automatic events (sessions, screen views) stop too.
@@ -337,7 +342,12 @@ Firebase 13 needs Xcode 26.1 (Swift 6.2.1). The project stays on 12.x until CI m
 - [`docs/app-store/listing.md`](docs/app-store/listing.md) is the draft App Store Connect listing:
   name, subtitle, description, keywords and the rest.
 - [`screenshots/app-store/`](screenshots/app-store/) holds the 6.9-inch iPhone screenshots
-  (1320 × 2868), numbered 01 to 06.
+  (1320 × 2868), numbered 01 to 06, and the 13-inch iPad ones (2064 × 2752), `ipad-01` and
+  `ipad-02`. App Store Connect requires iPad screenshots because the app runs on iPad.
+- Release builds fail if `Cats&Dogs/Secrets.plist` is missing or has no OpenWeather key (the "Check
+  OpenWeather API key" build phase), so an archive can't ship without one. Debug builds skip the
+  check. Radar map tiles are requested with a `FurcastWeather/<version>` User-Agent and cached on
+  disk, as OpenStreetMap's tile policy asks.
 - [`Cats&Dogs/PrivacyInfo.xcprivacy`](Cats&Dogs/PrivacyInfo.xcprivacy) is the privacy manifest: no
   tracking or tracking domains, product interaction data for analytics and precise location for
   app functionality (neither linked to the user), and `UserDefaults` as the only required-reason API.

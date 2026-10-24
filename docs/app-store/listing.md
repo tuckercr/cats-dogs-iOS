@@ -57,7 +57,9 @@ Copy each field into App Store Connect. Character counts are checked against App
 | Marketing URL (optional) | https://furcastweather.app (once registered) |
 | Privacy policy URL | https://fangjet.com/weather |
 
-**Screenshots**: 6.9-inch iPhone from `screenshots/app-store/`, suggested order 03, 04, 02, 05, 06 (01 optional). iPad 13-inch: `screenshots/tablet.png` plus new captures if wanted.
+**Screenshots** (both sets are required, because the app runs on iPhone and iPad):
+- 6.9-inch iPhone (1320 × 2868) from `screenshots/app-store/`, suggested order 03, 04, 02, 05, 06 (01 optional)
+- 13-inch iPad (2064 × 2752): `screenshots/app-store/ipad-02-tokyo.png`, then `ipad-01-amsterdam.png`
 
 ## App Review information
 
@@ -87,3 +89,13 @@ Not collected: contact info, health, financial, user content, browsing or search
 ## Export compliance
 
 Answered in the build (`ITSAppUsesNonExemptEncryption = NO`); App Store Connect won't ask.
+
+## Before you submit
+
+Not settled by code; each needs an outside answer or account:
+
+- **Signing team**: `DEVELOPMENT_TEAM` is still the personal free team (`LNG7P6G3S6`). Switch it to FangJet LLC's Team ID once Apple approves the enrolment.
+- **RainViewer**: the free radar API is offered "for personal and educational use only". Get written permission or a commercial agreement for a published app, or launch with Remote Config `radar_enabled` set to false.
+- **Open-Meteo**: the free API is for non-commercial use. Confirm with Open-Meteo that a free, ad-free app from FangJet LLC qualifies, or take a paid plan; until then `open_meteo_enabled` can fall back to OpenWeatherMap.
+- **OpenWeather key**: it ships inside the app (Secrets.plist), so anyone can extract it. Watch usage in the OpenWeather dashboard and rotate it if it's abused; a small key-proxy backend would remove it from the app entirely.
+- **OpenStreetMap tiles**: requests now identify the app and are cached, as the tile policy asks, but heavy use of tile.openstreetmap.org can still be blocked. At scale, move to a commercial tile provider.
