@@ -79,7 +79,7 @@ struct SettingsView: View {
             } header: {
                 Text("Privacy")
             } footer: {
-                Text("Anonymous counts of which features get used, to help improve Cats & Dogs. Never your location.")
+                Text("Anonymous counts of which features get used, to help improve Furcast Weather. Never your location.")
             }
 
             Section("About") {

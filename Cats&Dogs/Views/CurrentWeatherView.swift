@@ -94,7 +94,7 @@ struct CurrentWeatherView: View {
     }
 
     private var navigationTitle: String {
-        cityListViewModel.activeLocation?.label ?? "Cats & Dogs"
+        cityListViewModel.activeLocation?.label ?? "Furcast Weather"
     }
 
     private var cityTabs: some View {
