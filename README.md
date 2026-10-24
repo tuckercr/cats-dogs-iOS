@@ -80,7 +80,7 @@ Requires **iOS 17+**.
      Granting location here adds your current location as a city.
    - Manage locations: add, set active, reorder, delete
    - Clear cached weather
-   - OpenWeather and Open-Meteo attribution, and [privacy policy](https://fangjet.com/privacy-policy)
+   - OpenWeather and Open-Meteo attribution, and [privacy policy](https://fangjet.com/weather)
 
 ### Where the data comes from
 
