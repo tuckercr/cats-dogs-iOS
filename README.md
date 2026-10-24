@@ -201,7 +201,7 @@ Cats&Dogs/
 | Periodic background weather refresh | ✅ WorkManager, every 30 min (Remote Config) | ✅ `BGAppRefreshTask`, no sooner than the Remote Config interval |
 | Follows the OS temperature-unit preference | ✅ Android 14+ | ⚠️ region-based only |
 | Firebase Analytics, with kill switch and user opt-out | ✅ optional, opt-out in Settings → About | ✅ optional, opt-out in Settings → Privacy |
-| Firebase Remote Config (same 16 keys) | ✅ optional | ✅ optional |
+| Firebase Remote Config (same 17 keys) | ✅ optional | ✅ optional |
 | Crashlytics | ✅ optional, release builds only | ❌ Xcode Organizer crash reports instead |
 | View-model unit tests | ✅ | ✅ |
 | UI tests in CI | ✅ Compose UI tests | ❌ |
@@ -296,6 +296,7 @@ Remote Config parameters are defined and deployed from the Android repo
 | `walk_hours_start` / `walk_hours_end` | 7 / 20 (0–23) | Local hours walks are suggested in, inclusive |
 | `pet_hot_threshold_c` / `pet_cold_threshold_c` | 30 (20–45) / 0 (−20–10) | Switch the pets to their hot and cold moods, and the walk card to "paws hot" and "too cold" |
 | `open_meteo_enabled` | true | Off sends forecasts for cities with coordinates to OpenWeatherMap (3-hourly) instead of Open-Meteo |
+| `openweather_api_key` | "" | Replacement OpenWeather API key, used from the next launch; empty uses the key built into the app. Lets a leaked key be rotated without an update. Not secret: Remote Config values reach every device |
 
 Walk and pet temperatures are Celsius whatever units the user picked. An out-of-range value falls
 back to its default, and if a pair ends up inverted (minimum not below maximum), both fall back to
