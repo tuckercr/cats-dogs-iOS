@@ -45,6 +45,8 @@ final class RemoteConfigRepository {
     nonisolated static let keyWalkCardEnabled = "walk_card_enabled"
     /// Off sends forecasts for cities with coordinates to OpenWeatherMap instead of Open-Meteo.
     nonisolated static let keyOpenMeteoEnabled = "open_meteo_enabled"
+    /// Replacement OpenWeather API key, so a leaked key can be rotated without an app update.
+    nonisolated static let keyOpenWeatherApiKey = "openweather_api_key"
 
     private let remoteConfig: RemoteConfig?
 
@@ -67,6 +69,7 @@ final class RemoteConfigRepository {
             Self.keyDailyWeatherNotificationsEnabled: NSNumber(value: true),
             Self.keyForegroundRefreshMinMinutes: NSNumber(value: Self.defaultForegroundRefreshMinMinutes),
             Self.keyOpenMeteoEnabled: NSNumber(value: true),
+            Self.keyOpenWeatherApiKey: "" as NSString,
             Self.keyWalkHotPavementC: NSNumber(value: PetWeatherThresholds.standard.hotPavementC),
             Self.keyWalkMaxRainChance: NSNumber(value: PetWeatherThresholds.standard.maxRainChance),
             Self.keyWalkComfortMinC: NSNumber(value: PetWeatherThresholds.standard.comfortC.lowerBound),
@@ -126,6 +129,16 @@ final class RemoteConfigRepository {
     /// Read from the forecast fetch, which isn't on the main actor. Remote Config is thread-safe.
     nonisolated static var openMeteoEnabled: Bool { flag(keyOpenMeteoEnabled) }
 
+    /// Nil when unset or blank, so the key built into the app is used. Not a secret: Remote Config
+    /// values reach every device.
+    nonisolated static var openWeatherApiKey: String? {
+        guard FirebaseApp.app() != nil else { return nil }
+        let value = RemoteConfig.remoteConfig()[keyOpenWeatherApiKey]
+        guard value.source != .static else { return nil }
+        let key: String? = value.stringValue
+        return key?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank
+    }
+
     /// Every flag defaults to on. A key with no value at all reads as false, so that counts as
     /// "not set" rather than "off".
     private nonisolated static func flag(_ key: String) -> Bool {
@@ -152,4 +165,8 @@ final class RemoteConfigRepository {
         }
         return .milliseconds(milliseconds)
     }
+}
+
+private extension String {
+    var nilIfBlank: String? { isEmpty ? nil : self }
 }
