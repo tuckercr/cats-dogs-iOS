@@ -26,19 +26,25 @@ struct RadarCard: View {
     var timeZone: TimeZone = .current
 
     var body: some View {
-        Group {
-            if let location, let latitude = location.latitude, let longitude = location.longitude {
-                RadarMapView(latitude: latitude, longitude: longitude, timeZone: timeZone)
-            } else if location == nil {
-                placeholder("No location selected")
-            } else {
-                placeholder("Radar unavailable\n(coordinates not available)")
+        VStack(alignment: .trailing, spacing: 4) {
+            Group {
+                if let location, let latitude = location.latitude, let longitude = location.longitude {
+                    RadarMapView(latitude: latitude, longitude: longitude, timeZone: timeZone)
+                } else if location == nil {
+                    placeholder("No location selected")
+                } else {
+                    placeholder("Radar unavailable\n(coordinates not available)")
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 340)
+            .background(Color.surfaceVariant)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            if location?.latitude != nil, location?.longitude != nil {
+                RadarCredits()
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 340)
-        .background(Color.surfaceVariant)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private func placeholder(_ text: String) -> some View {
@@ -46,6 +52,18 @@ struct RadarCard: View {
             .multilineTextAlignment(.center)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// OpenStreetMap's licence requires visible attribution linking to its copyright page, and
+/// RainViewer asks to be credited for its free radar data.
+private struct RadarCredits: View {
+    var body: some View {
+        Text("[© OpenStreetMap contributors](https://www.openstreetmap.org/copyright) · Radar by [RainViewer](https://www.rainviewer.com)")
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .tint(.secondary)
+            .multilineTextAlignment(.trailing)
     }
 }
 
