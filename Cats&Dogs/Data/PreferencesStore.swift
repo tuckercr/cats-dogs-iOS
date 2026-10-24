@@ -5,6 +5,7 @@ final class PreferencesStore {
     static let shared = PreferencesStore()
 
     private let defaults: UserDefaults
+    private let region: String?
     private let hasSeenWelcomeKey = "has_seen_welcome"
     private let locationOnboardingDoneKey = "location_onboarding_done"
     private let notificationOnboardingDoneKey = "notification_onboarding_done"
@@ -19,9 +20,16 @@ final class PreferencesStore {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, region: String? = Locale.current.region?.identifier) {
         self.defaults = defaults
+        self.region = region
     }
+
+    /// The EU, the rest of the EEA, the UK and Switzerland need opt-in consent for analytics.
+    nonisolated static let optInRegions: Set<String> = [
+        "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV",
+        "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE", "IS", "LI", "NO", "GB", "CH",
+    ]
 
     var hasSeenWelcome: Bool {
         defaults.bool(forKey: hasSeenWelcomeKey)
@@ -59,9 +67,10 @@ final class PreferencesStore {
         return UnitOverride(rawValue: raw) ?? .system
     }
 
-    /// The user's analytics opt-out. On until they turn it off.
+    /// The user's analytics choice. Until they make one it is on, except where analytics need
+    /// opt-in consent, where it stays off until they turn it on in Settings.
     var shareUsageStatistics: Bool {
-        defaults.object(forKey: shareUsageStatisticsKey) as? Bool ?? true
+        defaults.object(forKey: shareUsageStatisticsKey) as? Bool ?? !Self.optInRegions.contains(region ?? "")
     }
 
     func setHasSeenWelcome(_ value: Bool) {

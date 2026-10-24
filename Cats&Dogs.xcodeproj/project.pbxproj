@@ -99,6 +99,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = C6ACE5DB2FD1E5C3008E6E91 /* Build configuration list for PBXNativeTarget "Cats&Dogs" */;
 			buildPhases = (
+				C6F1BB012FF2000000A1B2C3 /* Check OpenWeather API key */,
 				C6ACE5CC2FD1E5C2008E6E91 /* Sources */,
 				C6ACE5CD2FD1E5C2008E6E91 /* Frameworks */,
 				C6ACE5CE2FD1E5C2008E6E91 /* Resources */,
@@ -200,6 +201,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		C6F1BB012FF2000000A1B2C3 /* Check OpenWeather API key */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Check OpenWeather API key";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Release builds must not ship without the OpenWeather key, or every current-weather request fails.\nif [ \"$CONFIGURATION\" != \"Release\" ]; then exit 0; fi\nSECRETS=\"$SRCROOT/Cats&Dogs/Secrets.plist\"\n# PlistBuddy prints to stdout when the file is missing, so check the file exists first.\nKEY=\"\"\nif [ -f \"$SECRETS\" ]; then KEY=$(/usr/libexec/PlistBuddy -c \"Print :OWM_API_KEY\" \"$SECRETS\" 2>/dev/null); fi\nif [ -z \"$KEY\" ] || [ \"$KEY\" = \"your_key_here\" ]; then\n  echo \"error: Cats&Dogs/Secrets.plist has no OWM_API_KEY. Copy Secrets.example.plist and add the OpenWeather key before archiving.\"\n  exit 1\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		C6ACE5CC2FD1E5C2008E6E91 /* Sources */ = {
@@ -358,9 +381,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Cats&Dogs/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Furcast;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.weather";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Furcast Weather uses your location to show local weather for your area.";
-				INFOPLIST_KEY_NSUserNotificationsUsageDescription = "Furcast Weather sends daily weather updates for your active city.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -414,9 +437,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Cats&Dogs/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Furcast;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.weather";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Furcast Weather uses your location to show local weather for your area.";
-				INFOPLIST_KEY_NSUserNotificationsUsageDescription = "Furcast Weather sends daily weather updates for your active city.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
