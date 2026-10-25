@@ -233,6 +233,35 @@ final class WalkAdvisorTests: XCTestCase {
         XCTAssertEqual(slots.upcoming(from: Date()), slots)
     }
 
+    func testASlotBeforeSunriseIsNotAWalkTimeEvenInsideTheWalkingHours() {
+        // 7 AM is within 7 AM...8 PM, but on a winter morning it can still be dark (a night icon).
+        let advice = WalkAdvisor.advice(currentTempC: 12, upcoming: [slot("7 AM", 12, rain: 5, icon: "03n"), slot("8 AM", 12, rain: 5, icon: "03d")])
+        XCTAssertEqual(advice, WalkAdvice(rating: .okay, bestTimeLabel: "8 AM"))
+    }
+
+    func testRainingNowMeansNowIsNotTheWalkTimeEvenIfTheForecastHourLooksDry() {
+        let slots = [slot("3 PM", 18, rain: 10), slot("4 PM", 18, rain: 10)]
+        XCTAssertEqual(WalkAdvisor.advice(currentTempC: 18, upcoming: slots), WalkAdvice(rating: .great, bestTimeLabel: nil))
+        XCTAssertEqual(
+            WalkAdvisor.advice(currentTempC: 18, upcoming: slots, precipitatingNow: true),
+            WalkAdvice(rating: .okay, bestTimeLabel: "4 PM")
+        )
+    }
+
+    func testRainingNowWithNoDryWindowLaterIsPoor() {
+        let advice = WalkAdvisor.advice(currentTempC: 18, upcoming: [slot("3 PM", 18, rain: 10), slot("4 PM", 18, rain: 90)], precipitatingNow: true)
+        XCTAssertEqual(advice, WalkAdvice(rating: .poor, bestTimeLabel: nil))
+    }
+
+    func testPrecipitationIsReadFromTheCondition() {
+        for main in ["Rain", "drizzle", "Snow", "Thunderstorm"] {
+            XCTAssertTrue(WalkAdvisor.isPrecipitating(conditionMain: main), main)
+        }
+        for main in ["Clear", "Clouds", "Mist", "Fog"] {
+            XCTAssertFalse(WalkAdvisor.isPrecipitating(conditionMain: main), main)
+        }
+    }
+
     private func slot(
         _ label: String,
         _ temp: Double,
@@ -240,11 +269,12 @@ final class WalkAdvisorTests: XCTestCase {
         units: WeatherUnits = .metric,
         pavement: Double? = nil,
         hour: Int? = nil,
-        epoch: Int? = nil
+        epoch: Int? = nil,
+        icon: String = "01d"
     ) -> HourlySlot {
         HourlySlot(
             timeLabel: label,
-            iconCode: "01d",
+            iconCode: icon,
             description: "clear",
             temperature: temp,
             feelsLike: temp,
