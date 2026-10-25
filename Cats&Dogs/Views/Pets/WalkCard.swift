@@ -1,8 +1,11 @@
 import SwiftUI
 
-/// "Best walk time" card: when to take the dog out, with a quick rating chip.
+/// "Best walk time" card: when to take the dog out. The sentence carries the advice; the paw icon is
+/// tinted by the rating as a glance cue (deliberately not a chip, which read as a button), and a
+/// short caption says why when it's too hot or too cold.
 struct WalkCard: View {
     let advice: WalkAdvice
+    @Environment(\.colorScheme) private var colorScheme
 
     private var detail: String {
         if advice.rating == .great { return "Now is a great time" }
@@ -12,10 +15,32 @@ struct WalkCard: View {
         return "Not a good day for walkies"
     }
 
+    private var caption: String? {
+        switch advice.rating {
+        case .pawsHot:
+            advice.pavementNow.map { "Pavement about \(Int($0.rounded()))°. Too hot for paws." } ?? "Too hot for paws."
+        case .tooCold: "Too cold for paws."
+        default: nil
+        }
+    }
+
+    /// The dark shade on the light theme's card and the pale one on the dark theme's, so the paw and
+    /// the caption stay clear (at least 4.5:1) on either.
+    private var tint: Color {
+        let (light, dark): (UInt32, UInt32) = switch advice.rating {
+        case .great: (0x27500A, 0xC0DD97)
+        case .okay: (0x633806, 0xFAC775)
+        case .poor: (0x444441, 0xD3D1C7)
+        case .pawsHot: (0x791F1F, 0xF7C1C1)
+        case .tooCold: (0x0C447C, 0xB5D4F4)
+        }
+        return Color(hex: colorScheme == .dark ? dark : light)
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "pawprint.fill")
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(tint)
                 .font(.title3)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Best walk time")
@@ -23,14 +48,12 @@ struct WalkCard: View {
                     .foregroundStyle(Color.secondaryText)
                 Text(detail)
                     .font(.brand(.headline))
-                if advice.rating == .pawsHot, let pavement = advice.pavementNow {
-                    Text("Pavement about \(Int(pavement.rounded()))°. Too hot for paws.")
+                if let caption {
+                    Text(caption)
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(tint)
                 }
             }
-            Spacer(minLength: 8)
-            RatingChip(rating: advice.rating)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -40,36 +63,13 @@ struct WalkCard: View {
     }
 }
 
-private struct RatingChip: View {
-    let rating: WalkRating
-
-    private var style: (label: String, background: UInt32, text: UInt32) {
-        switch rating {
-        case .great: ("Great", 0xC0DD97, 0x27500A)
-        case .okay: ("Okay", 0xFAC775, 0x633806)
-        case .poor: ("Stay in", 0xD3D1C7, 0x444441)
-        case .pawsHot: ("Paws hot", 0xF7C1C1, 0x791F1F)
-        case .tooCold: ("Too cold", 0xB5D4F4, 0x0C447C)
-        }
-    }
-
-    var body: some View {
-        Text(style.label)
-            .font(.subheadline)
-            .fontWeight(.medium)
-            .foregroundStyle(Color(hex: style.text))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 4)
-            .background(Color(hex: style.background), in: Capsule())
-    }
-}
-
 #Preview {
     VStack(spacing: 12) {
         WalkCard(advice: WalkAdvice(rating: .great, bestTimeLabel: nil))
         WalkCard(advice: WalkAdvice(rating: .okay, bestTimeLabel: "6 PM"))
         WalkCard(advice: WalkAdvice(rating: .pawsHot, bestTimeLabel: "7 PM", pavementNow: 58))
         WalkCard(advice: WalkAdvice(rating: .poor, bestTimeLabel: nil))
+        WalkCard(advice: WalkAdvice(rating: .tooCold, bestTimeLabel: "11 AM"))
     }
     .padding()
 }
