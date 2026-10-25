@@ -9,7 +9,7 @@ struct WalkCard: View {
         if let best = advice.bestTimeLabel {
             return advice.bestTimeIsTomorrow ? "Tomorrow around \(best)" : "Around \(best)"
         }
-        return "No good window soon"
+        return "Not a good day for walkies"
     }
 
     var body: some View {
