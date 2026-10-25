@@ -50,7 +50,7 @@ struct RadarCard: View {
     private func placeholder(_ text: String) -> some View {
         Text(text)
             .multilineTextAlignment(.center)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color.secondaryText)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
@@ -61,8 +61,8 @@ private struct RadarCredits: View {
     var body: some View {
         Text("[© OpenStreetMap contributors](https://www.openstreetmap.org/copyright) · Radar by [RainViewer](https://www.rainviewer.com)")
             .font(.caption2)
-            .foregroundStyle(.secondary)
-            .tint(.secondary)
+            .foregroundStyle(Color.secondaryText)
+            .tint(Color.secondaryText)
             .multilineTextAlignment(.trailing)
     }
 }
@@ -196,7 +196,8 @@ private struct RadarMapView: View {
                     playing.toggle()
                 } label: {
                     Image(systemName: playing ? "pause.fill" : "play.fill")
-                        .frame(width: 32, height: 32)
+                        // 44pt is Apple's minimum touch target; the icon itself is unchanged.
+                        .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel(playing ? "Pause radar animation" : "Play radar animation")
                 Slider(
@@ -211,6 +212,11 @@ private struct RadarMapView: View {
                     step: 1
                 )
                 .padding(.trailing, 8)
+                // VoiceOver reads the frame's time rather than a bare percentage.
+                .accessibilityLabel("Radar frame")
+                .accessibilityValue(frames.indices.contains(frameIndex)
+                    ? frameLabel(frames[frameIndex], isNow: frameIndex == nowIndex)
+                    : "")
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 2)
@@ -303,11 +309,14 @@ private struct RadarLegend: View {
                 .clipShape(RoundedRectangle(cornerRadius: 4))
             HStack {
                 Text("Light")
-                Spacer()
+                Spacer(minLength: 4)
                 Text("Heavy")
             }
             .font(.caption2)
-            .frame(width: 96)
+            .lineLimit(1)
+            // At least the bar's width; wider when large Dynamic Type sizes need it.
+            .frame(minWidth: 96)
+            .fixedSize()
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)

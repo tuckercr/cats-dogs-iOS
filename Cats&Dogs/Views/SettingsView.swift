@@ -12,7 +12,7 @@ struct SettingsView: View {
 
     var body: some View {
         List {
-            Section("Units") {
+            Section {
                 ForEach(UnitOverride.allCases, id: \.self) { option in
                     Button {
                         settingsViewModel.setUnitOverride(option)
@@ -22,17 +22,21 @@ struct SettingsView: View {
                             Spacer()
                             if settingsViewModel.unitOverride == option {
                                 Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(Color.accent)
                             }
                         }
                         // A plain button only hit-tests what it draws; make the whole row tappable.
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    // The checkmark is visual only; VoiceOver reads "Selected" from this trait.
+                    .accessibilityAddTraits(settingsViewModel.unitOverride == option ? .isSelected : [])
                 }
+            } header: {
+                sectionHeader("Units")
             }
 
-            Section("Location") {
+            Section {
                 permissionRow(
                     status: settingsViewModel.locationPermission,
                     grantedText: "Location access granted",
@@ -41,9 +45,11 @@ struct SettingsView: View {
                     settingsURL: UIApplication.openSettingsURLString,
                     onRequest: { locationViewModel.requestPermission() }
                 )
+            } header: {
+                sectionHeader("Location")
             }
 
-            Section("Notifications") {
+            Section {
                 permissionRow(
                     status: settingsViewModel.notificationPermission,
                     grantedText: "Notifications enabled",
@@ -55,17 +61,23 @@ struct SettingsView: View {
                         Task { await settingsViewModel.requestNotificationPermission() }
                     }
                 )
+            } header: {
+                sectionHeader("Notifications")
             }
 
-            Section("Locations") {
+            Section {
                 Button("Manage locations", action: onOpenLocations)
+            } header: {
+                sectionHeader("Locations")
             }
 
-            Section("Cache") {
+            Section {
                 Button("Clear cached weather") {
                     settingsViewModel.clearCache()
                     showCacheCleared = true
                 }
+            } header: {
+                sectionHeader("Cache")
             }
 
             Section {
@@ -77,12 +89,13 @@ struct SettingsView: View {
                     )
                 )
             } header: {
-                Text("Privacy")
+                sectionHeader("Privacy")
             } footer: {
                 Text("Anonymous counts of which features get used, to help improve Furcast Weather. Never your location.")
+                    .foregroundStyle(Color.secondaryText)
             }
 
-            Section("About") {
+            Section {
                 Button("Weather data by OpenWeather") {
                     openURL(URL(string: "https://openweathermap.org/")!)
                 }
@@ -93,6 +106,8 @@ struct SettingsView: View {
                 Button("Privacy policy") {
                     openURL(URL(string: "https://fangjet.com/weather")!)
                 }
+            } header: {
+                sectionHeader("About")
             }
         }
         .scrollContentBackground(.hidden)
@@ -117,6 +132,11 @@ struct SettingsView: View {
         }
     }
 
+    /// The system's header grey is only about 3.3:1 on the brand surface; this one is 8.8:1.
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title).foregroundStyle(Color.secondaryText)
+    }
+
     private func unitLabel(for override: UnitOverride) -> String {
         switch override {
         case .system: "Use system setting"
@@ -137,7 +157,7 @@ struct SettingsView: View {
         switch status {
         case .granted:
             Text(grantedText)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.secondaryText)
         case .notDetermined:
             // iOS has no Settings entry for a permission the app has never asked for.
             Button(requestTitle, action: onRequest)

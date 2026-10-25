@@ -116,17 +116,21 @@ struct CurrentWeatherView: View {
                         .padding(.vertical, 8)
                         .background(
                             index == cityListViewModel.activeIndex
-                                ? Color.accentColor.opacity(0.2)
+                                ? Color.accent.opacity(0.2)
                                 : Color.clear
                         )
                         .clipShape(Capsule())
-                        .contentShape(Capsule())
+                        // 6pt above and below the capsule makes a 44pt touch target without
+                        // changing the layout (the row's vertical padding shrinks to match).
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityAddTraits(index == cityListViewModel.activeIndex ? .isSelected : [])
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.vertical, 2)
         }
         .background(Color.brandSurface)
     }
@@ -135,12 +139,12 @@ struct CurrentWeatherView: View {
         VStack(spacing: 16) {
             Image(systemName: "cloud.fill")
                 .font(.system(size: 72))
-                .foregroundStyle(Color.accentColor.opacity(0.4))
+                .foregroundStyle(Color.accent.opacity(0.4))
             Text("No cities added yet")
                 .font(.brand(.title2))
                 .multilineTextAlignment(.center)
             Text("Tap the + button to add your first city and get started.")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.secondaryText)
                 .multilineTextAlignment(.center)
             Button {
                 showAddSheet = true
@@ -516,7 +520,7 @@ private struct SectionHeader: View {
     var body: some View {
         Text(title)
             .font(.caption)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color.secondaryText)
             .padding(.top, 4)
             .accessibilityAddTraits(.isHeader)
     }
@@ -532,7 +536,7 @@ private struct HourlyStrip: View {
                     VStack(spacing: 6) {
                         Text(slot.timeLabel)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.secondaryText)
                         WeatherIconView(iconCode: slot.iconCode, size: 32)
                         Text("\(Int(slot.temperature.rounded()))°")
                             .fontWeight(.semibold)
@@ -562,7 +566,7 @@ private struct PrecipChance: View {
                 Text("\(percent)%")
                     .font(.caption)
             }
-            .foregroundStyle(Color.accentColor)
+            .foregroundStyle(Color.accent)
             .accessibilityLabel("Chance of precipitation \(percent)%")
         }
     }
@@ -572,7 +576,7 @@ private struct MetricIconRow: View {
     let icon: String
     let label: String
     let value: String
-    var iconTint: Color = .accentColor
+    var iconTint: Color = .accent
 
     var body: some View {
         HStack(spacing: 12) {
@@ -609,14 +613,14 @@ private struct UpcomingDayRow: View {
                         .fontWeight(.medium)
                     Text(day.description)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.secondaryText)
                     PrecipChance(percent: day.precipitationChance)
                 }
                 Spacer()
                 Text(WeatherFormatting.temperature(day.tempMax, units: day.units))
                     .fontWeight(.semibold)
                 Text(WeatherFormatting.temperature(day.tempMin, units: day.units))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
             }
             .padding(.vertical, 10)
             .contentShape(Rectangle())

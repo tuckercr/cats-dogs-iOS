@@ -12,7 +12,7 @@ struct LocationsView: View {
                     if location.isCurrentLocation {
                         Image(systemName: "location.fill")
                             .font(.caption)
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(Color.accent)
                     }
                     Text(index == cityListViewModel.activeIndex ? "\(location.label) (Active)" : location.label)
                     Spacer()

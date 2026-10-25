@@ -20,7 +20,7 @@ struct OnboardingLocationView: View {
                 } else {
                     Image(systemName: "location.fill")
                         .font(.system(size: 48))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.accent)
                 }
             }
 
@@ -32,7 +32,7 @@ struct OnboardingLocationView: View {
 
             Text(bodyText)
                 .font(.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.secondaryText)
                 .multilineTextAlignment(.center)
 
             Spacer()

@@ -13,7 +13,7 @@ struct OnboardingNotificationView: View {
                     .frame(width: 112, height: 112)
                 Image(systemName: "bell.fill")
                     .font(.system(size: 56))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Color.accent)
             }
 
             Spacer().frame(height: 32)
@@ -27,7 +27,7 @@ struct OnboardingNotificationView: View {
 
             Text("Get a morning, afternoon, and evening weather update for your active city.")
                 .font(.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.secondaryText)
                 .multilineTextAlignment(.center)
 
             Spacer().frame(height: 48)
