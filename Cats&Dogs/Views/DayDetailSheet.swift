@@ -14,7 +14,7 @@ struct DayDetailSheet: View {
                     Divider()
                     if day.hourlySlots.isEmpty {
                         Text("Hourly data not available for this day.")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.secondaryText)
                             .padding(.vertical, 8)
                     } else if verticalSizeClass == .compact {
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -54,7 +54,7 @@ struct DayDetailSheet: View {
             WeatherIconView(iconCode: day.iconCode, size: 64)
             VStack(alignment: .leading, spacing: 4) {
                 Text(day.description)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
             }
             Spacer()
             VStack(alignment: .trailing) {
@@ -62,7 +62,7 @@ struct DayDetailSheet: View {
                     .font(.brand(.title2, weight: .bold))
                     .fontWeight(.bold)
                 Text(WeatherFormatting.temperature(day.tempMin, units: day.units))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
             }
         }
         .padding(.top, 8)
@@ -72,17 +72,17 @@ struct DayDetailSheet: View {
         HStack {
             Text("TIME")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.secondaryText)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text("TEMP")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.secondaryText)
             Text("WIND")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.secondaryText)
             Text("HUM")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.secondaryText)
         }
     }
 }
@@ -101,15 +101,15 @@ private struct HourlySlotRow: View {
             HStack(spacing: 2) {
                 Image(systemName: "wind")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
                 Text(WeatherFormatting.wind(slot.windSpeed, units: slot.units))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
             }
             HStack(spacing: 2) {
                 Image(systemName: "drop.fill")
                     .font(.caption2)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Color.accent)
                 Text("\(slot.humidity)%")
                     .font(.caption)
             }
@@ -135,11 +135,11 @@ private struct HourlySlotColumn: View {
                 Text(WeatherFormatting.wind(slot.windSpeed, units: slot.units))
                     .font(.caption)
             }
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color.secondaryText)
             HStack(spacing: 2) {
                 Image(systemName: "drop.fill")
                     .font(.caption2)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Color.accent)
                 Text("\(slot.humidity)%")
                     .font(.caption)
             }

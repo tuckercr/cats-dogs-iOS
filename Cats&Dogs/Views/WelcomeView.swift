@@ -27,7 +27,7 @@ struct WelcomeView: View {
 
             Text("Check current conditions and a multi-day forecast for any city.")
                 .font(.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.secondaryText)
                 .multilineTextAlignment(.center)
 
             Spacer()

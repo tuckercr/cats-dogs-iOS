@@ -15,12 +15,12 @@ struct WalkCard: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "pawprint.fill")
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.accent)
                 .font(.title3)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Best walk time")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
                 Text(detail)
                     .font(.brand(.headline))
                 if advice.rating == .pawsHot, let pavement = advice.pavementNow {

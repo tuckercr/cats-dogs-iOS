@@ -14,13 +14,13 @@ struct AddCitySheet: View {
                     if !savedLocations.isEmpty {
                         Text("SAVED CITIES")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.secondaryText)
                         ForEach(Array(savedLocations.enumerated()), id: \.offset) { index, location in
                             HStack {
                                 if location.isCurrentLocation {
                                     Image(systemName: "location.fill")
                                         .font(.caption)
-                                        .foregroundStyle(Color.accentColor)
+                                        .foregroundStyle(Color.accent)
                                 }
                                 Text(location.label)
                                     .lineLimit(1)
@@ -37,7 +37,7 @@ struct AddCitySheet: View {
 
                     Text("ADD A NEW CITY")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.secondaryText)
 
                     TextField("City", text: Binding(
                         get: { geoViewModel.cityInput },

@@ -36,6 +36,9 @@ struct Cats_DogsApp: App {
             } else {
                 RootView()
                     .transition(.opacity)
+                    // Set explicitly: on iOS 27 the asset catalog's global accent colour
+                    // (NSAccentColorName) isn't applied, and controls fall back to system blue.
+                    .tint(Color.accent)
             }
         }
         .onChange(of: scenePhase) { _, phase in
