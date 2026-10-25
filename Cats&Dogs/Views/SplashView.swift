@@ -7,7 +7,9 @@ import SwiftUI
 struct SplashView: View {
     var body: some View {
         ZStack {
-            Color(red: 0.118, green: 0.533, blue: 0.898)
+            // The same blue as the system launch screen (UILaunchScreen), so there's no colour jump
+            // when this view takes over from it.
+            Color.launchBackground
                 .ignoresSafeArea()
 
             VStack {
