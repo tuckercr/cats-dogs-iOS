@@ -66,11 +66,19 @@ struct StaleWeatherBanner: View {
         return showingForecast ? "Showing the forecast from \(readingTime)." : "Showing weather from \(readingTime)."
     }
 
+    /// The banner has no button, so the offline message says how to retry; the other messages
+    /// already say when to try again.
+    private var bannerText: String {
+        [lead, WeatherErrorMessages.message(for: errorKey), errorKey == "offline" ? WeatherErrorMessages.pullToRetry : nil]
+            .compactMap { $0 }
+            .joined(separator: " ")
+    }
+
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: errorKey == "offline" ? "wifi.slash" : "clock.arrow.circlepath")
                 .accessibilityHidden(true)
-            Text("\(lead) \(WeatherErrorMessages.message(for: errorKey))")
+            Text(bannerText)
                 .font(.subheadline)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
