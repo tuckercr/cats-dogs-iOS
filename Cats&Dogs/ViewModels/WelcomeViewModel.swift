@@ -11,6 +11,9 @@ struct OnboardingState: Equatable {
 @Observable
 final class WelcomeViewModel {
     private(set) var onboardingState: OnboardingState?
+    /// True between the welcome screen and the "Who's at home?" answer. In memory only: the step is
+    /// part of a new user's first run, not resumed on a later launch, and not shown after an update.
+    private(set) var isAskingHousehold = false
 
     private let preferences: PreferencesStore
     private let onOnboardingComplete: @MainActor () -> Void
@@ -31,11 +34,17 @@ final class WelcomeViewModel {
 
     func completeWelcome() {
         preferences.setHasSeenWelcome(true)
+        isAskingHousehold = true
         onboardingState = onboardingState.map { state in
             var updated = state
             updated.hasSeenWelcome = true
             return updated
         }
+    }
+
+    /// Moves on from "Who's at home?". The answer itself goes to `SettingsViewModel.setShowWalkCard`.
+    func completeHousehold() {
+        isAskingHousehold = false
     }
 
     func completeNotificationOnboarding() {

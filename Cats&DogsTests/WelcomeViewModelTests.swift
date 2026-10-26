@@ -44,6 +44,25 @@ final class WelcomeViewModelTests: XCTestCase {
         XCTAssertTrue(preferences.reopened().hasSeenWelcome)
     }
 
+    func testWelcomeLeadsToWhosAtHomeOnlyInTheSameRun() {
+        let viewModel = WelcomeViewModel(preferences: preferences.store)
+        XCTAssertFalse(viewModel.isAskingHousehold)
+
+        viewModel.completeWelcome()
+        XCTAssertTrue(viewModel.isAskingHousehold)
+
+        viewModel.completeHousehold()
+        XCTAssertFalse(viewModel.isAskingHousehold)
+        XCTAssertFalse(
+            WelcomeViewModel(preferences: preferences.reopened()).isAskingHousehold,
+            "A later launch, or an existing user after an update, isn't asked"
+        )
+    }
+
+    func testOnlyHomesWithADogGetTheWalkCard() {
+        XCTAssertEqual(Household.allCases.filter(\.hasDog), [.dog, .both])
+    }
+
     func testCompleteNotificationOnboardingMarksStateDoneAndPersists() {
         let viewModel = WelcomeViewModel(preferences: preferences.store)
 

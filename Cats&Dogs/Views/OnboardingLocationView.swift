@@ -68,7 +68,7 @@ struct OnboardingLocationView: View {
         case .failed:
             "Could not determine your location. You can still add cities manually."
         default:
-            "Allow Sunny & Misty to use your device location to show local weather automatically."
+            "Misty likes to know which window she's looking out of. Allow your location to see the weather where you are."
         }
     }
 
