@@ -221,6 +221,10 @@ struct CurrentWeatherView: View {
         }
         .refreshable {
             refreshActiveLocation()
+            // Keep the pull spinner up until the fetch has finished, rather than dropping it at once.
+            while weatherViewModel.isRefreshing {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
         }
         .overlay(alignment: .top) {
             if weatherViewModel.isRefreshing {
@@ -231,6 +235,9 @@ struct CurrentWeatherView: View {
     }
 
     private func refreshActiveLocation() {
+        // A refresh also moves "now" on, so the hourly strip and captions update even when the
+        // weather itself hasn't changed.
+        now = Date()
         guard let location = cityListViewModel.activeLocation else { return }
         weatherViewModel.refreshCurrent(location: location)
         weatherViewModel.refreshForecast(location: location)
