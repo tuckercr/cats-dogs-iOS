@@ -1,10 +1,14 @@
 import Foundation
 
 enum WeatherErrorMessages {
+    static let pullToRetry = "Pull to try again."
+
     static func message(for errorKey: String) -> String {
         switch errorKey {
         case "offline":
-            "Misty knocked the Wi-Fi off the shelf. Pull to try again."
+            // No "try again" here: the full-screen error has a Try again button, and the banner adds
+            // `pullToRetry`, as pulling to refresh is the only way to retry there.
+            "Misty knocked the Wi-Fi off the shelf."
         case "city_not_found":
             "We couldn't find that city. Try a different search."
         case "missing_api_key", "bad_api_key":
