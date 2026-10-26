@@ -12,7 +12,8 @@ final class OpenWeatherParsingTests: XCTestCase {
           "weather": [ { "main": "Clear", "description": "clear sky", "icon": "01d" } ],
           "main": { "temp": 10.0, "feels_like": 9.0, "humidity": 40 },
           "wind": { "speed": 1.0 },
-          "timezone": -21600
+          "timezone": -21600,
+          "dt": 1761480000
         }
         """
         let forecast = """
@@ -21,6 +22,7 @@ final class OpenWeatherParsingTests: XCTestCase {
 
         // Mountain Daylight Time is UTC-6h.
         XCTAssertEqual(try decoder.decode(CurrentWeatherResponse.self, from: Data(current.utf8)).timezone, -21600)
+        XCTAssertEqual(try decoder.decode(CurrentWeatherResponse.self, from: Data(current.utf8)).dt, 1_761_480_000)
         XCTAssertEqual(try decoder.decode(ForecastResponse.self, from: Data(forecast.utf8)).city?.timezone, 3600)
     }
 

@@ -6,6 +6,8 @@ import SwiftUI
 struct PetScene: View {
     let mood: PetMood
     var moonPhase = MoonPhase(at: Date())
+    /// The offline error: the Wi-Fi router lies on its side next to Misty.
+    var knockedOverRouter = false
     @Environment(\.southernHemisphere) private var southernHemisphere
 
     // The scene is authored on a 260 x 150 grid and scaled to fit.
@@ -26,6 +28,15 @@ struct PetScene: View {
             pets.cat(mood)
             pets.dog(mood)
             pets.props(mood)
+            if knockedOverRouter {
+                // Tipped back on the ground to Misty's right, antennas splayed.
+                let pivot = CGPoint(x: 216 * painter.scale, y: 128 * painter.scale)
+                var tipped = context
+                tipped.translateBy(x: pivot.x, y: pivot.y)
+                tipped.rotate(by: .degrees(-18))
+                tipped.translateBy(x: -pivot.x, y: -pivot.y)
+                Painter(context: tipped, scale: painter.scale).knockedOverRouter()
+            }
         }
         .aspectRatio(Self.sceneWidth / Self.sceneHeight, contentMode: .fit)
         .accessibilityElement()
@@ -53,6 +64,8 @@ private enum Palette {
     /// The moon's unlit part: just darker than the night sky, so the disc shows faintly.
     static let moonUnlit = Color(hex: 0x34416E)
     static let ground = Color.black.opacity(0.2)
+    static let router = Color(hex: 0x4A5A6A)
+    static let routerLight = Color(hex: 0x97C459)
 }
 
 /// Draws in scene units, scaling everything by `scale`.
@@ -172,6 +185,20 @@ private struct Painter {
             } else {
                 circle(Palette.outline, cx: x, cy: y, r: 2.6)
             }
+        }
+    }
+
+    func knockedOverRouter() {
+        for (from, to) in [((202.0, 122.0), (196.0, 104.0)), ((230.0, 122.0), (236.0, 106.0))] {
+            var antenna = Path()
+            antenna.move(to: point(from.0, from.1))
+            antenna.addLine(to: point(to.0, to.1))
+            context.stroke(antenna, with: .color(Palette.outline), lineWidth: 2.5 * scale)
+        }
+        let body = CGRect(x: 196 * scale, y: 120 * scale, width: 40 * scale, height: 14 * scale)
+        context.fill(Path(roundedRect: body, cornerRadius: 3 * scale), with: .color(Palette.router))
+        for x in [206.0, 214.0, 222.0] {
+            circle(Palette.routerLight, cx: x, cy: 127, r: 1.8)
         }
     }
 

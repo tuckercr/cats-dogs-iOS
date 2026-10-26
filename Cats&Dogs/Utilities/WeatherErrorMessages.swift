@@ -4,7 +4,7 @@ enum WeatherErrorMessages {
     static func message(for errorKey: String) -> String {
         switch errorKey {
         case "offline":
-            "You're offline. Check your connection and try again."
+            "Misty knocked the Wi-Fi off the shelf. Pull to try again."
         case "city_not_found":
             "We couldn't find that city. Try a different search."
         case "missing_api_key", "bad_api_key":

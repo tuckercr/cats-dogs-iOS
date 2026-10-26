@@ -41,7 +41,7 @@ struct OnboardingLocationView: View {
                 Button(action: requestLocation) {
                     Text("Use my location").frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentButtonStyle()
                 .controlSize(.large)
 
                 Button(action: onSkip) {

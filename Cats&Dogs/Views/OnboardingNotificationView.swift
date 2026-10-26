@@ -41,7 +41,7 @@ struct OnboardingNotificationView: View {
             } label: {
                 Text("Allow notifications").frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentButtonStyle()
             .controlSize(.large)
 
             Spacer().frame(height: 12)

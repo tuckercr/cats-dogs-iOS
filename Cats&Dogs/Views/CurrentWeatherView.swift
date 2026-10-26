@@ -178,7 +178,7 @@ struct CurrentWeatherView: View {
             } label: {
                 Label("Add city", systemImage: "plus")
             }
-            .buttonStyle(.borderedProminent)
+            .accentButtonStyle()
         }
         .padding(32)
     }
@@ -196,6 +196,9 @@ struct CurrentWeatherView: View {
                     }
 
                 case .success(let weather):
+                    if let staleErrorKey = weatherViewModel.staleErrorKey {
+                        StaleWeatherBanner(weather: weather, errorKey: staleErrorKey)
+                    }
                     CurrentWeatherContent(
                         weather: weather,
                         forecastState: weatherViewModel.forecast,
@@ -207,13 +210,7 @@ struct CurrentWeatherView: View {
                     )
 
                 case .error(let errorKey, let canRetry):
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(WeatherErrorMessages.message(for: errorKey))
-                            .foregroundStyle(.red)
-                        if canRetry {
-                            Button("Retry", action: refreshActiveLocation)
-                        }
-                    }
+                    WeatherErrorStateView(errorKey: errorKey, canRetry: canRetry, onRetry: refreshActiveLocation)
                 }
             }
             .padding(.horizontal, 16)

@@ -71,7 +71,7 @@ struct AddCitySheet: View {
                     }
 
                     Button("Add city", action: onAddCity)
-                        .buttonStyle(.borderedProminent)
+                        .accentButtonStyle()
                         .frame(maxWidth: .infinity)
                         .disabled(
                             geoViewModel.cityInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
