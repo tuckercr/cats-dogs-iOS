@@ -91,7 +91,7 @@ enum PetMood: CaseIterable {
             ]
             case .beforeDawn: [
                 "Still dark out. Sunny is already waiting by the door.",
-                "Not quite morning. Misty is pretending to be asleep.",
+                "Too dark to get up, says Misty. She's pretending to be asleep.",
             ]
             }
         }
