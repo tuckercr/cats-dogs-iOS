@@ -95,7 +95,7 @@ private struct HourlySlotRow: View {
             Text(slot.timeLabel)
                 .fontWeight(.medium)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            WeatherIconView(iconCode: slot.iconCode, size: 28)
+            WeatherIconView(iconCode: slot.iconCode, size: 28, description: slot.description)
             Text(WeatherFormatting.temperature(slot.temperature, units: slot.units))
                 .fontWeight(.semibold)
             HStack(spacing: 2) {
@@ -126,7 +126,7 @@ private struct HourlySlotColumn: View {
         VStack(spacing: 6) {
             Text(slot.timeLabel)
                 .fontWeight(.medium)
-            WeatherIconView(iconCode: slot.iconCode, size: 28)
+            WeatherIconView(iconCode: slot.iconCode, size: 28, description: slot.description)
             Text(WeatherFormatting.temperature(slot.temperature, units: slot.units))
                 .fontWeight(.semibold)
             HStack(spacing: 2) {

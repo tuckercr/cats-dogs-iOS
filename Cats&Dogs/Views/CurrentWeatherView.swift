@@ -538,7 +538,7 @@ private struct HourlyStrip: View {
                         Text(slot.timeLabel)
                             .font(.caption)
                             .foregroundStyle(Color.secondaryText)
-                        WeatherIconView(iconCode: slot.iconCode, size: 32)
+                        WeatherIconView(iconCode: slot.iconCode, size: 32, description: slot.description)
                         Text("\(Int(slot.temperature.rounded()))°")
                             .fontWeight(.semibold)
                         PrecipChance(percent: slot.precipitationChance)
