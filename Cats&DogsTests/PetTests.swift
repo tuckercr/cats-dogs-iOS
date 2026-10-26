@@ -36,10 +36,41 @@ final class PetMoodTests: XCTestCase {
 
     func testCaptionIsStableForADayAndEveryMoodHasOne() {
         let date = Date(timeIntervalSince1970: TimeInterval(fixtureDayStart))
+        let utc = TimeZone(identifier: "UTC")!
         for mood in PetMood.allCases {
-            XCTAssertFalse(mood.captions.isEmpty)
-            XCTAssertEqual(mood.caption(on: date), mood.caption(on: date.addingTimeInterval(3600)))
+            for part in [NightPart.evening, .lateNight, .beforeDawn] {
+                XCTAssertFalse(mood.captions(nightPart: part).isEmpty)
+            }
+            // 12:00 and 13:00 UTC: the same day and, at night, the same part of it.
+            let noon = date.addingTimeInterval(12 * 3600)
+            XCTAssertEqual(mood.caption(on: noon, timeZone: utc), mood.caption(on: noon.addingTimeInterval(3600), timeZone: utc))
         }
+    }
+
+    func testNightIsSplitByTheCitysLocalHour() {
+        XCTAssertEqual(NightPart(hour: 19), .evening)
+        XCTAssertEqual(NightPart(hour: 22), .evening)
+        XCTAssertEqual(NightPart(hour: 23), .lateNight)
+        XCTAssertEqual(NightPart(hour: 3), .lateNight)
+        XCTAssertEqual(NightPart(hour: 5), .beforeDawn)
+        XCTAssertEqual(NightPart(hour: 7), .beforeDawn)
+    }
+
+    func testTheEveningStrollCaptionNeverShowsInTheSmallHours() {
+        let threeAM = ISO8601DateFormatter().date(from: "2026-10-26T03:00:00Z")!
+        let utc = TimeZone(identifier: "UTC")!
+        for day in 0 ..< 4 {
+            let caption = PetMood.night.caption(on: threeAM.addingTimeInterval(Double(day) * 86_400), timeZone: utc)
+            XCTAssertFalse(caption.contains("stroll"), caption)
+        }
+    }
+
+    func testTheCaptionFollowsTheCitysTimeZoneNotTheDevices() {
+        // 03:00 UTC is 12:00 in Tokyo: a night caption there is evening's, here it's late night's.
+        let date = ISO8601DateFormatter().date(from: "2026-10-26T03:00:00Z")!
+        let lateNight = PetMood.night.captions(nightPart: .lateNight)
+        XCTAssertTrue(lateNight.contains(PetMood.night.caption(on: date, timeZone: TimeZone(identifier: "UTC")!)))
+        XCTAssertFalse(lateNight.contains(PetMood.night.caption(on: date, timeZone: TimeZone(identifier: "Asia/Tokyo")!)))
     }
 }
 

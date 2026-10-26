@@ -447,7 +447,7 @@ private struct CurrentWeatherContent: View {
                 Text(
                     "\(WeatherFormatting.temperature(weather.tempMin, units: weather.units)) / \(WeatherFormatting.temperature(weather.tempMax, units: weather.units))"
                 )
-                Text(mood.caption())
+                Text(mood.caption(timeZone: weather.timeZone))
                     .font(.brand(.headline))
                     .multilineTextAlignment(.center)
                     .padding(.top, 10)
