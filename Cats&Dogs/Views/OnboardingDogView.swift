@@ -6,52 +6,43 @@ struct OnboardingDogView: View {
     let onAnswered: (_ hasDog: Bool) -> Void
 
     var body: some View {
-        ScrollView {
+        OnboardingLayout {
+            PetScene(mood: .cloudy)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 16)
+                .background(PetMood.cloudy.skyColor, in: RoundedRectangle(cornerRadius: 24))
+                .padding(.horizontal, 24)
+
+            Text("Is there a dog at home?")
+                .font(.brand(.title2))
+                .fontWeight(.semibold)
+                .multilineTextAlignment(.center)
+                .padding(.top, 12)
+                .accessibilityAddTraits(.isHeader)
+
+            Text("If there is, Sunny will suggest the best time for a walk. You can change this later in Settings.")
+                .foregroundStyle(Color.secondaryText)
+                .multilineTextAlignment(.center)
+
             VStack(spacing: 12) {
-                PetScene(mood: .cloudy)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 16)
-                    .background(PetMood.cloudy.skyColor, in: RoundedRectangle(cornerRadius: 24))
-                    .padding(.horizontal, 24)
-
-                Text("Is there a dog at home?")
-                    .font(.brand(.title2))
-                    .fontWeight(.semibold)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 12)
-                    .accessibilityAddTraits(.isHeader)
-
-                Text("If there is, Sunny will suggest the best time for a walk. You can change this later in Settings.")
-                    .foregroundStyle(Color.secondaryText)
-                    .multilineTextAlignment(.center)
-
-                VStack(spacing: 12) {
-                    Button {
-                        onAnswered(true)
-                    } label: {
-                        Text("Yes").frame(maxWidth: .infinity)
-                    }
-                    .accentButtonStyle()
-                    .controlSize(.large)
-
-                    Button {
-                        onAnswered(false)
-                    } label: {
-                        Text("No").frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
+                Button {
+                    onAnswered(true)
+                } label: {
+                    Text("Yes").frame(maxWidth: .infinity)
                 }
-                .padding(.top, 20)
+                .accentButtonStyle()
+                .controlSize(.large)
+
+                Button {
+                    onAnswered(false)
+                } label: {
+                    Text("No").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
             }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 24)
+            .padding(.top, 20)
         }
-        .scrollBounceBehavior(.basedOnSize)
-        // Centres the content when it fits, as the other onboarding screens' spacers do.
-        .defaultScrollAnchor(.center)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.brandSurface)
     }
 }
 

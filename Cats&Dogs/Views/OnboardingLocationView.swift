@@ -7,9 +7,7 @@ struct OnboardingLocationView: View {
     @State private var viewModel = LocationPermissionViewModel()
 
     var body: some View {
-        VStack(spacing: 12) {
-            Spacer()
-
+        OnboardingLayout {
             ZStack {
                 Circle()
                     .fill(Color.primaryContainer)
@@ -29,13 +27,12 @@ struct OnboardingLocationView: View {
                 .fontWeight(.semibold)
                 .multilineTextAlignment(.center)
                 .padding(.top, 20)
+                .accessibilityAddTraits(.isHeader)
 
             Text(bodyText)
                 .font(.body)
                 .foregroundStyle(Color.secondaryText)
                 .multilineTextAlignment(.center)
-
-            Spacer()
 
             if viewModel.state != .locating {
                 Button(action: requestLocation) {
@@ -43,6 +40,7 @@ struct OnboardingLocationView: View {
                 }
                 .accentButtonStyle()
                 .controlSize(.large)
+                .padding(.top, 36)
 
                 Button(action: onSkip) {
                     Text("Enter a city manually").frame(maxWidth: .infinity)
@@ -51,9 +49,6 @@ struct OnboardingLocationView: View {
                 .controlSize(.large)
             }
         }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.brandSurface)
         .onChange(of: viewModel.state) { _, newState in
             if case .located(let location) = newState {
                 onLocationResolved(location)
