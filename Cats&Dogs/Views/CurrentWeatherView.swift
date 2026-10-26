@@ -13,6 +13,11 @@ struct CurrentWeatherView: View {
     @State private var showAddSheet = false
     @State private var selectedDay: DayForecast?
     @State private var rescheduleTask: Task<Void, Never>?
+    /// "Now" for the hourly strip, walk advice, captions and moon. Moved on when the app becomes
+    /// active and every half hour while it stays open, so a screen left on overnight keeps up.
+    @State private var now = Date()
+
+    private static let autoRefreshInterval: Duration = .seconds(30 * 60)
 
     private var forecastDays: [DayForecast] {
         if case .success(let days) = weatherViewModel.forecast { return days }
@@ -64,6 +69,18 @@ struct CurrentWeatherView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                now = Date()
+                backgroundRefreshActiveLocation()
+            }
+        }
+        // The same quiet refresh every half hour while the app stays in the foreground. Restarted
+        // (and so only running) while the scene is active.
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.autoRefreshInterval)
+                guard !Task.isCancelled else { return }
+                now = Date()
                 backgroundRefreshActiveLocation()
             }
         }
@@ -184,6 +201,7 @@ struct CurrentWeatherView: View {
                         forecastState: weatherViewModel.forecast,
                         location: cityListViewModel.activeLocation,
                         showWalkCard: showWalkCard,
+                        now: now,
                         onDaySelected: { selectedDay = $0 },
                         onForecastRetry: refreshActiveLocation
                     )
@@ -268,6 +286,7 @@ private struct CurrentWeatherContent: View {
     let forecastState: LoadingState<[DayForecast]>
     let location: SavedLocation?
     let showWalkCard: Bool
+    let now: Date
     let onDaySelected: (DayForecast) -> Void
     let onForecastRetry: () -> Void
 
@@ -312,6 +331,7 @@ private struct CurrentWeatherContent: View {
         WalkAdvisor.advice(
             currentTempC: currentTempC,
             upcoming: upcomingSlots,
+            now: now,
             timeZone: weather.timeZone,
             thresholds: RemoteConfigRepository.shared.petWeatherThresholds,
             precipitatingNow: WalkAdvisor.isPrecipitating(conditionMain: weather.conditionMain)
@@ -320,7 +340,7 @@ private struct CurrentWeatherContent: View {
 
     /// From the hour in progress on, however old the forecast on screen is.
     private var upcomingSlots: [HourlySlot] {
-        forecastDays.flatMap(\.hourlySlots).upcoming(from: Date())
+        forecastDays.flatMap(\.hourlySlots).upcoming(from: now)
     }
 
     private var hourlySlots: [HourlySlot] {
@@ -426,7 +446,7 @@ private struct CurrentWeatherContent: View {
         } label: {
             VStack(spacing: 4) {
                 // Kept smaller than the card so the scene doesn't dominate, especially on wide screens.
-                PetScene(mood: mood)
+                PetScene(mood: mood, moonPhase: MoonPhase(at: now))
                     .frame(maxWidth: 280)
                     .padding(.horizontal, 24)
                 Text(weather.description)
@@ -447,7 +467,7 @@ private struct CurrentWeatherContent: View {
                 Text(
                     "\(WeatherFormatting.temperature(weather.tempMin, units: weather.units)) / \(WeatherFormatting.temperature(weather.tempMax, units: weather.units))"
                 )
-                Text(mood.caption(timeZone: weather.timeZone))
+                Text(mood.caption(on: now, timeZone: weather.timeZone))
                     .font(.brand(.headline))
                     .multilineTextAlignment(.center)
                     .padding(.top, 10)
