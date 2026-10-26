@@ -25,7 +25,7 @@ struct OnboardingNotificationView: View {
 
             Spacer().frame(height: 12)
 
-            Text("Get a morning, afternoon, and evening weather update for your active city.")
+            Text("Allow Sunny & Misty to send you daily weather updates for your saved locations.")
                 .font(.body)
                 .foregroundStyle(Color.secondaryText)
                 .multilineTextAlignment(.center)
