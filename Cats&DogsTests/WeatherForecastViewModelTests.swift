@@ -231,6 +231,44 @@ final class WeatherForecastViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.currentWeather.successValue?.temperature, 5)
     }
 
+    func testFailedRefreshOverCachedWeatherFlagsItAsStaleUntilARefreshSucceeds() async {
+        preferences.store.setCachedWeather(await makeCurrentWeather(temperature: 5), for: austin.cacheKey)
+        api.onCurrent = { _ in throw self.offline }
+
+        viewModel.refreshCurrent(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+        XCTAssertEqual(viewModel.staleErrorKey, "offline")
+
+        api.onCurrent = { request in weatherResponse(name: request.cityQuery ?? "Somewhere") }
+        viewModel.refreshCurrent(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+        XCTAssertNil(viewModel.staleErrorKey)
+    }
+
+    func testFailedRefreshWithNothingCachedShowsTheErrorNotTheStaleBanner() async {
+        api.onCurrent = { _ in throw self.offline }
+
+        viewModel.refreshCurrent(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+
+        XCTAssertEqual(viewModel.currentWeather, .error(errorKey: "offline", canRetry: true))
+        XCTAssertNil(viewModel.staleErrorKey)
+    }
+
+    func testFailedBackgroundRefreshFlagsShownWeatherAsStaleAndSwitchingCityClearsIt() async {
+        viewModel.refreshCurrent(location: austin)
+        await waitUntil { !self.viewModel.isRefreshing }
+        api.onCurrent = { _ in throw self.offline }
+
+        viewModel.backgroundRefreshCurrent(location: austin)
+        await waitUntil { self.api.completedCurrentRequests == 2 }
+        await settle()
+        XCTAssertEqual(viewModel.staleErrorKey, "offline")
+
+        viewModel.refreshCurrent(location: denver)
+        XCTAssertNil(viewModel.staleErrorKey)
+    }
+
     // MARK: - Foreground refresh throttle
 
     func testForegroundRefreshSkipsACityFetchedWithinTheWindow() async {

@@ -20,6 +20,9 @@ struct CurrentWeather: Codable, Equatable {
     let sunsetEpoch: Int?
     /// The city's offset from UTC, so sunrise and sunset can be shown in its local time.
     var timezoneOffsetSeconds: Int? = nil
+    /// When OpenWeather took this reading, in epoch seconds; nil in data cached before it was recorded.
+    /// Shown as "Showing weather from ..." when a refresh fails and cached data stays up.
+    var observedAtEpoch: Int? = nil
 
     var timeZone: TimeZone {
         timezoneOffsetSeconds.flatMap { TimeZone(secondsFromGMT: $0) } ?? .current

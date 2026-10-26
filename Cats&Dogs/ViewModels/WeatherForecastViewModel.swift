@@ -7,6 +7,9 @@ final class WeatherForecastViewModel {
     private(set) var currentWeather: LoadingState<CurrentWeather> = .idle
     private(set) var forecast: LoadingState<[DayForecast]> = .idle
     private(set) var isRefreshing = false
+    /// Set when a refresh fails while weather is already on screen, so the screen can say the data
+    /// is old and why; nil once a refresh succeeds or the user moves to another city.
+    private(set) var staleErrorKey: String?
 
     private let preferences: PreferencesStore
     private let weatherRepository: WeatherRepository
@@ -54,11 +57,17 @@ final class WeatherForecastViewModel {
             let units = resolvedUnits()
             let result = await fetchCurrent(for: location, units: units)
             if let target = currentTargetKey, target != location.cacheKey { return }
-            if case .success(let weather) = result {
+            switch result {
+            case .success(let weather):
                 currentFetchedAt[location.cacheKey] = now()
                 currentWeather = .success(weather)
+                staleErrorKey = nil
                 preferences.setLastCity(weather.cityName)
                 preferences.setCachedWeather(weather, for: location.cacheKey)
+            case .failure(let error):
+                if case .success = currentWeather {
+                    staleErrorKey = WeatherErrorMessages.errorKey(for: error)
+                }
             }
         }
     }
@@ -78,6 +87,7 @@ final class WeatherForecastViewModel {
     }
 
     func refreshCurrent(location: SavedLocation) {
+        if currentTargetKey != location.cacheKey { staleErrorKey = nil }
         currentTargetKey = location.cacheKey
         currentFetchGeneration += 1
         let fetchId = currentFetchGeneration
@@ -97,16 +107,20 @@ final class WeatherForecastViewModel {
                 preferences.setLastCity(weather.cityName)
                 preferences.setCachedWeather(weather, for: location.cacheKey)
                 currentWeather = .success(weather)
+                staleErrorKey = nil
                 currentFetchedAt[location.cacheKey] = now()
             case .failure(let error):
                 let errorKey = WeatherErrorMessages.errorKey(for: error)
                 onError(errorKey)
-                // Keep cached data visible if there is any; only show the error when there's nothing.
+                // Keep cached data visible if there is any, flagged as old; only show the error on
+                // its own when there's nothing.
                 if cached == nil {
                     currentWeather = .error(
                         errorKey: errorKey,
                         canRetry: WeatherErrorMessages.canRetry(for: error)
                     )
+                } else {
+                    staleErrorKey = errorKey
                 }
             }
 

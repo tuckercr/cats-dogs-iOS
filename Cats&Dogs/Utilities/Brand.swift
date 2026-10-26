@@ -14,6 +14,30 @@ extension Color {
     }
 }
 
+extension View {
+    /// The filled accent button, in place of `.borderedProminent`, whose label is always white: only
+    /// 2.0:1 on the dark theme's light blue. The label here uses OnAccent (Android's `onPrimary`).
+    func accentButtonStyle() -> some View {
+        buttonStyle(AccentButtonStyle())
+    }
+}
+
+struct AccentButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.controlSize) private var controlSize
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.body.weight(.semibold))
+            .foregroundStyle(Color.onAccent)
+            .padding(.horizontal, 20)
+            .padding(.vertical, controlSize == .large ? 14 : 8)
+            .background(Color.accent, in: Capsule())
+            .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.4)
+            .contentShape(Capsule())
+    }
+}
+
 /// Shared brand styling, matching the Android app's theme (`ui/theme/Color.kt`, `Type.kt`).
 /// Colours live in the asset catalog, each with Android's dark-scheme value:
 /// - AccentColor: the brand blue (Android `primary`)
@@ -21,6 +45,7 @@ extension Color {
 /// - BrandSurface: screen backgrounds (`background` / `surface`)
 /// - SurfaceVariant: content cards such as Today, Hourly and Radar (`surfaceVariant`)
 /// - PrimaryContainer: icon circles on the welcome and onboarding screens (`primaryContainer`)
+/// - OnAccent: text on accent-filled buttons (`onPrimary`)
 extension Font {
     /// Baloo 2, the rounded face that echoes the "Sunny & Misty" wordmark. Used for display and title
     /// text only; body copy stays on the system font. Scales with Dynamic Type via `style`.

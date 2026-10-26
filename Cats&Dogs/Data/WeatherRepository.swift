@@ -153,7 +153,8 @@ struct WeatherRepository {
             units: units,
             sunriseEpoch: positiveEpoch(response.sys?.sunrise),
             sunsetEpoch: positiveEpoch(response.sys?.sunset),
-            timezoneOffsetSeconds: response.timezone
+            timezoneOffsetSeconds: response.timezone,
+            observedAtEpoch: positiveEpoch(response.dt)
         )
     }
 

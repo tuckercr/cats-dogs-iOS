@@ -10,6 +10,8 @@ struct CurrentWeatherResponse: Decodable {
     let sys: SysDTO?
     /// The city's offset from UTC in seconds.
     var timezone: Int? = nil
+    /// When the reading was taken, in epoch seconds.
+    var dt: Int? = nil
 }
 
 struct SysDTO: Decodable {

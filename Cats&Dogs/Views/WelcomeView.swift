@@ -35,7 +35,7 @@ struct WelcomeView: View {
             Button(action: onGetStarted) {
                 Text("Get started").frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentButtonStyle()
             .controlSize(.large)
         }
         .padding(32)
