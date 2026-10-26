@@ -69,9 +69,15 @@ final class WeatherFormattingTests: XCTestCase {
     }
 
     func testVisibilityInMilesOrKilometres() {
-        XCTAssertEqual(WeatherFormatting.visibility(10_000), "10.0 km")
+        XCTAssertEqual(WeatherFormatting.visibility(5_500), "5.5 km")
         XCTAssertEqual(WeatherFormatting.visibility(800), "800 m")
-        XCTAssertEqual(WeatherFormatting.visibility(10_000, inMiles: true), "6.2 mi")
+        XCTAssertEqual(WeatherFormatting.visibility(5_500, inMiles: true), "3.4 mi")
+    }
+
+    func testVisibilityAtOpenWeathersTenKilometreCapReadsAsClear() {
+        XCTAssertEqual(WeatherFormatting.visibility(10_000), "Clear")
+        XCTAssertEqual(WeatherFormatting.visibility(10_000, inMiles: true), "Clear")
+        XCTAssertEqual(WeatherFormatting.visibility(9_999), "10.0 km")
     }
 
     func testDistanceUnitsFollowTheChoiceOrTheMeasurementSystem() {

@@ -23,7 +23,12 @@ enum WeatherFormatting {
     /// A speed that would show as "0.0": written as a plain 0, with no direction.
     static func isCalm(_ speed: Double) -> Bool { speed < 0.05 }
 
+    /// OpenWeather reports visibility up to 10 km and no further, so 10 km means "at least 10 km".
+    /// Converted, that read as a precise and poor-looking 6.2 mi (US sources cap at 10 mi instead).
     static func visibility(_ meters: Int, inMiles: Bool = false) -> String {
+        if meters >= 10_000 {
+            return "Clear"
+        }
         if inMiles {
             return String(format: "%.1f mi", Double(meters) / 1609.344)
         }
