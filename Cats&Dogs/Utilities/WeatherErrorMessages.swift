@@ -12,7 +12,7 @@ enum WeatherErrorMessages {
         case "rate_limited":
             "Too many requests. Please wait a moment and try again."
         case "server_error":
-            "The weather service is temporarily unavailable. Please try again later."
+            "The weather service is napping. Try again in a few minutes."
         case "empty_query":
             "Please enter a city name."
         default:
