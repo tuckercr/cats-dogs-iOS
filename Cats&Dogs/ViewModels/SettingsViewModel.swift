@@ -32,6 +32,7 @@ enum PermissionStatus: Equatable {
 final class SettingsViewModel {
     private(set) var unitOverride: UnitOverride
     private(set) var shareUsageStatistics: Bool
+    private(set) var showWalkCard: Bool
     private(set) var locationPermission: PermissionStatus = .notDetermined
     private(set) var notificationPermission: PermissionStatus = .notDetermined
 
@@ -67,6 +68,7 @@ final class SettingsViewModel {
         }
         unitOverride = preferences.unitOverride
         shareUsageStatistics = preferences.shareUsageStatistics
+        showWalkCard = preferences.showWalkCard
     }
 
     func setUnitOverride(_ override: UnitOverride) {
@@ -79,6 +81,11 @@ final class SettingsViewModel {
         shareUsageStatistics = enabled
         preferences.setShareUsageStatistics(enabled)
         applyUsageSharing()
+    }
+
+    func setShowWalkCard(_ show: Bool) {
+        showWalkCard = show
+        preferences.setShowWalkCard(show)
     }
 
     func clearCache() {

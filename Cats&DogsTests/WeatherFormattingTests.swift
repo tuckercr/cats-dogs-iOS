@@ -56,4 +56,36 @@ final class WeatherFormattingTests: XCTestCase {
         XCTAssertEqual(WeatherFormatting.uvIndex(9), "9 (Very high)")
         XCTAssertEqual(WeatherFormatting.uvIndex(11.2), "11 (Extreme)")
     }
+
+    func testCalmWindIsAPlainZeroWithNoDirection() {
+        XCTAssertEqual(WeatherFormatting.wind(0, units: .imperial), "0 mph")
+        XCTAssertEqual(WeatherFormatting.wind(0.04, units: .metric), "0 m/s")
+        XCTAssertEqual(WeatherFormatting.windWithDirection(0, deg: 0, units: .imperial), "0 mph")
+    }
+
+    func testWindWithSpeedKeepsItsDirection() {
+        XCTAssertEqual(WeatherFormatting.wind(0.05, units: .imperial), "0.1 mph")
+        XCTAssertEqual(WeatherFormatting.windWithDirection(3.4, deg: 45, units: .imperial), "3.4 mph  NE")
+    }
+
+    func testVisibilityInMilesOrKilometres() {
+        XCTAssertEqual(WeatherFormatting.visibility(5_500), "5.5 km")
+        XCTAssertEqual(WeatherFormatting.visibility(800), "800 m")
+        XCTAssertEqual(WeatherFormatting.visibility(5_500, inMiles: true), "3.4 mi")
+    }
+
+    func testVisibilityAtOpenWeathersTenKilometreCapReadsAsClear() {
+        XCTAssertEqual(WeatherFormatting.visibility(10_000), "Clear")
+        XCTAssertEqual(WeatherFormatting.visibility(10_000, inMiles: true), "Clear")
+        XCTAssertEqual(WeatherFormatting.visibility(9_999), "10.0 km")
+    }
+
+    func testDistanceUnitsFollowTheChoiceOrTheMeasurementSystem() {
+        let us = Locale(identifier: "en_US"), uk = Locale(identifier: "en_GB"), france = Locale(identifier: "fr_FR")
+        XCTAssertTrue(WeatherFormatting.usesMiles(override: .system, locale: us))
+        XCTAssertTrue(WeatherFormatting.usesMiles(override: .system, locale: uk))
+        XCTAssertFalse(WeatherFormatting.usesMiles(override: .system, locale: france))
+        XCTAssertFalse(WeatherFormatting.usesMiles(override: .metric, locale: us))
+        XCTAssertTrue(WeatherFormatting.usesMiles(override: .imperial, locale: france))
+    }
 }

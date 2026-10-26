@@ -5,6 +5,8 @@ struct CurrentWeatherView: View {
     @Bindable var geoViewModel: GeoLocationViewModel
     @Bindable var weatherViewModel: WeatherForecastViewModel
     let unitOverride: UnitOverride
+    /// The user's Settings choice; Remote Config can also hide the card for everyone.
+    let showWalkCard: Bool
     let onOpenSettings: () -> Void
 
     @Environment(\.scenePhase) private var scenePhase
@@ -90,7 +92,15 @@ struct CurrentWeatherView: View {
         }
         .sheet(item: $selectedDay) { day in
             DayDetailSheet(day: day)
+                .environment(\.southernHemisphere, isSouthernHemisphere)
         }
+        // The moon (hero scene and night icons) is lit from the other side down south.
+        .environment(\.southernHemisphere, isSouthernHemisphere)
+        .environment(\.distanceInMiles, WeatherFormatting.usesMiles(override: unitOverride))
+    }
+
+    private var isSouthernHemisphere: Bool {
+        (cityListViewModel.activeLocation?.latitude ?? 0) < 0
     }
 
     private var navigationTitle: String {
@@ -173,6 +183,7 @@ struct CurrentWeatherView: View {
                         weather: weather,
                         forecastState: weatherViewModel.forecast,
                         location: cityListViewModel.activeLocation,
+                        showWalkCard: showWalkCard,
                         onDaySelected: { selectedDay = $0 },
                         onForecastRetry: refreshActiveLocation
                     )
@@ -246,10 +257,17 @@ struct CurrentWeatherView: View {
     }
 }
 
+extension EnvironmentValues {
+    /// Whether distances (visibility) read in miles rather than kilometres.
+    @Entry var distanceInMiles = false
+}
+
 private struct CurrentWeatherContent: View {
+    @Environment(\.distanceInMiles) private var distanceInMiles
     let weather: CurrentWeather
     let forecastState: LoadingState<[DayForecast]>
     let location: SavedLocation?
+    let showWalkCard: Bool
     let onDaySelected: (DayForecast) -> Void
     let onForecastRetry: () -> Void
 
@@ -342,7 +360,7 @@ private struct CurrentWeatherContent: View {
     @ViewBuilder
     private var heroSection: some View {
         heroCard
-        if RemoteConfigRepository.shared.walkCardEnabled, let walkAdvice {
+        if showWalkCard, RemoteConfigRepository.shared.walkCardEnabled, let walkAdvice {
             WalkCard(advice: walkAdvice)
         }
     }
@@ -429,7 +447,7 @@ private struct CurrentWeatherContent: View {
                 Text(
                     "\(WeatherFormatting.temperature(weather.tempMin, units: weather.units)) / \(WeatherFormatting.temperature(weather.tempMax, units: weather.units))"
                 )
-                Text(mood.caption())
+                Text(mood.caption(timeZone: weather.timeZone))
                     .font(.brand(.headline))
                     .multilineTextAlignment(.center)
                     .padding(.top, 10)
@@ -461,14 +479,14 @@ private struct CurrentWeatherContent: View {
             MetricIconRow(
                 icon: "wind",
                 label: "Wind",
-                value: "\(WeatherFormatting.wind(weather.windSpeed, units: weather.units))  \(WeatherFormatting.windDirection(weather.windDeg))"
+                value: WeatherFormatting.windWithDirection(weather.windSpeed, deg: weather.windDeg, units: weather.units)
             )
             if let visibility = weather.visibilityMeters {
                 Divider().padding(.horizontal, 16)
                 MetricIconRow(
                     icon: "eye",
                     label: "Visibility",
-                    value: WeatherFormatting.visibility(visibility)
+                    value: WeatherFormatting.visibility(visibility, inMiles: distanceInMiles)
                 )
             }
             Divider().padding(.horizontal, 16)
@@ -538,7 +556,7 @@ private struct HourlyStrip: View {
                         Text(slot.timeLabel)
                             .font(.caption)
                             .foregroundStyle(Color.secondaryText)
-                        WeatherIconView(iconCode: slot.iconCode, size: 32)
+                        WeatherIconView(iconCode: slot.iconCode, size: 32, description: slot.description, date: slot.date)
                         Text("\(Int(slot.temperature.rounded()))°")
                             .fontWeight(.semibold)
                         PrecipChance(percent: slot.precipitationChance)

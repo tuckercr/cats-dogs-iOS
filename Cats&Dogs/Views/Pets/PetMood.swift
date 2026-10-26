@@ -45,7 +45,8 @@ enum PetMood: CaseIterable {
     }
 
     /// Captions in the pets' voice. One is picked per day so it varies without changing on refresh.
-    var captions: [String] {
+    /// Night has a set for each part of it, so a 3 AM caption doesn't suggest an evening stroll.
+    func captions(nightPart: NightPart = .evening) -> [String] {
         switch self {
         case .sunny: [
             "Perfect walkies weather! Off we go.",
@@ -78,15 +79,44 @@ enum PetMood: CaseIterable {
             "Brrr. Short walks and warm blankets.",
             "Coat weather for small dogs today.",
         ]
-        case .night: [
-            "Both are curled up asleep. Shh.",
-            "Quiet night. Time for one last stroll before bed?",
-        ]
+        case .night:
+            switch nightPart {
+            case .evening: [
+                "Quiet night. Time for one last stroll before bed?",
+                "The dog thinks there's time for one more lap of the block.",
+            ]
+            case .lateNight: [
+                "Both are curled up asleep. Shh.",
+                "Lights out. The cat has claimed the warm spot.",
+            ]
+            case .beforeDawn: [
+                "Still dark out. The dog is already waiting by the door.",
+                "Not quite morning. The cat is pretending to be asleep.",
+            ]
+            }
         }
     }
 
-    func caption(on date: Date = Date(), calendar: Calendar = .current) -> String {
+    /// Today's caption, chosen by the city's own date and (at night) hour, not the device's.
+    func caption(on date: Date = Date(), timeZone: TimeZone = .current) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
         let dayOfYear = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
-        return captions[dayOfYear % captions.count]
+        let options = captions(nightPart: NightPart(hour: calendar.component(.hour, from: date)))
+        return options[dayOfYear % options.count]
+    }
+}
+
+/// The part of the night it is, by the city's local hour. The night scene runs from sunset to
+/// sunrise, so any night hour before noon is before dawn and any after noon is evening.
+enum NightPart: Equatable {
+    case evening, lateNight, beforeDawn
+
+    init(hour: Int) {
+        switch hour {
+        case 23, 0 ..< 5: self = .lateNight
+        case 5 ..< 12: self = .beforeDawn
+        default: self = .evening
+        }
     }
 }

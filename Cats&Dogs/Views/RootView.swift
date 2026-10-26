@@ -41,6 +41,7 @@ struct RootView: View {
                             geoViewModel: geoViewModel,
                             weatherViewModel: weatherViewModel,
                             unitOverride: settingsViewModel.unitOverride,
+                            showWalkCard: settingsViewModel.showWalkCard,
                             onOpenSettings: {
                                 weatherViewModel.logSettingsOpened()
                                 path.append(.settings)

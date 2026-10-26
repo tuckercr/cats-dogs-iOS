@@ -16,6 +16,7 @@ final class PreferencesStore {
     private let forecastCacheKey = "forecast_cache"
     private let unitOverrideKey = "unit_override"
     private let shareUsageStatisticsKey = "share_usage_statistics"
+    private let showWalkCardKey = "show_walk_card"
 
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -71,6 +72,16 @@ final class PreferencesStore {
     /// opt-in consent, where it stays off until they turn it on in Settings.
     var shareUsageStatistics: Bool {
         defaults.object(forKey: shareUsageStatisticsKey) as? Bool ?? !Self.optInRegions.contains(region ?? "")
+    }
+
+    /// Whether the main screen shows the "Best walk time" card. On until the user turns it off
+    /// (say, because they don't have a dog).
+    var showWalkCard: Bool {
+        defaults.object(forKey: showWalkCardKey) as? Bool ?? true
+    }
+
+    func setShowWalkCard(_ value: Bool) {
+        defaults.set(value, forKey: showWalkCardKey)
     }
 
     func setHasSeenWelcome(_ value: Bool) {

@@ -1,0 +1,15 @@
+{
+  "images": [
+    {
+      "filename": "wx_01n_waxing_crescent.svg",
+      "idiom": "universal"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  },
+  "properties": {
+    "preserves-vector-representation": true
+  }
+}
