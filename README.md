@@ -1,6 +1,6 @@
 # Sunny & Misty (iOS)
 
-![iOS CI](https://github.com/tuckercr/cats-dogs-iOS/actions/workflows/ios.yml/badge.svg)
+![iOS CI](https://github.com/tuckercr/weather-iOS/actions/workflows/ios.yml/badge.svg)
 
 A clean, modern iOS weather app, where Sunny the dog and Misty the cat act out the forecast. Track
 current conditions, an hourly and 7-day forecast, and an animated precipitation radar for any
@@ -8,7 +8,7 @@ number of saved cities, see when to walk the dog, get daily weather notification
 between metric and imperial units. Built with SwiftUI.
 
 There is also a native Android version of the same product, built in Kotlin and Jetpack Compose:
-[tuckercr/cats-dogs](https://github.com/tuckercr/cats-dogs). The two apps share one design, one
+[tuckercr/weather-android](https://github.com/tuckercr/weather-android). The two apps share one design, one
 Firebase project and the same Remote Config keys, and new features ship on both.
 
 ## Screenshots
