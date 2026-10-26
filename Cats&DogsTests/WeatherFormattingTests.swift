@@ -67,4 +67,19 @@ final class WeatherFormattingTests: XCTestCase {
         XCTAssertEqual(WeatherFormatting.wind(0.05, units: .imperial), "0.1 mph")
         XCTAssertEqual(WeatherFormatting.windWithDirection(3.4, deg: 45, units: .imperial), "3.4 mph  NE")
     }
+
+    func testVisibilityInMilesOrKilometres() {
+        XCTAssertEqual(WeatherFormatting.visibility(10_000), "10.0 km")
+        XCTAssertEqual(WeatherFormatting.visibility(800), "800 m")
+        XCTAssertEqual(WeatherFormatting.visibility(10_000, inMiles: true), "6.2 mi")
+    }
+
+    func testDistanceUnitsFollowTheChoiceOrTheMeasurementSystem() {
+        let us = Locale(identifier: "en_US"), uk = Locale(identifier: "en_GB"), france = Locale(identifier: "fr_FR")
+        XCTAssertTrue(WeatherFormatting.usesMiles(override: .system, locale: us))
+        XCTAssertTrue(WeatherFormatting.usesMiles(override: .system, locale: uk))
+        XCTAssertFalse(WeatherFormatting.usesMiles(override: .system, locale: france))
+        XCTAssertFalse(WeatherFormatting.usesMiles(override: .metric, locale: us))
+        XCTAssertTrue(WeatherFormatting.usesMiles(override: .imperial, locale: france))
+    }
 }

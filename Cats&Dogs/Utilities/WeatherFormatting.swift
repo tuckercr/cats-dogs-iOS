@@ -23,11 +23,25 @@ enum WeatherFormatting {
     /// A speed that would show as "0.0": written as a plain 0, with no direction.
     static func isCalm(_ speed: Double) -> Bool { speed < 0.05 }
 
-    static func visibility(_ meters: Int) -> String {
+    static func visibility(_ meters: Int, inMiles: Bool = false) -> String {
+        if inMiles {
+            return String(format: "%.1f mi", Double(meters) / 1609.344)
+        }
         if meters >= 1000 {
             return String(format: "%.1f km", Double(meters) / 1000.0)
         }
         return "\(meters) m"
+    }
+
+    /// Whether distances (visibility) read in miles: the app's unit choice, or for "Use system
+    /// setting" the system's measurement system (Settings › General › Language & Region), where the
+    /// US and UK use miles.
+    static func usesMiles(override: UnitOverride, locale: Locale = .current) -> Bool {
+        switch override {
+        case .metric: false
+        case .imperial: true
+        case .system: locale.measurementSystem != .metric
+        }
     }
 
     static func windDirection(_ deg: Int) -> String {

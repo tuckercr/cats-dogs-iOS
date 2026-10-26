@@ -94,6 +94,7 @@ struct CurrentWeatherView: View {
         }
         // The moon (hero scene and night icons) is lit from the other side down south.
         .environment(\.southernHemisphere, isSouthernHemisphere)
+        .environment(\.distanceInMiles, WeatherFormatting.usesMiles(override: unitOverride))
     }
 
     private var isSouthernHemisphere: Bool {
@@ -253,7 +254,13 @@ struct CurrentWeatherView: View {
     }
 }
 
+extension EnvironmentValues {
+    /// Whether distances (visibility) read in miles rather than kilometres.
+    @Entry var distanceInMiles = false
+}
+
 private struct CurrentWeatherContent: View {
+    @Environment(\.distanceInMiles) private var distanceInMiles
     let weather: CurrentWeather
     let forecastState: LoadingState<[DayForecast]>
     let location: SavedLocation?
@@ -475,7 +482,7 @@ private struct CurrentWeatherContent: View {
                 MetricIconRow(
                     icon: "eye",
                     label: "Visibility",
-                    value: WeatherFormatting.visibility(visibility)
+                    value: WeatherFormatting.visibility(visibility, inMiles: distanceInMiles)
                 )
             }
             Divider().padding(.horizontal, 16)
