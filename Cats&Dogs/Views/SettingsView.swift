@@ -46,9 +46,6 @@ struct SettingsView: View {
                 )
             } header: {
                 sectionHeader("Main screen")
-            } footer: {
-                Text("When to take the dog out. Turn it off if you don't have a dog.")
-                    .foregroundStyle(Color.secondaryText)
             }
 
             Section {
@@ -106,7 +103,7 @@ struct SettingsView: View {
             } header: {
                 sectionHeader("Privacy")
             } footer: {
-                Text("Anonymous counts of which features get used, to help improve Furcast Weather. Never your location.")
+                Text("Anonymous counts of which features get used, to help improve Sunny & Misty. Never your location.")
                     .foregroundStyle(Color.secondaryText)
             }
 

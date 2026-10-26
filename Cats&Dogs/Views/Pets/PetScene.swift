@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Placeholder illustration of the cat and dog acting out `mood`. Drawn with simple shapes so the
+/// Placeholder illustration of Sunny (the dog) and Misty (the cat) acting out `mood`. Drawn with simple shapes so the
 /// feature works end to end; swap the body of this view for real artwork later. Same shapes and
 /// colours as the Android `PetScene`.
 struct PetScene: View {
@@ -23,7 +23,7 @@ struct PetScene: View {
         }
         .aspectRatio(Self.sceneWidth / Self.sceneHeight, contentMode: .fit)
         .accessibilityElement()
-        .accessibilityLabel("The cat and dog reacting to the weather")
+        .accessibilityLabel("Sunny the dog and Misty the cat reacting to the weather")
     }
 }
 

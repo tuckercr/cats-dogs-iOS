@@ -68,7 +68,7 @@ struct OnboardingLocationView: View {
         case .failed:
             "Could not determine your location. You can still add cities manually."
         default:
-            "Allow Furcast Weather to use your device location to show local weather automatically."
+            "Allow Sunny & Misty to use your device location to show local weather automatically."
         }
     }
 
