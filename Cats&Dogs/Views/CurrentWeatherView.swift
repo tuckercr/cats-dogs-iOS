@@ -5,6 +5,8 @@ struct CurrentWeatherView: View {
     @Bindable var geoViewModel: GeoLocationViewModel
     @Bindable var weatherViewModel: WeatherForecastViewModel
     let unitOverride: UnitOverride
+    /// The user's Settings choice; Remote Config can also hide the card for everyone.
+    let showWalkCard: Bool
     let onOpenSettings: () -> Void
 
     @Environment(\.scenePhase) private var scenePhase
@@ -181,6 +183,7 @@ struct CurrentWeatherView: View {
                         weather: weather,
                         forecastState: weatherViewModel.forecast,
                         location: cityListViewModel.activeLocation,
+                        showWalkCard: showWalkCard,
                         onDaySelected: { selectedDay = $0 },
                         onForecastRetry: refreshActiveLocation
                     )
@@ -264,6 +267,7 @@ private struct CurrentWeatherContent: View {
     let weather: CurrentWeather
     let forecastState: LoadingState<[DayForecast]>
     let location: SavedLocation?
+    let showWalkCard: Bool
     let onDaySelected: (DayForecast) -> Void
     let onForecastRetry: () -> Void
 
@@ -356,7 +360,7 @@ private struct CurrentWeatherContent: View {
     @ViewBuilder
     private var heroSection: some View {
         heroCard
-        if RemoteConfigRepository.shared.walkCardEnabled, let walkAdvice {
+        if showWalkCard, RemoteConfigRepository.shared.walkCardEnabled, let walkAdvice {
             WalkCard(advice: walkAdvice)
         }
     }

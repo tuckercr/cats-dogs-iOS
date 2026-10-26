@@ -37,6 +37,21 @@ struct SettingsView: View {
             }
 
             Section {
+                Toggle(
+                    "Best walk time",
+                    isOn: Binding(
+                        get: { settingsViewModel.showWalkCard },
+                        set: { settingsViewModel.setShowWalkCard($0) }
+                    )
+                )
+            } header: {
+                sectionHeader("Main screen")
+            } footer: {
+                Text("When to take the dog out. Turn it off if you don't have a dog.")
+                    .foregroundStyle(Color.secondaryText)
+            }
+
+            Section {
                 permissionRow(
                     status: settingsViewModel.locationPermission,
                     grantedText: "Location access granted",

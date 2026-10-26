@@ -34,6 +34,19 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(preferences.reopened().unitOverride, .metric)
     }
 
+    func testWalkCardIsShownByDefault() {
+        XCTAssertTrue(SettingsViewModel(preferences: preferences.store).showWalkCard)
+    }
+
+    func testTurningTheWalkCardOffUpdatesStateAndPersists() {
+        let viewModel = SettingsViewModel(preferences: preferences.store)
+
+        viewModel.setShowWalkCard(false)
+
+        XCTAssertFalse(viewModel.showWalkCard)
+        XCTAssertFalse(preferences.reopened().showWalkCard)
+    }
+
     func testUsageSharingIsOnByDefault() {
         XCTAssertTrue(SettingsViewModel(preferences: preferences.store).shareUsageStatistics)
     }
