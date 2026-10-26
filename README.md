@@ -1,19 +1,21 @@
-# Furcast Weather (iOS)
+# Sunny & Misty (iOS)
 
-![iOS CI](https://github.com/tuckercr/cats-dogs-iOS/actions/workflows/ios.yml/badge.svg)
+![iOS CI](https://github.com/tuckercr/weather-iOS/actions/workflows/ios.yml/badge.svg)
 
-Native SwiftUI port of the [Android Furcast Weather app](https://github.com/tuckercr/cats-dogs).
-Features generally land on Android first and iOS catches up — see [Feature parity](#feature-parity-with-android).
+A clean, modern iOS weather app, where Sunny the dog and Misty the cat act out the forecast. Track
+current conditions, an hourly and 7-day forecast, and an animated precipitation radar for any
+number of saved cities, see when to walk the dog, get daily weather notifications, and switch
+between metric and imperial units. Built with SwiftUI.
 
-Save multiple cities (or use your current location) and see current conditions with a cat and dog
-acting out the weather, the best time to walk the dog, an hourly and 7-day forecast, an animated
-precipitation radar, and optional daily weather notifications.
+There is also a native Android version of the same product, built in Kotlin and Jetpack Compose:
+[tuckercr/weather-android](https://github.com/tuckercr/weather-android). The two apps share one design, one
+Firebase project and the same Remote Config keys, and new features ship on both.
 
 ## Screenshots
 
 | Pets, walk time & hourly | Radar & rest of week | Day detail | Settings & units |
 |---|---|---|---|
-| ![The cat and dog react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour detail for a day](./screenshots/day.png) | ![Settings with unit selection](./screenshots/settings.png) |
+| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour detail for a day](./screenshots/day.png) | ![Settings with unit selection](./screenshots/settings.png) |
 
 On iPad and in landscape, the pets sit beside today's details and the week splits into two columns:
 
@@ -40,29 +42,38 @@ analytics off and Remote Config on its built-in defaults. See [Firebase](#fireba
 
 Requires **iOS 17+**.
 
-The app is called **Furcast Weather** (**Furcast** on the home screen). The Xcode project, target,
+The app is called **Sunny & Misty** ("Sunny & Misty: Pet Weather" on the App Store). The Xcode project, target,
 scheme and bundle ID (`com.tuckercr.Cats-Dogs`) keep the original Cats&Dogs name on purpose.
 
 ## App flow
 
-1. **Splash** — a brief splash screen with the mascot.
-2. **Welcome** — first launch only; tap **Get started**.
-3. **Notification onboarding** — opt in to daily weather updates, or **Not now**.
-4. **Location onboarding** — use the device location, or **Enter a city manually**.
-5. **Current weather** — the main screen for the active city:
-   - Hero card: the cat and dog act out one of 8 weather moods (sunny, cloudy, rain, storm, snow, hot,
-     cold, night) on a mood-coloured card, with the city, temperature, min/max and a daily caption in
-     the pets' voice. Tap it for today's hourly detail. The art is drawn in code as a placeholder,
-     isolated in `PetScene`.
-   - **Best walk time**: Great, Okay, Stay in, Paws hot or Too cold, with the first good window
-     between 7 AM and 8 PM in the next 24 hours, shown as "Tomorrow around 7 AM" when it falls on the
-     next day in the city's time zone. Hot pavement (estimated 52 °C / 125 °F) counts as paws hot
-     even on a mild day. Hours that have already passed are dropped when the screen is drawn, so an
-     older cached forecast never suggests a time in the past.
+1. **Splash**: Sunny and Misty with the "Sunny & Misty: Pet Weather" wordmark.
+2. **Welcome**: first launch only; tap **Get started**.
+3. **Notification onboarding**: opt in to daily weather updates, or **Not now**.
+4. **Location onboarding**: use the device location, or **Enter a city manually**.
+5. **Current weather**: the main screen for the active city:
+   - Hero card: Sunny and Misty act out one of 8 weather moods (sunny, cloudy, rain, storm, snow, hot,
+     cold, night) on a mood-coloured card, with the city, temperature, min/max and a caption in the
+     pets' voice ("Sunny wants puddles. Misty wants a towel."). One caption is picked per day; at
+     night it follows the city's time of night (evening, late night, before dawn). The moon shows
+     its real phase, lit from the other side in the southern hemisphere. Tap the card for today's
+     hourly detail. The art is drawn in code as a placeholder, isolated in `PetScene`.
+   - **Best walk time**: "Now is a great time", the next good hour ("Around 8 AM", or "Tomorrow
+     around 7 AM" when it falls on the city's next day), or "Not a good day for walkies" when nothing
+     in the next 24 hours qualifies. A good hour is under 30% rain chance, at a comfortable
+     temperature, between 7 AM and 8 PM and in daylight, and when it is raining now, now never
+     counts, whatever the hourly forecast says. The paw is tinted by the rating, and a caption
+     explains hot pavement (estimated 52 °C / 125 °F, even on a mild day) or freezing weather.
+     It can be turned off in Settings.
    - **Hourly**: the next 24 hours, with rain chance. Cities without coordinates fall back to
      OpenWeatherMap, which is 3-hourly, so the strip spans three days for them.
-   - **Today**: feels like, humidity, wind, visibility, cloud cover, UV index (daytime only),
-     sunrise and sunset.
+   - **Weather icons** are bundled with the app (vector assets drawn in the pets' style, with the
+     pets' navy outline so they read on light and dark cards). Night icons show the moon's phase for
+     that hour.
+   - **Today**: feels like, humidity, wind ("0 mph", with no direction, when calm), visibility,
+     cloud cover, UV index (daytime only), sunrise and sunset. Visibility is in miles or km to
+     match the units (for "Use system setting", the device's measurement system: miles in the US
+     and UK), and reads "Clear" at OpenWeather's 10 km cap.
    - **Radar**: RainViewer's recent radar frames animated over an OpenStreetMap base map, with the
      frame time, a Light→Heavy legend, play/pause and a scrubber. A caption under the map credits
      OpenStreetMap and RainViewer. Frames are refetched once they are 10 minutes old (checked every
@@ -70,19 +81,21 @@ scheme and bundle ID (`com.tuckercr.Cats-Dogs`) keep the original Cats&Dogs name
      until the new ones arrive.
    - **Rest of week**: one row per day (sample closest to local noon) with rain chance; tap a row
      for hourly detail.
-   - All times — hours, days, sunrise/sunset, radar frames and "today" — are in the city's own time
-     zone, not the device's.
+   - All times (hours, days, sunrise and sunset, radar frames and "today") are in the city's own
+     time zone, not the device's.
    - On landscape phones and iPad the pets and walk card sit beside today's details, and the week
      splits into two columns.
    - City tabs appear under the title once two or more cities are saved.
    - Pull to refresh. Data also refreshes silently whenever the app returns to the foreground
-     (unless `foreground_refresh_min_minutes` says that city was fetched recently), and periodically
-     in the background.
+     (unless `foreground_refresh_min_minutes` says that city was fetched recently), every 30 minutes
+     while the app stays open, and periodically in the background. Each refresh also moves the
+     clock on, so hours that have passed drop off and a screen left open overnight keeps up.
    - The walk card and the radar can each be switched off from Remote Config.
-6. **Add city** (＋) — search with geocoding suggestions; choosing a suggestion pins exact coordinates.
+6. **Add city** (＋): search with geocoding suggestions; choosing a suggestion pins exact coordinates.
    A name added without choosing a suggestion appears straight away and is geocoded in the background.
 7. **Settings** (gear):
    - Units: system, metric, or imperial
+   - Main screen: **Best walk time** on or off, for people without a dog
    - Location and notification permission status. A permission that was never requested is requested
      in-app (iOS has no Settings entry for it yet); a denied one links to the iOS Settings app.
      Granting location here adds your current location as a city.
@@ -102,8 +115,8 @@ scheme and bundle ID (`com.tuckercr.Cats-Dogs`) keep the original Cats&Dogs name
 | Radar | [RainViewer](https://www.rainviewer.com/api.html) frames (free, no key) at zoom 7, the highest it serves |
 | Base map | OpenStreetMap tiles |
 
-Open-Meteo's weather codes are mapped onto OpenWeatherMap-style conditions and icons, so icons and
-pet moods work the same for both sources.
+Open-Meteo's weather codes are mapped onto OpenWeatherMap-style conditions and icon codes, so the
+icons and pet moods work the same for both sources.
 
 ### Caching and errors
 
@@ -128,8 +141,8 @@ a single `BGAppRefreshTask`. Each time iOS grants background time it:
 
 The notifications themselves stay on calendar triggers, so they always arrive on time; their text is
 as fresh as the most recent background run. They are also rewritten whenever the app itself loads
-new data. The fetch-then-notify decision logic is `NotificationWorkerLogic`, a direct port of the
-Android class with the same tests.
+new data. The fetch-then-notify decision logic is `NotificationWorkerLogic`, the same logic as on
+Android, with the same tests.
 
 > **iOS decides when background refresh runs.** The interval is a minimum, not a schedule: iOS
 > learns from how often the app is opened, and runs nothing if the user force-quits the app or turns
@@ -152,7 +165,7 @@ which Xcode merges with the generated Info.plist.
 | UI | SwiftUI, `NavigationStack` |
 | State | `@Observable` view models on the main actor |
 | Networking | `URLSession` + `Codable` behind `OpenWeatherAPI`, `OpenMeteoAPI` and `GeocodingAPI` protocols, plus an injectable RainViewer fetch (all faked in tests) |
-| Persistence | `UserDefaults` via `PreferencesStore` — onboarding flags, saved cities, unit override, weather cache |
+| Persistence | `UserDefaults` via `PreferencesStore`: onboarding flags, saved cities, unit override, walk card and usage-statistics settings, weather cache |
 | Location | Core Location (when-in-use) |
 | Notifications | `UserNotifications` local calendar triggers |
 | Background work | `BackgroundTasks` (`BGAppRefreshTask`) via SwiftUI `.backgroundTask` |
@@ -175,70 +188,63 @@ Cats&Dogs/
   Views/       Screens; Pets/ holds the pet scene, moods, walk advice and their thresholds
 ```
 
-## Feature parity with Android
+## Accessibility
 
-| Feature | Android | iOS |
+- VoiceOver labels on every control, including the radar slider (read as the frame's time) and
+  the hourly weather icons. The selected unit and the active city tab carry the Selected trait.
+- Touch targets of at least 44 pt (radar play button, city tabs).
+- Text meets WCAG AA contrast: the light theme's blue is `#01579B` and secondary text uses
+  `SecondaryText` rather than the system grey. The brand colour is applied as the app's tint
+  explicitly, since iOS 27 doesn't apply the asset catalog's global accent colour.
+- Layouts scale with Dynamic Type, up to the accessibility sizes.
+
+## Platform differences
+
+The iOS and Android apps have the same features. Where the platforms differ:
+
+| | iOS | Android |
 |---|---|---|
-| Welcome, notification and location onboarding | ✅ | ✅ |
-| Multiple saved cities, tabs, current location | ✅ | ✅ |
-| City search with geocoding suggestions | ✅ | ✅ |
-| Current conditions incl. sunrise / sunset and UV | ✅ | ✅ |
-| Pet hero (8 weather moods, daily caption) | ✅ | ✅ |
-| Best walk time card, incl. pavement heat | ✅ | ✅ |
-| Walk card skips past hours, says "Tomorrow around…", looks 24 hours ahead | ✅ | ✅ |
-| Hourly strip and rain chance | ✅ | ✅ |
-| Open-Meteo forecast for cities with coordinates | ✅ | ✅ |
-| All times in the city's own time zone | ✅ | ✅ |
-| Rest of week + day detail sheet | ✅ | ✅ |
-| Animated RainViewer radar | ✅ speed from Remote Config | ✅ speed from Remote Config |
-| Radar refreshes frames older than 10 minutes | ✅ | ✅ |
-| OpenStreetMap and RainViewer credit under the map | ✅ | ✅ |
-| Wide layout for landscape and tablets | ✅ | ✅ |
-| Branding: brand blue, gold accent, Baloo 2, themed icon | ✅ | ✅ tinted icon on iOS 18+ |
-| Per-city cache, silent refresh on foreground | ✅ | ✅ |
-| Settings: units, permissions, clear cache, about, privacy policy | ✅ | ✅ |
-| Manage locations: set active, reorder, delete | ✅ | ✅ |
-| Daily notifications at 9 / 13 / 19 | ✅ fetched at send time | ✅ text from the latest background refresh |
-| Periodic background weather refresh | ✅ WorkManager, every 30 min (Remote Config) | ✅ `BGAppRefreshTask`, no sooner than the Remote Config interval |
-| Follows the OS temperature-unit preference | ✅ Android 14+ | ⚠️ region-based only |
-| Firebase Analytics, with kill switch and user opt-out | ✅ optional, opt-out in Settings → About | ✅ optional, opt-out in Settings → Privacy |
-| Firebase Remote Config (same 17 keys) | ✅ optional | ✅ optional |
-| Crashlytics | ✅ optional, release builds only | ❌ Xcode Organizer crash reports instead |
-| View-model unit tests | ✅ | ✅ |
-| UI tests in CI | ✅ Compose UI tests | ❌ |
-| Release minification | ✅ R8 | n/a |
+| Daily notifications at 9 / 13 / 19 | Text from the latest background refresh | Fetched at send time |
+| Background weather refresh | `BGAppRefreshTask`, no sooner than the Remote Config interval | WorkManager, every 30 minutes (Remote Config) |
+| "Use system setting" for temperature | By region | Android 14+ temperature preference, else region |
+| Crash reporting | Xcode Organizer crash reports | Crashlytics, release builds only |
+| *Share usage statistics* | Settings › Privacy | Settings › About |
+| UI tests in CI | None yet | Compose UI tests |
+| Release code shrinking | Not needed (Swift compiles to native code) | R8 minification and resource shrinking |
 
 ## Tests
 
-Unit tests live in the `Cats&DogsTests` target (XCTest): 213 tests in 22 classes. Run them in Xcode
+Unit tests live in the `Cats&DogsTests` target (XCTest): 238 tests in 24 classes. Run them in Xcode
 with **⌘U**, or from the Test navigator.
 
-Ported from Android:
+Shared with Android (the same cases on both platforms):
 
-- `ForecastAggregatorTests` — noon slot selection, multi-day grouping, rain chance, local hour, UV
-- `OpenWeatherParsingTests` — JSON decoding for API responses, including UTC offsets and rain chance
-- `WeatherUnitsTests` — imperial vs metric by region, Celsius conversion
-- `WeatherRepositoryTests` — repository mapping and error handling (fake API), Open-Meteo switched off by Remote Config
-- `GeocodingRepositoryTests` — suggestion formatting and validation (fake API)
-- `NotificationWorkerLogicTests` — notification content, permission and retry behaviour, "today" in the city's time zone, the Remote Config switch
-- `OpenMeteoForecastTests` — hour filtering, city time zones (including half-hour zones and DST), WMO codes, UV, pavement heat
-- `RadarTests` — RainViewer timeline parsing, tile URLs, load-once and retry, refreshing a stale timeline while the old one stays on screen
-- `PetMoodTests`, `WalkAdvisorTests` (both in `PetTests.swift`) — mood mapping, walk ratings including night hours and pavement heat, Remote Config thresholds, today vs tomorrow in the city's time zone, the 24-hour cap, dropping past hours
-- `CityListViewModelTests` — loading and legacy migration, add (with geocoding and de-duplication), remove, set active, reorder
-- `WeatherForecastViewModelTests` — request routing, cache-first display, error mapping, silent background refresh, the foreground-refresh window, analytics events, and races between overlapping requests
-- `GeoLocationViewModelTests` — debounced search, latest-input-wins, suggestion pinning, reset
-- `LocationPermissionViewModelTests` — denied, located and failed states
-- `SettingsViewModelTests` — unit override persistence, clear cache, permission requests, usage-sharing opt-out
-- `WelcomeViewModelTests` — onboarding flags, including installs that predate the notification step, and the onboarding-complete event
-- `AnalyticsRepositoryTests` — the three analytics gates and pushing the opt-out into the SDK
-- `PetWeatherThresholdsTests` — walk and pet threshold ranges and pair checks
+- `ForecastAggregatorTests`: noon slot selection, multi-day grouping, rain chance, local hour, UV
+- `OpenWeatherParsingTests`: JSON decoding for API responses, including UTC offsets and rain chance
+- `WeatherUnitsTests`: imperial vs metric by region, Celsius conversion
+- `WeatherRepositoryTests`: repository mapping and error handling (fake API), Open-Meteo switched off by Remote Config
+- `GeocodingRepositoryTests`: suggestion formatting and validation (fake API)
+- `NotificationWorkerLogicTests`: notification content, permission and retry behaviour, "today" in the city's time zone, the Remote Config switch
+- `OpenMeteoForecastTests`: hour filtering, city time zones (including half-hour zones and DST), WMO codes, UV, pavement heat
+- `RadarTests`: RainViewer timeline parsing, tile URLs, load-once and retry, refreshing a stale timeline while the old one stays on screen
+- `PetMoodTests`, `WalkAdvisorTests` (both in `PetTests.swift`): mood mapping, night captions by the city's local hour, walk ratings including walking hours, daylight, raining now and pavement heat, Remote Config thresholds, today vs tomorrow in the city's time zone, the 24-hour cap, dropping past hours
+- `MoonPhaseTests`: the phase from the date, checked against published phases
+- `WeatherIconViewTests`: icon for each condition by day and night, moon phases, southern-hemisphere mirroring, every asset present
+- `CityListViewModelTests`: loading and legacy migration, add (with geocoding and de-duplication), remove, set active, reorder
+- `WeatherForecastViewModelTests`: request routing, cache-first display, error mapping, silent background refresh, the foreground-refresh window, analytics events, and races between overlapping requests
+- `GeoLocationViewModelTests`: debounced search, latest-input-wins, suggestion pinning, reset
+- `LocationPermissionViewModelTests`: denied, located and failed states
+- `SettingsViewModelTests`: unit override persistence, clear cache, permission requests, usage-sharing opt-out, the walk card setting
+- `WelcomeViewModelTests`: onboarding flags, including installs that predate the notification step, and the onboarding-complete event
+- `AnalyticsRepositoryTests`: the three analytics gates and pushing the opt-out into the SDK
+- `PetWeatherThresholdsTests`: walk and pet threshold ranges and pair checks
 
 iOS only:
 
-- `WeatherBackgroundRefresherTests` — background refresh caching, notification rescheduling and retry timing
-- `PreferencesStoreTests` — per-city cache round trip, eviction when a city is removed, older cache format
-- `WeatherFormattingTests` — sunrise/sunset in the city's time zone, UV categories
-- `RemoteConfigRepositoryTests` — defaults, the refresh-interval floor, radar-speed and foreground-refresh limits
+- `WeatherBackgroundRefresherTests`: background refresh caching, notification rescheduling and retry timing
+- `PreferencesStoreTests`: per-city cache round trip, eviction when a city is removed, older cache format
+- `WeatherFormattingTests`: sunrise and sunset in the city's time zone, UV categories, calm wind, visibility in miles or km and "Clear"
+- `RemoteConfigRepositoryTests`: defaults, the refresh-interval floor, radar-speed and foreground-refresh limits
 
 View-model tests run against real repositories with scripted API fakes, and a `PreferencesStore` backed
 by a throwaway `UserDefaults` suite, so they never touch the app's real data. Shared helpers (including
@@ -288,7 +294,7 @@ Remote Config parameters are defined and deployed from the Android repo
 | `radar_frame_interval_ms` | 850 (100–5000, otherwise the default) | Radar animation speed |
 | `analytics_enabled` | true | Kill switch for every analytics event, and SDK collection |
 | `radar_enabled` | true | Hides the radar card if RainViewer or the OpenStreetMap tiles become unavailable |
-| `walk_card_enabled` | true | Hides the "time to walk the dog" card |
+| `walk_card_enabled` | true | Hides the "Best walk time" card for everyone; users can also turn it off in Settings |
 | `daily_weather_notifications_enabled` | true | Only the daily 9 / 13 / 19 weather summaries; off removes the pending ones. Future notification types get their own switches |
 | `foreground_refresh_min_minutes` | 0 (0–1440) | Skips the silent refresh on returning to the app if that city was fetched this recently. Pull-to-refresh and city changes are never skipped |
 | `walk_hot_pavement_c` | 52 (40–70) | Pavement temperature that triggers the hot-paws warning |
@@ -313,9 +319,9 @@ The events and parameters match Android, so both platforms report into the same 
 
 | Event | Parameters | When |
 |---|---|---|
-| `onboarding_complete` | — | The last onboarding step (location) finished or was skipped |
-| `city_added` | — | A new city was saved (re-adding an existing one doesn't count) |
-| `settings_opened` | — | Settings opened from the gear |
+| `onboarding_complete` | None | The last onboarding step (location) finished or was skipped |
+| `city_added` | None | A new city was saved (re-adding an existing one doesn't count) |
+| `settings_opened` | None | Settings opened from the gear |
 | `weather_error` | `error_key` (e.g. `offline`, `city_not_found`) | A current-weather or forecast fetch failed, even if cached data hid the error |
 
 An event is sent only when all three gates are open:
@@ -347,7 +353,7 @@ Firebase 13 needs Xcode 26.1 (Swift 6.2.1). The project stays on 12.x until CI m
   `ipad-02`. App Store Connect requires iPad screenshots because the app runs on iPad.
 - Release builds fail if `Cats&Dogs/Secrets.plist` is missing or has no OpenWeather key (the "Check
   OpenWeather API key" build phase), so an archive can't ship without one. Debug builds skip the
-  check. Radar map tiles are requested with a `FurcastWeather/<version>` User-Agent and cached on
+  check. Radar map tiles are requested with a `SunnyAndMisty/<version>` User-Agent and cached on
   disk, as OpenStreetMap's tile policy asks.
 - [`Cats&Dogs/PrivacyInfo.xcprivacy`](Cats&Dogs/PrivacyInfo.xcprivacy) is the privacy manifest: no
   tracking or tracking domains, product interaction data for analytics and precise location for

@@ -20,7 +20,7 @@ struct WelcomeView: View {
                     .accessibilityHidden(true)
             }
 
-            Text("Furcast Weather")
+            Text("Sunny & Misty")
                 .font(.brand(.largeTitle, weight: .bold))
                 .fontWeight(.semibold)
                 .padding(.top, 20)

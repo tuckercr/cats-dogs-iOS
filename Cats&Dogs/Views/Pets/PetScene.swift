@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Placeholder illustration of the cat and dog acting out `mood`. Drawn with simple shapes so the
+/// Placeholder illustration of Sunny (the dog) and Misty (the cat) acting out `mood`. Drawn with simple shapes so the
 /// feature works end to end; swap the body of this view for real artwork later. Same shapes and
 /// colours as the Android `PetScene`.
 struct PetScene: View {
@@ -17,13 +17,19 @@ struct PetScene: View {
             let painter = Painter(context: context, scale: size.width / Self.sceneWidth)
             painter.sky(mood, moonPhase: moonPhase, southernHemisphere: southernHemisphere)
             painter.oval(Palette.ground, cx: 130, cy: 140, rx: 110, ry: 8)
-            painter.cat(mood)
-            painter.dog(mood)
-            painter.props(mood)
+            // The pets are authored cat-left, dog-right; mirrored so Sunny (the dog) stands on the
+            // left, matching the name. The sky stays put, and the ground shadow is symmetrical.
+            var mirrored = context
+            mirrored.translateBy(x: size.width, y: 0)
+            mirrored.scaleBy(x: -1, y: 1)
+            let pets = Painter(context: mirrored, scale: painter.scale)
+            pets.cat(mood)
+            pets.dog(mood)
+            pets.props(mood)
         }
         .aspectRatio(Self.sceneWidth / Self.sceneHeight, contentMode: .fit)
         .accessibilityElement()
-        .accessibilityLabel("The cat and dog reacting to the weather")
+        .accessibilityLabel("Sunny the dog and Misty the cat reacting to the weather")
     }
 }
 

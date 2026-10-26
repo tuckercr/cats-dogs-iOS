@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// How the cat and dog react on the home screen, derived from the current conditions.
+/// How Sunny (the dog) and Misty (the cat) react on the home screen, derived from the current conditions.
 enum PetMood: CaseIterable {
     case sunny, cloudy, rain, storm, snow, hot, cold, night
 
@@ -50,21 +50,21 @@ enum PetMood: CaseIterable {
         switch self {
         case .sunny: [
             "Perfect walkies weather! Off we go.",
-            "The cat has claimed the sunniest windowsill.",
+            "Misty has claimed the sunniest windowsill.",
             "Sunshine and tail wags all round.",
         ]
         case .cloudy: [
-            "A bit grey, but the dog is still keen for a walk.",
-            "Nap weather, says the cat.",
+            "A bit grey, but Sunny is still keen for a walk.",
+            "Nap weather, says Misty.",
             "No sun, no problem. Still time for a stroll.",
         ]
         case .rain: [
-            "The dog wants puddles. The cat wants a towel.",
-            "Grab a raincoat. The cat is NOT going out in this.",
+            "Sunny wants puddles. Misty wants a towel.",
+            "Grab a raincoat. Misty is NOT going out in this.",
             "Wet paws ahead. Keep a towel by the door.",
         ]
         case .storm: [
-            "Thunder! The cat is under the bed. Keep pets inside.",
+            "Thunder! Misty is under the bed. Keep pets inside.",
             "Stormy out there. Sofa cuddles today.",
         ]
         case .snow: [
@@ -83,15 +83,15 @@ enum PetMood: CaseIterable {
             switch nightPart {
             case .evening: [
                 "Quiet night. Time for one last stroll before bed?",
-                "The dog thinks there's time for one more lap of the block.",
+                "Sunny thinks there's time for one more lap of the block.",
             ]
             case .lateNight: [
-                "Both are curled up asleep. Shh.",
-                "Lights out. The cat has claimed the warm spot.",
+                "Sunny and Misty are curled up asleep. Shh.",
+                "Lights out. Misty has claimed the warm spot.",
             ]
             case .beforeDawn: [
-                "Still dark out. The dog is already waiting by the door.",
-                "Not quite morning. The cat is pretending to be asleep.",
+                "Still dark out. Sunny is already waiting by the door.",
+                "Too dark to get up, says Misty. She's pretending to be asleep.",
             ]
             }
         }
