@@ -20,6 +20,12 @@ struct RootView: View {
                     WelcomeView {
                         welcomeViewModel.completeWelcome()
                     }
+                } else if welcomeViewModel.isAskingAboutDog {
+                    OnboardingDogView { hasDog in
+                        // The walk card only shows when there's a dog.
+                        settingsViewModel.setShowWalkCard(hasDog)
+                        welcomeViewModel.completeDogQuestion()
+                    }
                 } else if !state.notificationOnboardingDone {
                     OnboardingNotificationView {
                         welcomeViewModel.completeNotificationOnboarding()

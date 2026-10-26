@@ -4,9 +4,7 @@ struct OnboardingNotificationView: View {
     let onDone: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-
+        OnboardingLayout {
             ZStack {
                 Circle()
                     .fill(Color.primaryContainer)
@@ -16,21 +14,17 @@ struct OnboardingNotificationView: View {
                     .foregroundStyle(Color.accent)
             }
 
-            Spacer().frame(height: 32)
-
             Text("Stay in the loop")
                 .font(.brand(.title2))
                 .fontWeight(.semibold)
                 .multilineTextAlignment(.center)
+                .padding(.top, 20)
+                .accessibilityAddTraits(.isHeader)
 
-            Spacer().frame(height: 12)
-
-            Text("Get a morning, afternoon, and evening weather update for your active city.")
+            Text("Allow Sunny & Misty to send you daily weather updates for your saved locations.")
                 .font(.body)
                 .foregroundStyle(Color.secondaryText)
                 .multilineTextAlignment(.center)
-
-            Spacer().frame(height: 48)
 
             Button {
                 Task {
@@ -43,20 +37,14 @@ struct OnboardingNotificationView: View {
             }
             .accentButtonStyle()
             .controlSize(.large)
-
-            Spacer().frame(height: 12)
+            .padding(.top, 36)
 
             Button(action: onDone) {
                 Text("Not now").frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
             .controlSize(.large)
-
-            Spacer()
         }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.brandSurface)
     }
 }
 

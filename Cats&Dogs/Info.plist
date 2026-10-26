@@ -20,5 +20,15 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- Declared here, not with INFOPLIST_KEY_UILaunchScreen_* build settings: Xcode ignores the
+	     colour and image ones and generated an empty launch screen (plain white). The icon is
+	     200 pt, the same size and place as SplashView's, which takes over from it. -->
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>LaunchSplash</string>
+	</dict>
 </dict>
 </plist>

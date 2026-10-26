@@ -84,6 +84,16 @@ struct CurrentWeatherView: View {
                 backgroundRefreshActiveLocation()
             }
         }
+        // While refreshes keep failing, re-read the clock every few minutes so old weather gives way
+        // to the forecast once it passes the cutoff.
+        .task(id: weatherViewModel.staleErrorKey) {
+            guard weatherViewModel.staleErrorKey != nil else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: StaleWeather.recheckInterval)
+                guard !Task.isCancelled else { return }
+                now = Date()
+            }
+        }
         .onChange(of: weatherViewModel.currentWeather) { _, state in
             if case .success = state { rescheduleNotificationsSoon() }
         }
@@ -195,12 +205,33 @@ struct CurrentWeatherView: View {
                         Spacer()
                     }
 
-                case .success(let weather):
-                    if let staleErrorKey = weatherViewModel.staleErrorKey {
-                        StaleWeatherBanner(weather: weather, errorKey: staleErrorKey)
+                case .success(let cached):
+                    // Past the cutoff the old reading isn't shown as "now": the cached forecast's
+                    // current hour stands in, or the error if it doesn't cover now.
+                    let staleErrorKey = weatherViewModel.staleErrorKey
+                    let tooOld = staleErrorKey != nil && StaleWeather.isTooOldToShowAsNow(cached, now: now)
+                    let forecastNow: CurrentWeather? = tooOld ? weatherViewModel.forecast.successValue.flatMap {
+                        StaleWeather.forecastAsCurrent(cached, forecast: $0, now: now)
+                    } : nil
+                    if tooOld && forecastNow == nil {
+                        WeatherErrorStateView(
+                            errorKey: staleErrorKey ?? "generic",
+                            canRetry: true,
+                            onRetry: refreshActiveLocation,
+                            lastUpdated: StaleWeather.readingTime(cached, now: now)
+                        )
+                    } else {
+                    if let staleErrorKey {
+                        StaleWeatherBanner(
+                            weather: cached,
+                            errorKey: staleErrorKey,
+                            showingForecast: forecastNow != nil,
+                            now: now
+                        )
                     }
                     CurrentWeatherContent(
-                        weather: weather,
+                        weather: forecastNow ?? cached,
+                        showingForecast: forecastNow != nil,
                         forecastState: weatherViewModel.forecast,
                         location: cityListViewModel.activeLocation,
                         showWalkCard: showWalkCard,
@@ -208,6 +239,7 @@ struct CurrentWeatherView: View {
                         onDaySelected: { selectedDay = $0 },
                         onForecastRetry: refreshActiveLocation
                     )
+                    }
 
                 case .error(let errorKey, let canRetry):
                     WeatherErrorStateView(errorKey: errorKey, canRetry: canRetry, onRetry: refreshActiveLocation)
@@ -287,6 +319,9 @@ extension EnvironmentValues {
 private struct CurrentWeatherContent: View {
     @Environment(\.distanceInMiles) private var distanceInMiles
     let weather: CurrentWeather
+    /// True when `weather` is the cached forecast's current hour standing in for an old reading:
+    /// there's no cloud cover (or visibility) to show.
+    var showingForecast = false
     let forecastState: LoadingState<[DayForecast]>
     let location: SavedLocation?
     let showWalkCard: Bool
@@ -513,12 +548,14 @@ private struct CurrentWeatherContent: View {
                     value: WeatherFormatting.visibility(visibility, inMiles: distanceInMiles)
                 )
             }
-            Divider().padding(.horizontal, 16)
-            MetricIconRow(
-                icon: "cloud.fill",
-                label: "Cloud cover",
-                value: "\(weather.cloudPercent)%"
-            )
+            if !showingForecast {
+                Divider().padding(.horizontal, 16)
+                MetricIconRow(
+                    icon: "cloud.fill",
+                    label: "Cloud cover",
+                    value: "\(weather.cloudPercent)%"
+                )
+            }
             // UV is always 0 after dark, so it only shows in the daytime (night icons end in "n").
             if !weather.iconCode.hasSuffix("n"), let uv = upcomingSlots.first?.uvIndex {
                 Divider().padding(.horizontal, 16)

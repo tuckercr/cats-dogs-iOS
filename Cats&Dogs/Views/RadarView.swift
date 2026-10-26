@@ -56,11 +56,13 @@ struct RadarCard: View {
 }
 
 /// OpenStreetMap's licence requires visible attribution linking to its copyright page, and
-/// RainViewer asks to be credited for its free radar data.
+/// RainViewer asks to be credited for its free radar data. Kept at caption2's default size whatever
+/// the Dynamic Type setting, so the credit stays a small footnote under the map. Same as Android.
 private struct RadarCredits: View {
     var body: some View {
         Text("[© OpenStreetMap contributors](https://www.openstreetmap.org/copyright) · Radar by [RainViewer](https://www.rainviewer.com)")
             .font(.caption2)
+            .dynamicTypeSize(.large)
             .foregroundStyle(Color.secondaryText)
             .tint(Color.secondaryText)
             .multilineTextAlignment(.trailing)

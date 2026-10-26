@@ -44,6 +44,21 @@ final class WelcomeViewModelTests: XCTestCase {
         XCTAssertTrue(preferences.reopened().hasSeenWelcome)
     }
 
+    func testWelcomeLeadsToTheDogQuestionOnlyInTheSameRun() {
+        let viewModel = WelcomeViewModel(preferences: preferences.store)
+        XCTAssertFalse(viewModel.isAskingAboutDog)
+
+        viewModel.completeWelcome()
+        XCTAssertTrue(viewModel.isAskingAboutDog)
+
+        viewModel.completeDogQuestion()
+        XCTAssertFalse(viewModel.isAskingAboutDog)
+        XCTAssertFalse(
+            WelcomeViewModel(preferences: preferences.reopened()).isAskingAboutDog,
+            "A later launch, or an existing user after an update, isn't asked"
+        )
+    }
+
     func testCompleteNotificationOnboardingMarksStateDoneAndPersists() {
         let viewModel = WelcomeViewModel(preferences: preferences.store)
 

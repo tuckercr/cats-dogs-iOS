@@ -29,6 +29,7 @@ struct AccentButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.body.weight(.semibold))
+            .multilineTextAlignment(.center)
             .foregroundStyle(Color.onAccent)
             .padding(.horizontal, 20)
             .padding(.vertical, controlSize == .large ? 14 : 8)

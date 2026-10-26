@@ -1,46 +1,55 @@
 import SwiftUI
 
+/// The first onboarding screen: introduces Sunny and Misty, who tell you the weather.
 struct WelcomeView: View {
     let onGetStarted: () -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
-            Spacer()
+        OnboardingLayout {
+            PetScene(mood: .sunny)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 16)
+                .background(PetMood.sunny.skyColor, in: RoundedRectangle(cornerRadius: 24))
 
-            ZStack {
-                Circle()
-                    .fill(Color.primaryContainer)
-                    .frame(width: 112, height: 112)
-                // The mascot, as on Android's welcome screen.
-                Image("LaunchSplash")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 88, height: 88)
-                    .clipShape(Circle())
-                    .accessibilityHidden(true)
-            }
-
-            Text("Sunny & Misty")
+            Text("Meet Sunny & Misty")
                 .font(.brand(.largeTitle, weight: .bold))
-                .fontWeight(.semibold)
-                .padding(.top, 20)
+                .multilineTextAlignment(.center)
+                .padding(.top, 12)
+                .accessibilityAddTraits(.isHeader)
 
-            Text("Check current conditions and a multi-day forecast for any city.")
-                .font(.body)
+            character(
+                name: "Sunny",
+                body: "Loves a walk in almost any weather, and always knows the best time to head out."
+            )
+            .padding(.top, 8)
+            character(
+                name: "Misty",
+                body: "Prefers the window seat, and will tell you when it's a day for staying in."
+            )
+
+            Text("Together they check the sky so you know what to expect, for you and your pets.")
                 .foregroundStyle(Color.secondaryText)
                 .multilineTextAlignment(.center)
-
-            Spacer()
+                .padding(.top, 8)
 
             Button(action: onGetStarted) {
                 Text("Get started").frame(maxWidth: .infinity)
             }
             .accentButtonStyle()
             .controlSize(.large)
+            .padding(.top, 20)
         }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.brandSurface)
+    }
+
+    private func character(name: String, body: String) -> some View {
+        VStack(spacing: 2) {
+            Text(name)
+                .font(.brand(.title2))
+                .foregroundStyle(Color.accent)
+            Text(body)
+                .multilineTextAlignment(.center)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 

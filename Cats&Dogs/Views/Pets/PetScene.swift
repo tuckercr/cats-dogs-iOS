@@ -159,6 +159,8 @@ private struct Painter {
 
     func dog(_ mood: PetMood) {
         oval(Palette.dogFur, cx: 160, cy: 110, rx: 28, ry: 28)
+        // A rim of body fur round the face, so it doesn't vanish into the sunny sky (the same colour).
+        circle(Palette.dogFur, cx: 160, cy: 76, r: 25.5)
         circle(Palette.dogFace, cx: 160, cy: 76, r: 23)
         oval(Palette.dogEar, cx: 139, cy: 80, rx: 8, ry: 15)
         oval(Palette.dogEar, cx: 181, cy: 80, rx: 8, ry: 15)
