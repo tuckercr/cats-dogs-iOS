@@ -6,6 +6,8 @@ struct WeatherErrorStateView: View {
     let errorKey: String
     let canRetry: Bool
     let onRetry: () -> Void
+    /// When the weather on file is too old to show: "yesterday at 10:10 AM".
+    var lastUpdated: String?
 
     private var offline: Bool { errorKey == "offline" }
 
@@ -24,6 +26,12 @@ struct WeatherErrorStateView: View {
             Text(WeatherErrorMessages.message(for: errorKey))
                 .foregroundStyle(Color.secondaryText)
                 .multilineTextAlignment(.center)
+            if let lastUpdated {
+                Text("Last updated \(lastUpdated).")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.secondaryText)
+                    .multilineTextAlignment(.center)
+            }
             if canRetry {
                 Button(action: onRetry) {
                     Text("Try again")
@@ -45,14 +53,17 @@ struct WeatherErrorStateView: View {
 struct StaleWeatherBanner: View {
     let weather: CurrentWeather
     let errorKey: String
+    /// The reading is past the cutoff and the screen shows the cached forecast for this hour.
+    var showingForecast = false
+    var now = Date()
 
     // Fixed in both appearances, like the hero card it sits above (text 8.9:1).
     private static let background = Color(hex: 0xFAEEDA)
     private static let foreground = Color(hex: 0x633806)
 
     private var lead: String {
-        guard let observedAt = weather.observedAtEpoch else { return "Showing saved weather." }
-        return "Showing weather from \(WeatherFormatting.epochTime(observedAt, timeZone: weather.timeZone))."
+        guard let readingTime = StaleWeather.readingTime(weather, now: now) else { return "Showing saved weather." }
+        return showingForecast ? "Showing the forecast from \(readingTime)." : "Showing weather from \(readingTime)."
     }
 
     var body: some View {
