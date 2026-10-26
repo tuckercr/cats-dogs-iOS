@@ -90,7 +90,14 @@ struct CurrentWeatherView: View {
         }
         .sheet(item: $selectedDay) { day in
             DayDetailSheet(day: day)
+                .environment(\.southernHemisphere, isSouthernHemisphere)
         }
+        // The moon (hero scene and night icons) is lit from the other side down south.
+        .environment(\.southernHemisphere, isSouthernHemisphere)
+    }
+
+    private var isSouthernHemisphere: Bool {
+        (cityListViewModel.activeLocation?.latitude ?? 0) < 0
     }
 
     private var navigationTitle: String {
@@ -538,7 +545,7 @@ private struct HourlyStrip: View {
                         Text(slot.timeLabel)
                             .font(.caption)
                             .foregroundStyle(Color.secondaryText)
-                        WeatherIconView(iconCode: slot.iconCode, size: 32, description: slot.description)
+                        WeatherIconView(iconCode: slot.iconCode, size: 32, description: slot.description, date: slot.date)
                         Text("\(Int(slot.temperature.rounded()))°")
                             .fontWeight(.semibold)
                         PrecipChance(percent: slot.precipitationChance)

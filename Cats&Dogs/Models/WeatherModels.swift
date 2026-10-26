@@ -48,6 +48,8 @@ struct HourlySlot: Codable, Equatable, Identifiable {
     /// Hour of day (0...23) in the location's own time zone.
     var localHour: Int? = nil
     var epochSeconds: Int? = nil
+
+    var date: Date? { epochSeconds.map { Date(timeIntervalSince1970: TimeInterval($0)) } }
 }
 
 struct DayForecast: Codable, Equatable, Identifiable {

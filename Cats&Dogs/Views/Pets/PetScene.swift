@@ -5,6 +5,8 @@ import SwiftUI
 /// colours as the Android `PetScene`.
 struct PetScene: View {
     let mood: PetMood
+    var moonPhase = MoonPhase(at: Date())
+    @Environment(\.southernHemisphere) private var southernHemisphere
 
     // The scene is authored on a 260 x 150 grid and scaled to fit.
     private static let sceneWidth: CGFloat = 260
@@ -13,7 +15,7 @@ struct PetScene: View {
     var body: some View {
         Canvas { context, size in
             let painter = Painter(context: context, scale: size.width / Self.sceneWidth)
-            painter.sky(mood)
+            painter.sky(mood, moonPhase: moonPhase, southernHemisphere: southernHemisphere)
             painter.oval(Palette.ground, cx: 130, cy: 140, rx: 110, ry: 8)
             painter.cat(mood)
             painter.dog(mood)
@@ -42,7 +44,8 @@ private enum Palette {
     static let stormCloud = Color(hex: 0x5F6B7A)
     static let bolt = Color(hex: 0xFAC775)
     static let moon = Color(hex: 0xF1EFE8)
-    static let skyNight = Color(hex: 0x3C4A78)
+    /// The moon's unlit part: just darker than the night sky, so the disc shows faintly.
+    static let moonUnlit = Color(hex: 0x34416E)
     static let ground = Color.black.opacity(0.2)
 }
 
@@ -79,15 +82,34 @@ private struct Painter {
         circle(color, cx: cx + 8, cy: cy - 4, r: 16)
     }
 
-    func sky(_ mood: PetMood) {
+    /// The moon at `phase`: the unlit disc, the lit half, then the terminator, an ellipse that adds
+    /// to the lit half (gibbous) or cuts into it (crescent). Waxing is lit on the right in the north
+    /// and on the left in the south.
+    func moon(_ phase: MoonPhase, southernHemisphere: Bool, cx: CGFloat, cy: CGFloat, r: CGFloat) {
+        circle(Palette.moonUnlit, cx: cx, cy: cy, r: r)
+        switch phase {
+        case .new: return
+        case .full:
+            circle(Palette.moon, cx: cx, cy: cy, r: r)
+            return
+        default: break
+        }
+        let litOnRight = phase.isWaxing != southernHemisphere
+        var half = context
+        half.clip(to: Path(CGRect(x: (litOnRight ? cx : cx - r) * scale, y: (cy - r) * scale, width: r * scale, height: r * 2 * scale)))
+        half.fill(Path(ellipseIn: CGRect(x: (cx - r) * scale, y: (cy - r) * scale, width: r * 2 * scale, height: r * 2 * scale)), with: .color(Palette.moon))
+        let rx = abs(cos(phase.drawAngleDegrees * .pi / 180)) * r
+        oval(phase.isGibbous ? Palette.moon : Palette.moonUnlit, cx: cx, cy: cy, rx: rx, ry: r)
+    }
+
+    func sky(_ mood: PetMood, moonPhase: MoonPhase, southernHemisphere: Bool) {
         switch mood {
         case .sunny:
             circle(Palette.sun, cx: 220, cy: 32, r: 18)
         case .hot:
             circle(Palette.sunHot, cx: 220, cy: 32, r: 24)
         case .night:
-            circle(Palette.moon, cx: 215, cy: 30, r: 16)
-            circle(Palette.skyNight, cx: 223, cy: 25, r: 14)
+            moon(moonPhase, southernHemisphere: southernHemisphere, cx: 215, cy: 30, r: 16)
         case .cloudy:
             cloud(Palette.cloud, cx: 210, cy: 30)
         case .rain:
