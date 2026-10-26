@@ -56,4 +56,15 @@ final class WeatherFormattingTests: XCTestCase {
         XCTAssertEqual(WeatherFormatting.uvIndex(9), "9 (Very high)")
         XCTAssertEqual(WeatherFormatting.uvIndex(11.2), "11 (Extreme)")
     }
+
+    func testCalmWindIsAPlainZeroWithNoDirection() {
+        XCTAssertEqual(WeatherFormatting.wind(0, units: .imperial), "0 mph")
+        XCTAssertEqual(WeatherFormatting.wind(0.04, units: .metric), "0 m/s")
+        XCTAssertEqual(WeatherFormatting.windWithDirection(0, deg: 0, units: .imperial), "0 mph")
+    }
+
+    func testWindWithSpeedKeepsItsDirection() {
+        XCTAssertEqual(WeatherFormatting.wind(0.05, units: .imperial), "0.1 mph")
+        XCTAssertEqual(WeatherFormatting.windWithDirection(3.4, deg: 45, units: .imperial), "3.4 mph  NE")
+    }
 }

@@ -10,10 +10,18 @@ enum WeatherFormatting {
 
     static func wind(_ speed: Double, units: WeatherUnits) -> String {
         switch units {
-        case .metric: String(format: "%.1f m/s", speed)
-        case .imperial: String(format: "%.1f mph", speed)
+        case .metric: isCalm(speed) ? "0 m/s" : String(format: "%.1f m/s", speed)
+        case .imperial: isCalm(speed) ? "0 mph" : String(format: "%.1f mph", speed)
         }
     }
+
+    /// Speed and compass direction, without a direction when it's calm ("0 mph N" means nothing).
+    static func windWithDirection(_ speed: Double, deg: Int, units: WeatherUnits) -> String {
+        isCalm(speed) ? wind(speed, units: units) : "\(wind(speed, units: units))  \(windDirection(deg))"
+    }
+
+    /// A speed that would show as "0.0": written as a plain 0, with no direction.
+    static func isCalm(_ speed: Double) -> Bool { speed < 0.05 }
 
     static func visibility(_ meters: Int) -> String {
         if meters >= 1000 {

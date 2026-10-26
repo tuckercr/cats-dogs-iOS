@@ -468,7 +468,7 @@ private struct CurrentWeatherContent: View {
             MetricIconRow(
                 icon: "wind",
                 label: "Wind",
-                value: "\(WeatherFormatting.wind(weather.windSpeed, units: weather.units))  \(WeatherFormatting.windDirection(weather.windDeg))"
+                value: WeatherFormatting.windWithDirection(weather.windSpeed, deg: weather.windDeg, units: weather.units)
             )
             if let visibility = weather.visibilityMeters {
                 Divider().padding(.horizontal, 16)
