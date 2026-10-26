@@ -1,11 +1,11 @@
-# Furcast Weather (iOS)
+# Sunny & Misty (iOS)
 
 ![iOS CI](https://github.com/tuckercr/cats-dogs-iOS/actions/workflows/ios.yml/badge.svg)
 
-Native SwiftUI port of the [Android Furcast Weather app](https://github.com/tuckercr/cats-dogs).
+Native SwiftUI port of the [Android Sunny & Misty app](https://github.com/tuckercr/cats-dogs).
 Features generally land on Android first and iOS catches up — see [Feature parity](#feature-parity-with-android).
 
-Save multiple cities (or use your current location) and see current conditions with a cat and dog
+Save multiple cities (or use your current location) and see current conditions with Sunny the dog and Misty the cat
 acting out the weather, the best time to walk the dog, an hourly and 7-day forecast, an animated
 precipitation radar, and optional daily weather notifications.
 
@@ -13,7 +13,7 @@ precipitation radar, and optional daily weather notifications.
 
 | Pets, walk time & hourly | Radar & rest of week | Day detail | Settings & units |
 |---|---|---|---|
-| ![The cat and dog react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour detail for a day](./screenshots/day.png) | ![Settings with unit selection](./screenshots/settings.png) |
+| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour detail for a day](./screenshots/day.png) | ![Settings with unit selection](./screenshots/settings.png) |
 
 On iPad and in landscape, the pets sit beside today's details and the week splits into two columns:
 
@@ -40,7 +40,7 @@ analytics off and Remote Config on its built-in defaults. See [Firebase](#fireba
 
 Requires **iOS 17+**.
 
-The app is called **Furcast Weather** (**Furcast** on the home screen). The Xcode project, target,
+The app is called **Sunny & Misty** ("Sunny & Misty: Pet Weather" on the App Store). The Xcode project, target,
 scheme and bundle ID (`com.tuckercr.Cats-Dogs`) keep the original Cats&Dogs name on purpose.
 
 ## App flow
@@ -50,7 +50,7 @@ scheme and bundle ID (`com.tuckercr.Cats-Dogs`) keep the original Cats&Dogs name
 3. **Notification onboarding** — opt in to daily weather updates, or **Not now**.
 4. **Location onboarding** — use the device location, or **Enter a city manually**.
 5. **Current weather** — the main screen for the active city:
-   - Hero card: the cat and dog act out one of 8 weather moods (sunny, cloudy, rain, storm, snow, hot,
+   - Hero card: Sunny and Misty act out one of 8 weather moods (sunny, cloudy, rain, storm, snow, hot,
      cold, night) on a mood-coloured card, with the city, temperature, min/max and a daily caption in
      the pets' voice. Tap it for today's hourly detail. The art is drawn in code as a placeholder,
      isolated in `PetScene`.
@@ -347,7 +347,7 @@ Firebase 13 needs Xcode 26.1 (Swift 6.2.1). The project stays on 12.x until CI m
   `ipad-02`. App Store Connect requires iPad screenshots because the app runs on iPad.
 - Release builds fail if `Cats&Dogs/Secrets.plist` is missing or has no OpenWeather key (the "Check
   OpenWeather API key" build phase), so an archive can't ship without one. Debug builds skip the
-  check. Radar map tiles are requested with a `FurcastWeather/<version>` User-Agent and cached on
+  check. Radar map tiles are requested with a `SunnyAndMisty/<version>` User-Agent and cached on
   disk, as OpenStreetMap's tile policy asks.
 - [`Cats&Dogs/PrivacyInfo.xcprivacy`](Cats&Dogs/PrivacyInfo.xcprivacy) is the privacy manifest: no
   tracking or tracking domains, product interaction data for analytics and precise location for

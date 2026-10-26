@@ -1,4 +1,4 @@
-# Furcast Weather: App Store listing (draft)
+# Sunny & Misty: App Store listing (draft)
 
 Copy each field into App Store Connect. Character counts are checked against Apple's limits.
 
@@ -6,12 +6,12 @@ Copy each field into App Store Connect. Character counts are checked against App
 
 | Field | Value |
 |---|---|
-| Name (15/30) | Furcast Weather |
-| Subtitle (29/30) | Pet weather & best walk times |
+| Name (26/30) | Sunny & Misty: Pet Weather |
+| Subtitle (28/30) | Best walk times & live radar |
 | Primary category | Weather |
 | Secondary category | Lifestyle |
 | Bundle ID | com.tuckercr.Cats-Dogs |
-| SKU | furcast-weather-ios |
+| SKU | sunny-and-misty-ios |
 | Content rights | Does not contain, show or access third-party content that needs rights (weather data is licensed from the providers below) |
 | Copyright | 2026 FangJet LLC |
 
@@ -23,10 +23,10 @@ Copy each field into App Store Connect. Character counts are checked against App
 
 **Description** (up to 4,000)
 
-> Furcast Weather is the weather app for people who share their home with a cat, a dog, or both. Your two companions act out the forecast, so you can tell at a glance whether it's a sunglasses day, an umbrella day or a stay-under-the-blanket day.
+> Sunny & Misty is the weather app for people who share their home with a cat, a dog, or both. Sunny the dog and Misty the cat act out the forecast, so you can tell at a glance whether it's a sunglasses day, an umbrella day or a stay-under-the-blanket day.
 >
 > BEST TIME FOR A WALK
-> Furcast looks at the next 24 hours and tells you when to head out: right now, later today, or tomorrow morning. It checks rain chance, comfortable temperatures and daylight hours, and warns you when sun-baked pavement is too hot for paws, even on a mild day.
+> Sunny & Misty looks at the next 24 hours and tells you when to head out: right now, later today, or tomorrow morning. It checks rain chance, comfortable temperatures and daylight hours, and warns you when sun-baked pavement is too hot for paws, even on a mild day.
 >
 > PETS THAT REACT TO THE WEATHER
 > Sun, cloud, rain, storms, snow, heat, cold and night each get their own scene, with a fresh caption every day.
@@ -41,7 +41,7 @@ Copy each field into App Store Connect. Character counts are checked against App
 > - Designed for iPhone and iPad, in portrait and landscape
 >
 > PRIVATE BY DESIGN
-> No account, no ads, no tracking. Furcast keeps your saved cities on your device. Anonymous usage statistics help improve the app, and you can turn them off in Settings.
+> No account, no ads, no tracking. Sunny & Misty keeps your saved cities on your device. Anonymous usage statistics help improve the app, and you can turn them off in Settings.
 >
 > Weather data by OpenWeather and Open-Meteo.com. Radar by RainViewer. Maps © OpenStreetMap contributors.
 
@@ -54,7 +54,7 @@ Copy each field into App Store Connect. Character counts are checked against App
 | Field | Value |
 |---|---|
 | Support URL | https://fangjet.com/contact |
-| Marketing URL (optional) | https://furcastweather.app (once registered) |
+| Marketing URL (optional) | https://sunnyandmisty.com |
 | Privacy policy URL | https://fangjet.com/weather |
 
 **Screenshots** (both sets are required, because the app runs on iPhone and iPad):
@@ -67,7 +67,7 @@ Copy each field into App Store Connect. Character counts are checked against App
 - Contact: Colin Tucker, colin@fangjet.com, plus a phone number
 - Notes:
 
-> Furcast Weather needs no account. On first launch it asks for notification and location permission; both are optional. Without location, tap + to add any city by name. The best-walk-time card, hourly strip and radar appear on the main screen; tap a day in "Rest of week" for its hourly detail. Settings has units, permissions, saved cities and a "Share usage statistics" switch. Weather comes from OpenWeather and Open-Meteo, radar from RainViewer.
+> Sunny & Misty needs no account. On first launch it asks for notification and location permission; both are optional. Without location, tap + to add any city by name. The best-walk-time card, hourly strip and radar appear on the main screen; tap a day in "Rest of week" for its hourly detail. Settings has units, permissions, saved cities and a "Share usage statistics" switch. Weather comes from OpenWeather and Open-Meteo, radar from RainViewer.
 
 ## Age rating
 
