@@ -16,31 +16,83 @@ struct PetScene: View {
 
     var body: some View {
         Canvas { context, size in
-            let painter = Painter(context: context, scale: size.width / Self.sceneWidth)
-            painter.sky(mood, moonPhase: moonPhase, southernHemisphere: southernHemisphere)
-            painter.oval(Palette.ground, cx: 130, cy: 140, rx: 110, ry: 8)
-            // The pets are authored cat-left, dog-right; mirrored so Sunny (the dog) stands on the
-            // left, matching the name. The sky stays put, and the ground shadow is symmetrical.
-            var mirrored = context
-            mirrored.translateBy(x: size.width, y: 0)
-            mirrored.scaleBy(x: -1, y: 1)
-            let pets = Painter(context: mirrored, scale: painter.scale)
-            pets.cat(mood)
-            pets.dog(mood)
-            pets.props(mood)
-            if knockedOverRouter {
-                // Tipped back on the ground to Misty's right, antennas splayed.
-                let pivot = CGPoint(x: 216 * painter.scale, y: 128 * painter.scale)
-                var tipped = context
-                tipped.translateBy(x: pivot.x, y: pivot.y)
-                tipped.rotate(by: .degrees(-18))
-                tipped.translateBy(x: -pivot.x, y: -pivot.y)
-                Painter(context: tipped, scale: painter.scale).knockedOverRouter()
-            }
+            Self.draw(
+                in: context,
+                scale: size.width / Self.sceneWidth,
+                mood: mood,
+                moonPhase: moonPhase,
+                southernHemisphere: southernHemisphere,
+                knockedOverRouter: knockedOverRouter
+            )
         }
         .aspectRatio(Self.sceneWidth / Self.sceneHeight, contentMode: .fit)
         .accessibilityElement()
         .accessibilityLabel("Sunny the dog and Misty the cat reacting to the weather")
+    }
+}
+
+extension PetScene {
+    /// The scene at `scale` points per scene unit, with its top-left at the context's origin. Shared
+    /// by `PetScene` and `PetSceneIcon`. The sky's background colour is left to the caller.
+    fileprivate static func draw(
+        in context: GraphicsContext,
+        scale: CGFloat,
+        mood: PetMood,
+        moonPhase: MoonPhase,
+        southernHemisphere: Bool,
+        knockedOverRouter: Bool = false
+    ) {
+        let painter = Painter(context: context, scale: scale)
+        painter.sky(mood, moonPhase: moonPhase, southernHemisphere: southernHemisphere)
+        painter.oval(Palette.ground, cx: 130, cy: 140, rx: 110, ry: 8)
+        // The pets are authored cat-left, dog-right; mirrored so Sunny (the dog) stands on the
+        // left, matching the name. The sky stays put, and the ground shadow is symmetrical.
+        var mirrored = context
+        mirrored.translateBy(x: sceneWidth * scale, y: 0)
+        mirrored.scaleBy(x: -1, y: 1)
+        let pets = Painter(context: mirrored, scale: scale)
+        pets.cat(mood)
+        pets.dog(mood)
+        pets.props(mood)
+        if knockedOverRouter {
+            // Tipped back on the ground to Misty's right, antennas splayed.
+            let pivot = CGPoint(x: 216 * scale, y: 128 * scale)
+            var tipped = context
+            tipped.translateBy(x: pivot.x, y: pivot.y)
+            tipped.rotate(by: .degrees(-18))
+            tipped.translateBy(x: -pivot.x, y: -pivot.y)
+            Painter(context: tipped, scale: scale).knockedOverRouter()
+        }
+    }
+}
+
+/// The pets in `mood` on their sky colour, square: the picture attached to notifications. Cut tight
+/// round the pets (scene x 63...197, y 24...158) so they stay recognisable in a small thumbnail; the
+/// sun and moon fall outside it, and the pets' props still show the mood. Same crop as Android.
+struct PetSceneIcon: View {
+    let mood: PetMood
+    var southernHemisphere = false
+    var moonPhase = MoonPhase(at: Date())
+
+    private static let side: CGFloat = 134
+    private static let left: CGFloat = 63
+    private static let top: CGFloat = 24
+
+    var body: some View {
+        Canvas { context, size in
+            context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(mood.skyColor))
+            let scale = size.width / Self.side
+            var cropped = context
+            cropped.translateBy(x: -Self.left * scale, y: -Self.top * scale)
+            PetScene.draw(
+                in: cropped,
+                scale: scale,
+                mood: mood,
+                moonPhase: moonPhase,
+                southernHemisphere: southernHemisphere
+            )
+        }
+        .aspectRatio(1, contentMode: .fit)
     }
 }
 
