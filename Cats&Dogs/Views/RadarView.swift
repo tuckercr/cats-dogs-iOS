@@ -355,7 +355,7 @@ private enum MapTileLoader {
     private nonisolated static let session: URLSession = {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
         let configuration = URLSessionConfiguration.default
-        configuration.httpAdditionalHeaders = ["User-Agent": "SunnyAndMisty/\(version) (+https://fangjet.com/weather)"]
+        configuration.httpAdditionalHeaders = ["User-Agent": "SunnyAndMisty/\(version) (+https://sunnyandmisty.com)"]
         configuration.urlCache = URLCache(memoryCapacity: 8 * 1024 * 1024, diskCapacity: 100 * 1024 * 1024)
         configuration.requestCachePolicy = .useProtocolCachePolicy
         return URLSession(configuration: configuration)

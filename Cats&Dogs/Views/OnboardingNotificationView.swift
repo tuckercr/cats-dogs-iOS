@@ -21,7 +21,7 @@ struct OnboardingNotificationView: View {
                 .padding(.top, 20)
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Allow Sunny & Misty to send you daily weather updates for your saved locations.")
+            Text("Allow Sunny & Misty to send you daily weather updates for your selected city.")
                 .font(.body)
                 .foregroundStyle(Color.secondaryText)
                 .multilineTextAlignment(.center)

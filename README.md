@@ -103,7 +103,7 @@ and scheme keep the original Cats&Dogs name on purpose. The bundle ID is `com.fa
    - Clear cached weather
    - Privacy: **Share usage statistics** turns analytics on or off. It starts on, except in the EU,
      EEA, UK and Switzerland, where it starts off until the user turns it on
-   - OpenWeather and Open-Meteo attribution, and [privacy policy](https://fangjet.com/weather)
+   - OpenWeather and Open-Meteo attribution, and [privacy policy](https://sunnyandmisty.com/privacy)
 
 ### Where the data comes from
 
@@ -135,13 +135,15 @@ a single `BGAppRefreshTask`. Each time iOS grants background time it:
 
 1. fetches current weather and the forecast for the active city,
 2. writes them to the per-city cache, so the app opens with fresh data,
-3. rewrites the three pending notifications with the fresh text, and
+3. rewrites the pending notifications with the fresh text, and
 4. requests the next run after `weather_refresh_interval_minutes` (default 30, as on Android), or 15
    minutes after a failed fetch.
 
-The notifications themselves stay on calendar triggers, so they always arrive on time; their text is
-as fresh as the most recent background run. They are also rewritten whenever the app itself loads
-new data. The fetch-then-notify decision logic is `NotificationWorkerLogic`, the same logic as on
+The notifications themselves are on calendar triggers, so they always arrive on time. A week of them
+is queued, none repeating: the next one at each time carries the latest weather, and the rest say
+"Tap to see your weather update." so a notification never shows weather from days ago when iOS
+holds back background time. Each background run, and each time the app itself loads new data,
+replaces the whole queue. The fetch-then-notify decision logic is `NotificationWorkerLogic`, the same logic as on
 Android, with the same tests.
 
 > **iOS decides when background refresh runs.** The interval is a minimum, not a schedule: iOS
@@ -363,7 +365,7 @@ Firebase 13 needs Xcode 26.1 (Swift 6.2.1). The project stays on 12.x until CI m
 - `ITSAppUsesNonExemptEncryption` is false in `Info.plist`, so uploads skip the export-compliance
   question.
 - The app icons have no alpha channel, which App Store Connect requires.
-- The privacy policy is at [fangjet.com/weather](https://fangjet.com/weather), linked from Settings.
+- The privacy policy is at [sunnyandmisty.com/privacy](https://sunnyandmisty.com/privacy), linked from Settings.
 
 ## Credits
 
