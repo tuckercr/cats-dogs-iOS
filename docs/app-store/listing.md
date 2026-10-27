@@ -53,9 +53,9 @@ Copy each field into App Store Connect. Character counts are checked against App
 
 | Field | Value |
 |---|---|
-| Support URL | https://fangjet.com/contact |
+| Support URL | https://sunnyandmisty.com/support |
 | Marketing URL (optional) | https://sunnyandmisty.com |
-| Privacy policy URL | https://fangjet.com/weather |
+| Privacy policy URL | https://sunnyandmisty.com/privacy |
 
 **Screenshots** (both sets are required, because the app runs on iPhone and iPad):
 - 6.9-inch iPhone (1320 × 2868) from `screenshots/app-store/`, suggested order 03, 04, 02, 05, 06 (01 optional)

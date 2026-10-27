@@ -7,8 +7,15 @@ final class WeatherNotificationScheduler {
     static let shared = WeatherNotificationScheduler()
 
     private let center = UNUserNotificationCenter.current()
-    private let notificationHours = [9, 13, 19]
-    private var requestIdentifiers: [String] { notificationHours.map { "weather_daily_\($0)" } }
+    nonisolated private static let notificationHours = [9, 13, 19]
+    /// How many days of notifications are queued. iOS gives no guaranteed background time, so the
+    /// queue has to outlast the gaps between refreshes; each refresh replaces all of it.
+    nonisolated private static let daysQueued = 7
+    /// The text for queued notifications whose weather isn't known yet.
+    nonisolated static let fallbackContent = (title: "Sunny & Misty", body: "Tap to see your weather update.")
+    private var requestIdentifiers: [String] {
+        Self.plannedNotifications(after: Date()).map(\.identifier)
+    }
 
     private init() {}
 
@@ -51,41 +58,65 @@ final class WeatherNotificationScheduler {
         if let weather {
             content = buildNotificationContent(weather: weather, todayForecast: todayForecast)
         } else {
-            content = ("Sunny & Misty", "Tap to see your weather update.")
+            content = Self.fallbackContent
         }
 
         await scheduleDailyNotifications(title: content.title, body: content.body)
     }
 
-    /// Replaces the pending 9 AM / 1 PM / 7 PM notifications with the given text. When Remote Config
-    /// switches them off, the pending ones are removed so none fire.
+    /// Replaces the pending 9 AM / 1 PM / 7 PM notifications. The next one at each time gets the given
+    /// text; the ones after it get the fallback, since a repeating notification would keep showing
+    /// this reading for days if iOS doesn't give the app time to refresh. When Remote Config switches
+    /// them off, the pending ones are removed so none fire.
     func scheduleDailyNotifications(title: String, body: String) async {
         removePendingDailyNotifications()
         guard RemoteConfigRepository.shared.dailyWeatherNotificationsEnabled, await isAuthorized() else { return }
 
         // The brand look: the pets in today's mood, as on the app's top card.
         let picture = petsPicture(preferences: .shared)
-        for hour in notificationHours {
-            var dateComponents = DateComponents()
-            dateComponents.hour = hour
-            dateComponents.minute = 0
-
-            let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let calendar = Calendar.current
+        for planned in Self.plannedNotifications(after: Date(), calendar: calendar) {
+            let trigger = UNCalendarNotificationTrigger(
+                dateMatching: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: planned.date),
+                repeats: false
+            )
             let notification = UNMutableNotificationContent()
-            notification.title = title
-            notification.body = body
+            notification.title = planned.isNext ? title : Self.fallbackContent.title
+            notification.body = planned.isNext ? body : Self.fallbackContent.body
             notification.sound = .default
-            if let picture, let attachment = Self.attachment(picture, hour: hour) {
+            if planned.isNext, let picture, let attachment = Self.attachment(picture, identifier: planned.identifier) {
                 notification.attachments = [attachment]
             }
 
-            let request = UNNotificationRequest(
-                identifier: "weather_daily_\(hour)",
-                content: notification,
-                trigger: trigger
-            )
+            let request = UNNotificationRequest(identifier: planned.identifier, content: notification, trigger: trigger)
             try? await center.add(request)
         }
+    }
+
+    struct PlannedNotification: Equatable {
+        let identifier: String
+        let date: Date
+        /// The next notification at its time of day, the only one whose weather is current.
+        let isNext: Bool
+    }
+
+    /// The queued notifications after `now`: each notification time on each of the next
+    /// `daysQueued` days. The next one at each time keeps the original `weather_daily_<hour>`
+    /// identifier, which also replaces the repeating requests older versions scheduled.
+    nonisolated static func plannedNotifications(after now: Date, calendar: Calendar = .current) -> [PlannedNotification] {
+        notificationHours.flatMap { hour -> [PlannedNotification] in
+            guard let next = calendar.nextDate(
+                after: now,
+                matching: DateComponents(hour: hour, minute: 0),
+                matchingPolicy: .nextTime
+            ) else { return [] }
+            return (0..<daysQueued).compactMap { day in
+                guard let date = calendar.date(byAdding: .day, value: day, to: next) else { return nil }
+                let identifier = day == 0 ? "weather_daily_\(hour)" : "weather_daily_\(hour)_\(day)"
+                return PlannedNotification(identifier: identifier, date: date, isNext: day == 0)
+            }
+        }
+        .sorted { $0.date < $1.date }
     }
 
     /// A PNG of the pets in the mood of the active city's cached weather; nil before there's any.
@@ -109,9 +140,9 @@ final class WeatherNotificationScheduler {
     }
 
     /// Each notification needs its own file: iOS moves an attachment's file into its own store.
-    private static func attachment(_ png: Data, hour: Int) -> UNNotificationAttachment? {
+    private static func attachment(_ png: Data, identifier: String) -> UNNotificationAttachment? {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("notification-pets-\(hour)-\(UUID().uuidString).png")
+            .appendingPathComponent("notification-pets-\(identifier)-\(UUID().uuidString).png")
         do {
             try png.write(to: url)
             return try UNNotificationAttachment(identifier: "pets", url: url)
