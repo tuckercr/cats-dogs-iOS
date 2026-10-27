@@ -42,8 +42,8 @@ analytics off and Remote Config on its built-in defaults. See [Firebase](#fireba
 
 Requires **iOS 17+**.
 
-The app is called **Sunny & Misty** ("Sunny & Misty: Pet Weather" on the App Store). The Xcode project, target,
-scheme and bundle ID (`com.tuckercr.Cats-Dogs`) keep the original Cats&Dogs name on purpose.
+The app is called **Sunny & Misty** ("Sunny & Misty: Pet Weather" on the App Store). The Xcode project, target
+and scheme keep the original Cats&Dogs name on purpose. The bundle ID is `com.fangjet.weather`.
 
 ## App flow
 
@@ -152,7 +152,7 @@ Background tasks never fire on the simulator. To trigger one on a device, run fr
 app to the background, pause in the debugger and enter:
 
 ```
-e -l objc -- (void)[[BGTaskScheduler sharedScheduler] _simulateLaunchForTaskWithIdentifier:@"com.tuckercr.Cats-Dogs.refresh"]
+e -l objc -- (void)[[BGTaskScheduler sharedScheduler] _simulateLaunchForTaskWithIdentifier:@"com.fangjet.weather.refresh"]
 ```
 
 The task identifier and the `fetch` background mode are declared in [`Cats&Dogs/Info.plist`](Cats&Dogs/Info.plist),
@@ -278,7 +278,7 @@ Without it CI builds with Firebase switched off. Unit tests never start Firebase
 ## Firebase
 
 Both apps share the Firebase project **`cats-dogs-weather`**, with Google Analytics
-linked. The iOS app is registered as `com.tuckercr.Cats-Dogs`.
+linked. The iOS app is registered as `com.fangjet.weather`.
 
 To build with Firebase, download `GoogleService-Info.plist` for the iOS app (Firebase console →
 Project settings → Your apps, or `firebase apps:sdkconfig IOS <app id> --project cats-dogs-weather`)
