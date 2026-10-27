@@ -11,7 +11,7 @@ final class WeatherBackgroundRefresher {
     static let shared = WeatherBackgroundRefresher()
 
     /// Must match `BGTaskSchedulerPermittedIdentifiers` in Info.plist.
-    nonisolated static let taskIdentifier = "com.tuckercr.Cats-Dogs.refresh"
+    nonisolated static let taskIdentifier = "com.fangjet.weather.refresh"
     nonisolated static let retryInterval: TimeInterval = 15 * 60
 
     /// Remote Config's `weather_refresh_interval_minutes`, as on Android. iOS treats it as a minimum.

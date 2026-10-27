@@ -10,7 +10,7 @@ Copy each field into App Store Connect. Character counts are checked against App
 | Subtitle (28/30) | Best walk times & live radar |
 | Primary category | Weather |
 | Secondary category | Lifestyle |
-| Bundle ID | com.tuckercr.Cats-Dogs |
+| Bundle ID | com.fangjet.weather |
 | SKU | sunny-and-misty-ios |
 | Content rights | Does not contain, show or access third-party content that needs rights (weather data is licensed from the providers below) |
 | Copyright | 2026 FangJet LLC |
