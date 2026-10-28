@@ -23,6 +23,8 @@ struct CurrentWeatherView: View {
     @State private var locationViewModel = LocationPermissionViewModel()
     /// Location access at the last check, to spot it being granted later in the Settings app.
     @State private var locationWasGranted: Bool?
+    /// Whether the fetch under way is to add My Location, rather than to move a saved one.
+    @State private var fetchingMyLocationToAdd = false
 
     private static let autoRefreshInterval: Duration = .seconds(30 * 60)
 
@@ -78,7 +80,7 @@ struct CurrentWeatherView: View {
             if phase == .active {
                 now = Date()
                 backgroundRefreshActiveLocation()
-                addMyLocationIfNewlyAllowed()
+                updateMyLocation()
             }
         }
         // The same quiet refresh every half hour while the app stays in the foreground. Restarted
@@ -110,13 +112,17 @@ struct CurrentWeatherView: View {
         }
         .task {
             refreshActiveLocation()
-            addMyLocationIfNewlyAllowed()
+            updateMyLocation()
         }
         .onChange(of: locationViewModel.state) { _, state in
-            if case .located(let location) = state,
-               !cityListViewModel.locations.contains(where: \.isCurrentLocation) {
+            guard case .located(let location) = state else { return }
+            if cityListViewModel.locations.contains(where: \.isCurrentLocation) {
+                cityListViewModel.updateCurrentLocation(location)
+            } else if fetchingMyLocationToAdd {
+                // A position read only to move My Location, arriving after it was removed, adds nothing.
                 cityListViewModel.addLocation(location)
             }
+            fetchingMyLocationToAdd = false
         }
         .sheet(isPresented: $showAddSheet) {
             AddCitySheet(
@@ -279,15 +285,22 @@ struct CurrentWeatherView: View {
         }
     }
 
-    /// Adds "My Location" once location access turns up after onboarding went without it: granted
-    /// later in the Settings app, say. Only when there are no cities yet, or access has just changed
-    /// to granted, so someone who removed My Location on purpose doesn't get it back every launch.
-    private func addMyLocationIfNewlyAllowed() {
+    /// On launch and each return to the app, with location access on:
+    /// - re-reads the position while My Location is saved, so it follows the device rather than
+    ///   staying where it was added;
+    /// - otherwise adds it once access turns up after onboarding went without it (granted later in
+    ///   the Settings app, say). Only when there are no cities yet, or access has just changed to
+    ///   granted, so someone who removed My Location on purpose doesn't get it back every launch.
+    private func updateMyLocation() {
         let granted = locationViewModel.hasLocationPermission()
         let newlyGranted = granted && locationWasGranted == false
         locationWasGranted = granted
-        guard granted, !cityListViewModel.locations.contains(where: \.isCurrentLocation) else { return }
-        if newlyGranted || cityListViewModel.locations.isEmpty {
+        guard granted, locationViewModel.state != .locating else { return }
+        if cityListViewModel.locations.contains(where: \.isCurrentLocation) {
+            fetchingMyLocationToAdd = false
+            locationViewModel.fetchLocation()
+        } else if newlyGranted || cityListViewModel.locations.isEmpty {
+            fetchingMyLocationToAdd = true
             locationViewModel.fetchLocation()
         }
     }

@@ -21,6 +21,13 @@ final class LocationPermissionViewModelTests: XCTestCase {
         XCTAssertEqual(locationQueries, 0)
     }
 
+    func testCanAskOnlyWhileIOSWouldStillPrompt() {
+        // "Allow Once" and "Ask Next Time" come back as not determined on the next launch.
+        XCTAssertTrue(LocationPermissionViewModel(authorizationStatus: { .notDetermined }).canRequestPermission())
+        XCTAssertFalse(LocationPermissionViewModel(authorizationStatus: { .denied }).canRequestPermission())
+        XCTAssertFalse(LocationPermissionViewModel(authorizationStatus: { .authorizedWhenInUse }).canRequestPermission())
+    }
+
     func testNotDeterminedCountsAsNoPermission() {
         let viewModel = LocationPermissionViewModel(authorizationStatus: { .notDetermined })
 

@@ -159,7 +159,7 @@ enum TodayDetails {
 
     /// The Beaufort scale's names, which the Wind tile shows under the speed.
     static let windForceNames = [
-        "Calm", "Light air", "Light breeze", "Gentle breeze", "Moderate breeze", "Fresh breeze", "Strong breeze",
+        "Calm", "Light wind", "Light breeze", "Gentle breeze", "Moderate breeze", "Fresh breeze", "Strong breeze",
         "Near gale", "Gale", "Strong gale", "Storm", "Violent storm", "Hurricane force",
     ]
 
