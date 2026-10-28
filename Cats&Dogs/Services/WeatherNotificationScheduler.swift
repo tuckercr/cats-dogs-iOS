@@ -128,7 +128,7 @@ final class WeatherNotificationScheduler {
         let mood = PetMood.forConditions(
             conditionMain: weather.conditionMain,
             iconCode: weather.iconCode,
-            temperatureC: weather.units.toCelsius(weather.temperature),
+            feelsLikeC: weather.units.toCelsius(weather.feelsLike),
             thresholds: RemoteConfigRepository.shared.petWeatherThresholds
         )
         let renderer = ImageRenderer(

@@ -51,6 +51,10 @@ struct HourlySlot: Codable, Equatable, Identifiable {
     /// Hour of day (0...23) in the location's own time zone.
     var localHour: Int? = nil
     var epochSeconds: Int? = nil
+    /// Rain or snow in the 12 hours before the slot or during it, or snow on the ground: below
+    /// freezing, the pavement may be icy or salted. Nil when the source doesn't say (optional, so a
+    /// forecast cached before it existed still decodes).
+    var groundWet: Bool? = nil
 
     var date: Date? { epochSeconds.map { Date(timeIntervalSince1970: TimeInterval($0)) } }
 }
@@ -71,6 +75,18 @@ struct DayForecast: Codable, Equatable, Identifiable {
     var precipitationChance: Int = 0
     /// Peak UV index across the day's slots; nil when the source doesn't provide UV.
     var uvIndexMax: Double? = nil
+    /// The next few hours in 15-minute steps, from the one in progress, for "Rain starting around
+    /// 3:15 PM". Only on the first day (it reaches a few hours ahead, whatever the date); nil when the
+    /// source doesn't provide it, or in a forecast cached before it existed.
+    var quarterHours: [QuarterHour]? = nil
+}
+
+/// Rain and snow over the 15 minutes from `epochSeconds`.
+struct QuarterHour: Codable, Equatable {
+    let epochSeconds: Int
+    /// Rain and snow together, in mm of water.
+    let precipitationMm: Double
+    var snowfallCm: Double = 0
 }
 
 extension Array where Element == HourlySlot {

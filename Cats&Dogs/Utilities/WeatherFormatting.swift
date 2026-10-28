@@ -1,41 +1,37 @@
 import Foundation
 
 enum WeatherFormatting {
+    /// Whole degrees: forecasts aren't accurate to a tenth, and other weather apps don't show one.
     static func temperature(_ value: Double, units: WeatherUnits) -> String {
         switch units {
-        case .metric: String(format: "%.1f °C", value)
-        case .imperial: String(format: "%.1f °F", value)
+        case .metric: "\(Int(value.rounded())) °C"
+        case .imperial: "\(Int(value.rounded())) °F"
         }
     }
 
+    /// At and above this many m/s (what rounds to 10.0), wind speeds show without a decimal.
+    private static let wholeMetersPerSecondFrom = 9.95
+
+    /// Whole mph, and whole m/s from 10 up; below that a whole m/s is too coarse (3 m/s is anything
+    /// from a light to a gentle breeze), so it keeps one decimal.
     static func wind(_ speed: Double, units: WeatherUnits) -> String {
         switch units {
-        case .metric: isCalm(speed) ? "0 m/s" : String(format: "%.1f m/s", speed)
-        case .imperial: isCalm(speed) ? "0 mph" : String(format: "%.1f mph", speed)
+        case .metric where isCalm(speed, units: units): "0 m/s"
+        case .metric where speed < wholeMetersPerSecondFrom: String(format: "%.1f m/s", speed)
+        case .metric: "\(Int(speed.rounded())) m/s"
+        case .imperial: isCalm(speed, units: units) ? "0 mph" : "\(Int(speed.rounded())) mph"
         }
     }
 
-    /// Speed and compass direction, without a direction when it's calm ("0 mph N" means nothing).
-    static func windWithDirection(_ speed: Double, deg: Int, units: WeatherUnits) -> String {
-        isCalm(speed) ? wind(speed, units: units) : "\(wind(speed, units: units))  \(windDirection(deg))"
+    /// A chance of rain as shown: nil under 10%, where it's noise (most dry hours forecast 1%), and
+    /// otherwise to the nearest 10%, like Apple and Google Weather, since the forecast isn't more precise.
+    static func rainChance(_ percent: Int) -> Int? {
+        percent < 10 ? nil : (percent + 5) / 10 * 10
     }
 
-    /// A speed that would show as "0.0": written as a plain 0, with no direction.
-    static func isCalm(_ speed: Double) -> Bool { speed < 0.05 }
-
-    /// OpenWeather reports visibility up to 10 km and no further, so 10 km means "at least 10 km".
-    /// Converted, that read as a precise and poor-looking 6.2 mi (US sources cap at 10 mi instead).
-    static func visibility(_ meters: Int, inMiles: Bool = false) -> String {
-        if meters >= 10_000 {
-            return "Clear"
-        }
-        if inMiles {
-            return String(format: "%.1f mi", Double(meters) / 1609.344)
-        }
-        if meters >= 1000 {
-            return String(format: "%.1f km", Double(meters) / 1000.0)
-        }
-        return "\(meters) m"
+    /// A speed that would show as 0 (whole mph, or m/s to one decimal): written as a plain 0, and calm.
+    static func isCalm(_ speed: Double, units: WeatherUnits) -> Bool {
+        speed < (units == .imperial ? 0.5 : 0.05)
     }
 
     /// Whether distances (visibility) read in miles: the app's unit choice, or for "Use system
@@ -49,11 +45,6 @@ enum WeatherFormatting {
         }
     }
 
-    static func windDirection(_ deg: Int) -> String {
-        let directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-        return directions[((deg + 22) / 45) % 8]
-    }
-
     static func todayLabel(timeZone: TimeZone = .current) -> String {
         let formatter = DateFormatter()
         formatter.timeZone = timeZone
@@ -62,17 +53,15 @@ enum WeatherFormatting {
         return formatter.string(from: Date())
     }
 
-    /// UV index with the WHO exposure category, e.g. "6 (High)".
-    static func uvIndex(_ uv: Double) -> String {
-        let value = Int(uv.rounded())
-        let level = switch value {
+    /// The WHO exposure category for a UV index, e.g. "High" for 6.
+    static func uvLevel(_ uv: Double) -> String {
+        switch Int(uv.rounded()) {
         case ...2: "Low"
         case 3...5: "Moderate"
         case 6...7: "High"
         case 8...10: "Very high"
         default: "Extreme"
         }
-        return "\(value) (\(level))"
     }
 
     static func epochTime(_ epochSeconds: Int, timeZone: TimeZone = .current) -> String {

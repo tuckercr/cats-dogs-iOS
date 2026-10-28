@@ -77,12 +77,10 @@ struct DayDetailSheet: View {
             Text("TEMP")
                 .font(.caption)
                 .foregroundStyle(Color.secondaryText)
-            Text("WIND")
+            Text("RAIN")
                 .font(.caption)
                 .foregroundStyle(Color.secondaryText)
-            Text("HUM")
-                .font(.caption)
-                .foregroundStyle(Color.secondaryText)
+                .frame(minWidth: 44, alignment: .trailing)
         }
     }
 }
@@ -98,21 +96,9 @@ private struct HourlySlotRow: View {
             WeatherIconView(iconCode: slot.iconCode, size: 28, description: slot.description, date: slot.date)
             Text(WeatherFormatting.temperature(slot.temperature, units: slot.units))
                 .fontWeight(.semibold)
-            HStack(spacing: 2) {
-                Image(systemName: "wind")
-                    .font(.caption2)
-                    .foregroundStyle(Color.secondaryText)
-                Text(WeatherFormatting.wind(slot.windSpeed, units: slot.units))
-                    .font(.caption)
-                    .foregroundStyle(Color.secondaryText)
-            }
-            HStack(spacing: 2) {
-                Image(systemName: "drop.fill")
-                    .font(.caption2)
-                    .foregroundStyle(Color.accent)
-                Text("\(slot.humidity)%")
-                    .font(.caption)
-            }
+            // A fixed slot, so temperatures stay lined up on dry hours, which show no chance.
+            PrecipChance(percent: slot.precipitationChance)
+                .frame(minWidth: 44, alignment: .trailing)
         }
         .padding(.vertical, 8)
     }
@@ -129,20 +115,7 @@ private struct HourlySlotColumn: View {
             WeatherIconView(iconCode: slot.iconCode, size: 28, description: slot.description, date: slot.date)
             Text(WeatherFormatting.temperature(slot.temperature, units: slot.units))
                 .fontWeight(.semibold)
-            HStack(spacing: 2) {
-                Image(systemName: "wind")
-                    .font(.caption2)
-                Text(WeatherFormatting.wind(slot.windSpeed, units: slot.units))
-                    .font(.caption)
-            }
-            .foregroundStyle(Color.secondaryText)
-            HStack(spacing: 2) {
-                Image(systemName: "drop.fill")
-                    .font(.caption2)
-                    .foregroundStyle(Color.accent)
-                Text("\(slot.humidity)%")
-                    .font(.caption)
-            }
+            PrecipChance(percent: slot.precipitationChance)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

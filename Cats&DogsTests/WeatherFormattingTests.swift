@@ -49,35 +49,45 @@ final class WeatherFormattingTests: XCTestCase {
     }
 
     func testUVIndexUsesTheWHOCategories() {
-        XCTAssertEqual(WeatherFormatting.uvIndex(0.4), "0 (Low)")
-        XCTAssertEqual(WeatherFormatting.uvIndex(2.4), "2 (Low)")
-        XCTAssertEqual(WeatherFormatting.uvIndex(4.6), "5 (Moderate)")
-        XCTAssertEqual(WeatherFormatting.uvIndex(6), "6 (High)")
-        XCTAssertEqual(WeatherFormatting.uvIndex(9), "9 (Very high)")
-        XCTAssertEqual(WeatherFormatting.uvIndex(11.2), "11 (Extreme)")
+        XCTAssertEqual(WeatherFormatting.uvLevel(0.4), "Low")
+        XCTAssertEqual(WeatherFormatting.uvLevel(2.4), "Low")
+        XCTAssertEqual(WeatherFormatting.uvLevel(4.6), "Moderate")
+        XCTAssertEqual(WeatherFormatting.uvLevel(6), "High")
+        XCTAssertEqual(WeatherFormatting.uvLevel(9), "Very high")
+        XCTAssertEqual(WeatherFormatting.uvLevel(11.2), "Extreme")
     }
 
     func testCalmWindIsAPlainZeroWithNoDirection() {
         XCTAssertEqual(WeatherFormatting.wind(0, units: .imperial), "0 mph")
         XCTAssertEqual(WeatherFormatting.wind(0.04, units: .metric), "0 m/s")
-        XCTAssertEqual(WeatherFormatting.windWithDirection(0, deg: 0, units: .imperial), "0 mph")
+        // 0.4 mph rounds to 0, so it's calm too.
+        XCTAssertEqual(WeatherFormatting.wind(0.4, units: .imperial), "0 mph")
+        XCTAssertTrue(WeatherFormatting.isCalm(0.4, units: .imperial))
+        XCTAssertFalse(WeatherFormatting.isCalm(0.5, units: .imperial))
+        XCTAssertEqual(WeatherFormatting.wind(0.5, units: .imperial), "1 mph")
     }
 
-    func testWindWithSpeedKeepsItsDirection() {
-        XCTAssertEqual(WeatherFormatting.wind(0.05, units: .imperial), "0.1 mph")
-        XCTAssertEqual(WeatherFormatting.windWithDirection(3.4, deg: 45, units: .imperial), "3.4 mph  NE")
+    func testWindIsWholeMphAndWholeMetresPerSecondFrom10() {
+        XCTAssertEqual(WeatherFormatting.wind(12.6, units: .imperial), "13 mph")
+        XCTAssertEqual(WeatherFormatting.wind(3.44, units: .metric), "3.4 m/s")
+        XCTAssertEqual(WeatherFormatting.wind(9.96, units: .metric), "10 m/s")
+        XCTAssertEqual(WeatherFormatting.wind(12.4, units: .metric), "12 m/s")
     }
 
-    func testVisibilityInMilesOrKilometres() {
-        XCTAssertEqual(WeatherFormatting.visibility(5_500), "5.5 km")
-        XCTAssertEqual(WeatherFormatting.visibility(800), "800 m")
-        XCTAssertEqual(WeatherFormatting.visibility(5_500, inMiles: true), "3.4 mi")
+    func testRainChanceUnder10PercentIsHiddenAndTheRestRoundsToTheNearest10() {
+        XCTAssertNil(WeatherFormatting.rainChance(0))
+        XCTAssertNil(WeatherFormatting.rainChance(9))
+        XCTAssertEqual(WeatherFormatting.rainChance(10), 10)
+        XCTAssertEqual(WeatherFormatting.rainChance(14), 10)
+        XCTAssertEqual(WeatherFormatting.rainChance(37), 40)
+        XCTAssertEqual(WeatherFormatting.rainChance(45), 50)
+        XCTAssertEqual(WeatherFormatting.rainChance(96), 100)
     }
 
-    func testVisibilityAtOpenWeathersTenKilometreCapReadsAsClear() {
-        XCTAssertEqual(WeatherFormatting.visibility(10_000), "Clear")
-        XCTAssertEqual(WeatherFormatting.visibility(10_000, inMiles: true), "Clear")
-        XCTAssertEqual(WeatherFormatting.visibility(9_999), "10.0 km")
+        func testTemperaturesAreWholeDegrees() {
+        XCTAssertEqual(WeatherFormatting.temperature(56.3, units: .imperial), "56 °F")
+        XCTAssertEqual(WeatherFormatting.temperature(56.5, units: .imperial), "57 °F")
+        XCTAssertEqual(WeatherFormatting.temperature(-3.6, units: .metric), "-4 °C")
     }
 
     func testDistanceUnitsFollowTheChoiceOrTheMeasurementSystem() {

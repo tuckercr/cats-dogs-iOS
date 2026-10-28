@@ -2,7 +2,7 @@ import SwiftUI
 
 /// "Best walk time" card: when to take the dog out. The sentence carries the advice; the paw icon is
 /// tinted by the rating as a glance cue (deliberately not a chip, which read as a button), and a
-/// short caption says why when it's too hot or too cold.
+/// short caption says why when it's too hot or too cold, naming the pavement only when that's the reason.
 struct WalkCard: View {
     let advice: WalkAdvice
     @Environment(\.colorScheme) private var colorScheme
@@ -16,9 +16,17 @@ struct WalkCard: View {
     }
 
     private var caption: String? {
-        switch advice.rating {
-        case .pawsHot:
-            advice.pavementNow.map { "Pavement about \(Int($0.rounded()))°. Too hot for paws." } ?? "Too hot for paws."
+        if let pavement = advice.pavementNow.map({ Int($0.rounded()) }) {
+            switch (advice.rating, advice.pavementBand) {
+            case (.pawsHot, .dangerous): return "Pavement about \(pavement)°. Dangerously hot for paws."
+            case (.pawsHot, .tooHot): return "Pavement about \(pavement)°. Too hot for paws."
+            case (.okay, .warm): return "Pavement about \(pavement)°. Getting hot."
+            default: break
+            }
+        }
+        // Hot or cold air, not the pavement.
+        return switch advice.rating {
+        case .pawsHot: "Too hot for paws."
         case .tooCold: "Too cold for paws."
         default: nil
         }
@@ -67,7 +75,7 @@ struct WalkCard: View {
     VStack(spacing: 12) {
         WalkCard(advice: WalkAdvice(rating: .great, bestTimeLabel: nil))
         WalkCard(advice: WalkAdvice(rating: .okay, bestTimeLabel: "6 PM"))
-        WalkCard(advice: WalkAdvice(rating: .pawsHot, bestTimeLabel: "7 PM", pavementNow: 58))
+        WalkCard(advice: WalkAdvice(rating: .pawsHot, bestTimeLabel: "7 PM", pavementNow: 55, pavementBand: .tooHot))
         WalkCard(advice: WalkAdvice(rating: .poor, bestTimeLabel: nil))
         WalkCard(advice: WalkAdvice(rating: .tooCold, bestTimeLabel: "11 AM"))
     }

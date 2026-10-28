@@ -33,6 +33,9 @@ final class RemoteConfigRepository {
 
     /// Walk advice and pet moods, all Celsius. See `PetWeatherThresholds` for ranges.
     nonisolated static let keyWalkHotPavementC = "walk_hot_pavement_c"
+    nonisolated static let keyWalkWarmPavementC = "walk_warm_pavement_c"
+    nonisolated static let keyWalkIcyPavementC = "walk_icy_pavement_c"
+    nonisolated static let keyWalkDangerousPavementC = "walk_dangerous_pavement_c"
     nonisolated static let keyWalkMaxRainChance = "walk_max_rain_chance"
     nonisolated static let keyWalkComfortMinC = "walk_comfort_min_c"
     nonisolated static let keyWalkComfortMaxC = "walk_comfort_max_c"
@@ -71,6 +74,9 @@ final class RemoteConfigRepository {
             Self.keyOpenMeteoEnabled: NSNumber(value: true),
             Self.keyOpenWeatherApiKey: "" as NSString,
             Self.keyWalkHotPavementC: NSNumber(value: PetWeatherThresholds.standard.hotPavementC),
+            Self.keyWalkWarmPavementC: NSNumber(value: PetWeatherThresholds.standard.warmPavementC),
+            Self.keyWalkIcyPavementC: NSNumber(value: PetWeatherThresholds.standard.icyPavementC),
+            Self.keyWalkDangerousPavementC: NSNumber(value: PetWeatherThresholds.standard.dangerousPavementC),
             Self.keyWalkMaxRainChance: NSNumber(value: PetWeatherThresholds.standard.maxRainChance),
             Self.keyWalkComfortMinC: NSNumber(value: PetWeatherThresholds.standard.comfortC.lowerBound),
             Self.keyWalkComfortMaxC: NSNumber(value: PetWeatherThresholds.standard.comfortC.upperBound),
@@ -103,6 +109,9 @@ final class RemoteConfigRepository {
     var petWeatherThresholds: PetWeatherThresholds {
         PetWeatherThresholds.validated(
             hotPavementC: number(Self.keyWalkHotPavementC)?.doubleValue,
+            warmPavementC: number(Self.keyWalkWarmPavementC)?.doubleValue,
+            icyPavementC: number(Self.keyWalkIcyPavementC)?.doubleValue,
+            dangerousPavementC: number(Self.keyWalkDangerousPavementC)?.doubleValue,
             maxRainChance: number(Self.keyWalkMaxRainChance)?.intValue,
             comfortMinC: number(Self.keyWalkComfortMinC)?.doubleValue,
             comfortMaxC: number(Self.keyWalkComfortMaxC)?.doubleValue,

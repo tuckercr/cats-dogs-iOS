@@ -7,17 +7,25 @@ struct OpenMeteoResponse: Decodable {
     /// IANA zone name (e.g. "Europe/London"), so DST changes inside the forecast window are honoured.
     var timezone: String? = nil
     var hourly = OpenMeteoHourlyDTO()
+    var minutely15 = OpenMeteoMinutely15DTO()
 
     enum CodingKeys: String, CodingKey {
         case utcOffsetSeconds = "utc_offset_seconds"
         case timezone
         case hourly
+        case minutely15 = "minutely_15"
     }
 
-    init(utcOffsetSeconds: Int = 0, timezone: String? = nil, hourly: OpenMeteoHourlyDTO = OpenMeteoHourlyDTO()) {
+    init(
+        utcOffsetSeconds: Int = 0,
+        timezone: String? = nil,
+        hourly: OpenMeteoHourlyDTO = OpenMeteoHourlyDTO(),
+        minutely15: OpenMeteoMinutely15DTO = OpenMeteoMinutely15DTO()
+    ) {
         self.utcOffsetSeconds = utcOffsetSeconds
         self.timezone = timezone
         self.hourly = hourly
+        self.minutely15 = minutely15
     }
 
     init(from decoder: Decoder) throws {
@@ -25,6 +33,32 @@ struct OpenMeteoResponse: Decodable {
         utcOffsetSeconds = try container.decodeIfPresent(Int.self, forKey: .utcOffsetSeconds) ?? 0
         timezone = try container.decodeIfPresent(String.self, forKey: .timezone)
         hourly = try container.decodeIfPresent(OpenMeteoHourlyDTO.self, forKey: .hourly) ?? OpenMeteoHourlyDTO()
+        minutely15 = try container.decodeIfPresent(OpenMeteoMinutely15DTO.self, forKey: .minutely15) ?? OpenMeteoMinutely15DTO()
+    }
+}
+
+/// Parallel arrays in 15-minute steps. Like the hourly ones, the amounts at `time[i]` are totals for
+/// the 15 minutes *before* it: rain and snow in mm water, snowfall in cm.
+struct OpenMeteoMinutely15DTO: Decodable {
+    var time: [Int] = []
+    var precipitation: [Double?] = []
+    var snowfall: [Double?] = []
+
+    init(time: [Int] = [], precipitation: [Double?] = [], snowfall: [Double?] = []) {
+        self.time = time
+        self.precipitation = precipitation
+        self.snowfall = snowfall
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        time = try c.decodeIfPresent([Int].self, forKey: .time) ?? []
+        precipitation = try c.decodeIfPresent([Double?].self, forKey: .precipitation) ?? []
+        snowfall = try c.decodeIfPresent([Double?].self, forKey: .snowfall) ?? []
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case time, precipitation, snowfall
     }
 }
 
@@ -42,6 +76,9 @@ struct OpenMeteoHourlyDTO: Decodable {
     var uvIndex: [Double?] = []
     var shortwaveRadiation: [Double?] = []
     var isDay: [Int?] = []
+    /// Rain and snow over the hour before `time[i]`, in mm; snow lying on the ground, in metres.
+    var precipitation: [Double?] = []
+    var snowDepth: [Double?] = []
 
     enum CodingKeys: String, CodingKey {
         case time
@@ -56,6 +93,8 @@ struct OpenMeteoHourlyDTO: Decodable {
         case uvIndex = "uv_index"
         case shortwaveRadiation = "shortwave_radiation"
         case isDay = "is_day"
+        case precipitation
+        case snowDepth = "snow_depth"
     }
 
     init(
@@ -70,7 +109,9 @@ struct OpenMeteoHourlyDTO: Decodable {
         seaLevelPressure: [Double?] = [],
         uvIndex: [Double?] = [],
         shortwaveRadiation: [Double?] = [],
-        isDay: [Int?] = []
+        isDay: [Int?] = [],
+        precipitation: [Double?] = [],
+        snowDepth: [Double?] = []
     ) {
         self.time = time
         self.temperature = temperature
@@ -84,6 +125,8 @@ struct OpenMeteoHourlyDTO: Decodable {
         self.uvIndex = uvIndex
         self.shortwaveRadiation = shortwaveRadiation
         self.isDay = isDay
+        self.precipitation = precipitation
+        self.snowDepth = snowDepth
     }
 
     /// Missing arrays decode as empty, matching Open-Meteo omitting fields it has no data for.
@@ -101,6 +144,8 @@ struct OpenMeteoHourlyDTO: Decodable {
         uvIndex = try c.decodeIfPresent([Double?].self, forKey: .uvIndex) ?? []
         shortwaveRadiation = try c.decodeIfPresent([Double?].self, forKey: .shortwaveRadiation) ?? []
         isDay = try c.decodeIfPresent([Int?].self, forKey: .isDay) ?? []
+        precipitation = try c.decodeIfPresent([Double?].self, forKey: .precipitation) ?? []
+        snowDepth = try c.decodeIfPresent([Double?].self, forKey: .snowDepth) ?? []
     }
 }
 
