@@ -61,10 +61,15 @@ and scheme keep the original Cats&Dogs name on purpose. The bundle ID is `com.fa
    - **Best walk time**: "Now is a great time", the next good hour ("Around 8 AM", or "Tomorrow
      around 7 AM" when it falls on the city's next day), or "Not a good day for walkies" when nothing
      in the next 24 hours qualifies. A good hour is under 30% rain chance, at a comfortable
-     temperature, between 7 AM and 8 PM and in daylight, and when it is raining now, now never
-     counts, whatever the hourly forecast says. The paw is tinted by the rating, and a caption
-     explains hot pavement (estimated 52 °C / 125 °F, even on a mild day) or freezing weather.
+     feels-like temperature, between 7 AM and 8 PM, in daylight and with pavement under 45 °C
+     (113 °F), and when it is raining now, now never counts, whatever the hourly forecast says. The
+     paw is tinted by the rating, and a caption explains hot pavement (estimated 52 °C / 125 °F,
+     even on a mild day, and named only when it is the reason) or freezing weather.
      It can be turned off in Settings.
+   - **Next rain**: one line under the top card, only when rain or snow is due in the next 2 hours:
+     "Rain starting around 3:15 PM", "Rain stopping around 4:30 PM" or "Rain for the next 2 hours",
+     from Open-Meteo's 15-minute forecast (0.1 mm in 15 minutes counts; it stops after 30 dry
+     minutes). Rules in `Utilities/NextRain.swift`.
    - **Hourly**: the next 24 hours, with rain chance. Cities without coordinates fall back to
      OpenWeatherMap, which is 3-hourly, so the strip spans three days for them.
    - **Weather icons** are bundled with the app (vector assets drawn in the pets' style, with the
@@ -79,8 +84,9 @@ and scheme keep the original Cats&Dogs name on purpose. The bundle ID is `com.fa
      OpenStreetMap and RainViewer. Frames are refetched once they are 10 minutes old (checked every
      minute while the radar is on screen, and on returning to the app), with the old frames kept up
      until the new ones arrive.
-   - **Rest of week**: one row per day (sample closest to local noon) with rain chance; tap a row
-     for hourly detail.
+   - **Rest of week**: one row per day (sample closest to local noon) with rain chance (the day's
+     highest hour; hidden under 10%, otherwise to the nearest 10%, as everywhere in the app); tap a
+     row for each hour's temperature and rain chance.
    - All times (hours, days, sunrise and sunset, radar frames and "today") are in the city's own
      time zone, not the device's.
    - On landscape phones and iPad the pets and walk card sit beside today's details, and the week
@@ -300,10 +306,13 @@ Remote Config parameters are defined and deployed from the Android repo
 | `daily_weather_notifications_enabled` | true | Only the daily 9 / 13 / 19 weather summaries; off removes the pending ones. Future notification types get their own switches |
 | `foreground_refresh_min_minutes` | 0 (0–1440) | Skips the silent refresh on returning to the app if that city was fetched this recently. Pull-to-refresh and city changes are never skipped |
 | `walk_hot_pavement_c` | 52 (40–70) | Pavement temperature that triggers the hot-paws warning |
+| `walk_warm_pavement_c` | 45 (30–65, below `walk_hot_pavement_c`, otherwise 7 below it) | Pavement temperature at which the Today pavement tile says "Getting hot, keep it short" and that hour isn't suggested for a walk (a walk now rates "okay") |
+| `walk_dangerous_pavement_c` | 57.2, which is 135 °F (45–80, above `walk_hot_pavement_c`, otherwise 5 above it) | Pavement temperature at which the Today pavement tile says "Dangerously hot for paws" |
+| `walk_icy_pavement_c` | 0 (−20–10) | Pavement temperature below which the Today pavement tile says "Icy, watch for salt" after rain or snow in the last 12 hours or with snow on the ground, and "Below freezing" otherwise |
 | `walk_max_rain_chance` | 30 (0–100) | Rain chance at or above which an hour isn't suggested for a walk |
-| `walk_comfort_min_c` / `walk_comfort_max_c` | 3 (−20–20) / 27 (15–40) | Comfortable walking temperatures |
+| `walk_comfort_min_c` / `walk_comfort_max_c` | 3 (−20–20) / 27 (15–40) | Comfortable walking temperatures (feels-like) |
 | `walk_hours_start` / `walk_hours_end` | 7 / 20 (0–23) | Local hours walks are suggested in, inclusive |
-| `pet_hot_threshold_c` / `pet_cold_threshold_c` | 30 (20–45) / 0 (−20–10) | Switch the pets to their hot and cold moods, and the walk card to "paws hot" and "too cold" |
+| `pet_hot_threshold_c` / `pet_cold_threshold_c` | 30 (20–45) / 0 (−20–10) | Feels-like temperatures that switch the pets to their hot and cold moods, and the walk card to "paws hot" and "too cold" |
 | `open_meteo_enabled` | true | Off sends forecasts for cities with coordinates to OpenWeatherMap (3-hourly) instead of Open-Meteo |
 | `openweather_api_key` | "" | Replacement OpenWeather API key, used from the next launch; empty uses the key built into the app. Lets a leaked key be rotated without an update. Not secret: Remote Config values reach every device |
 

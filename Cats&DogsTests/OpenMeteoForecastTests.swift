@@ -118,4 +118,60 @@ final class OpenMeteoForecastTests: XCTestCase {
         XCTAssertEqual(PavementHeat.estimateC(airC: 20, shortwaveRadiationWm2: 800, isDay: true), 48, accuracy: 0.0001)
         XCTAssertEqual(PavementHeat.estimateC(airC: 20, shortwaveRadiationWm2: 5000, isDay: true), 55, accuracy: 0.0001)
     }
+
+    func testEachHourUsesTheSunOfTheHourAheadSinceOpenMeteoAveragesTheHourBefore() throws {
+        // Radiation stamped 01:00 is the 00:00-01:00 average, so it belongs to the 00:00 hour.
+        let pavement = PavementHeat.series(airC: [20, 20], shortwaveRadiationWm2: [0, 800], isDay: [true, true])
+
+        XCTAssertEqual(try XCTUnwrap(pavement[0]), 48, accuracy: 0.0001)
+        // The last hour has nothing after it and keeps its own value.
+        let last = PavementHeat.series(airC: [20], shortwaveRadiationWm2: [800], isDay: [true])
+        XCTAssertEqual(try XCTUnwrap(last[0]), 48, accuracy: 0.0001)
+    }
+
+    func testPavementWarmsThroughTheMorningAndKeepsSomeHeatAfterTheSunGoes() throws {
+        // 10 C air all day; sun for the middle two hours settles the pavement at 27.5 C.
+        let pavement = PavementHeat.series(
+            airC: Array(repeating: 10, count: 5),
+            shortwaveRadiationWm2: [0, 0, 500, 500, 0],
+            isDay: Array(repeating: true, count: 5)
+        )
+
+        XCTAssertEqual(try XCTUnwrap(pavement[0]), 10, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(pavement[1]), 20.5, accuracy: 0.0001) // 60% of the way up
+        XCTAssertEqual(try XCTUnwrap(pavement[2]), 24.7, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(pavement[3]), 18.82, accuracy: 0.0001) // 40% of the way back down
+    }
+
+    func testAnHourWithoutAnAirTemperatureHasNoPavementAndDoesntBreakTheSeries() {
+        let pavement = PavementHeat.series(airC: [20, nil, 20], shortwaveRadiationWm2: [0, 0, 0], isDay: [false, false, false])
+
+        XCTAssertEqual(pavement, [20, nil, 20])
+    }
+
+    func testGroundIsWetFromRainInThe12HoursBeforeAnHourOrDuringItOrFromLyingSnow() {
+        var rained = openMeteoResponse(hours: 24).hourly
+        // 0.4 mm fell in the hour before 03:00, i.e. from 02:00 to 03:00.
+        rained.precipitation = (0..<24).map { $0 == 3 ? 0.4 : 0 }
+
+        // 01:00's hour ends at 02:00, before the rain: dry. 02:00's hour is the rain itself.
+        XCTAssertFalse(OpenMeteoForecast.groundWet(rained, at: 1))
+        XCTAssertTrue(OpenMeteoForecast.groundWet(rained, at: 2))
+        // The 12 hours before 14:00 still take in the rain; the 12 before 15:00 start after it.
+        XCTAssertTrue(OpenMeteoForecast.groundWet(rained, at: 14))
+        XCTAssertFalse(OpenMeteoForecast.groundWet(rained, at: 15))
+
+        var snowy = openMeteoResponse(hours: 24).hourly
+        snowy.snowDepth = Array(repeating: 0.02, count: 24)
+        XCTAssertTrue(OpenMeteoForecast.groundWet(snowy, at: 10))
+        XCTAssertFalse(OpenMeteoForecast.groundWet(openMeteoResponse(hours: 24).hourly, at: 10))
+    }
+
+    func testSlotsCarryWhetherTheGroundIsWet() {
+        var hourly = openMeteoResponse(hours: 3).hourly
+        hourly.precipitation = [0, 0, 1]
+        let slots = days(OpenMeteoResponse(utcOffsetSeconds: 0, timezone: nil, hourly: hourly)).first?.hourlySlots
+
+        XCTAssertEqual(slots?.map(\.groundWet), [false, true, true])
+    }
 }

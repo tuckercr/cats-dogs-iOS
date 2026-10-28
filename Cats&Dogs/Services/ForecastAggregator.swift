@@ -18,6 +18,7 @@ enum ForecastAggregator {
         let pop: Double
         let uvIndex: Double?
         let pavementTemperature: Double?
+        let groundWet: Bool
 
         init(
             epochSeconds: Int,
@@ -34,7 +35,8 @@ enum ForecastAggregator {
             pressure: Int = 0,
             pop: Double = 0,
             uvIndex: Double? = nil,
-            pavementTemperature: Double? = nil
+            pavementTemperature: Double? = nil,
+            groundWet: Bool = false
         ) {
             self.epochSeconds = epochSeconds
             self.temperature = temperature
@@ -51,6 +53,7 @@ enum ForecastAggregator {
             self.pop = pop
             self.uvIndex = uvIndex
             self.pavementTemperature = pavementTemperature
+            self.groundWet = groundWet
         }
     }
 
@@ -113,7 +116,8 @@ enum ForecastAggregator {
                         uvIndex: slot.uvIndex,
                         pavementTemperature: slot.pavementTemperature,
                         localHour: calendar.component(.hour, from: date),
-                        epochSeconds: slot.epochSeconds
+                        epochSeconds: slot.epochSeconds,
+                        groundWet: slot.groundWet
                     )
                 }
 

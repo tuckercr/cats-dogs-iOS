@@ -5,11 +5,12 @@ enum PetMood: CaseIterable {
     case sunny, cloudy, rain, storm, snow, hot, cold, night
 
     /// Precipitation and storms win over temperature, temperature extremes win over time of day,
-    /// and an OpenWeatherMap icon ending in "n" means night.
+    /// and an OpenWeatherMap icon ending in "n" means night. Hot and cold go by the feels-like
+    /// temperature, since humid heat and wind chill are what pets feel.
     static func forConditions(
         conditionMain: String,
         iconCode: String,
-        temperatureC: Double,
+        feelsLikeC: Double,
         thresholds: PetWeatherThresholds = .standard
     ) -> PetMood {
         switch conditionMain.lowercased() {
@@ -17,8 +18,8 @@ enum PetMood: CaseIterable {
         case "snow": return .snow
         case "rain", "drizzle": return .rain
         default:
-            if temperatureC >= thresholds.petHotC { return .hot }
-            if temperatureC <= thresholds.petColdC { return .cold }
+            if feelsLikeC >= thresholds.petHotC { return .hot }
+            if feelsLikeC <= thresholds.petColdC { return .cold }
             if iconCode.hasSuffix("n") { return .night }
             if conditionMain.caseInsensitiveCompare("clear") == .orderedSame { return .sunny }
             return .cloudy
@@ -72,7 +73,7 @@ enum PetMood: CaseIterable {
             "Wipe those paws when you come in.",
         ]
         case .hot: [
-            "Too hot for paws on the pavement. Walk early or late.",
+            "Too hot for long walks. Plenty of water today.",
             "Fresh water bowls today. It is a scorcher.",
         ]
         case .cold: [

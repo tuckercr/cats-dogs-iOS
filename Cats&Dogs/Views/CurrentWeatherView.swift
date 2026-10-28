@@ -353,13 +353,13 @@ private struct CurrentWeatherContent: View {
         todayForecast != nil ? Array(forecastDays.dropFirst()) : forecastDays
     }
 
-    private var currentTempC: Double { weather.units.toCelsius(weather.temperature) }
+    private var feelsLikeC: Double { weather.units.toCelsius(weather.feelsLike) }
 
     private var mood: PetMood {
         PetMood.forConditions(
             conditionMain: weather.conditionMain,
             iconCode: weather.iconCode,
-            temperatureC: currentTempC,
+            feelsLikeC: feelsLikeC,
             thresholds: RemoteConfigRepository.shared.petWeatherThresholds
         )
     }
@@ -368,7 +368,7 @@ private struct CurrentWeatherContent: View {
     /// with nothing to base it on.
     private var walkAdvice: WalkAdvice? {
         WalkAdvisor.advice(
-            currentTempC: currentTempC,
+            currentFeelsLikeC: feelsLikeC,
             upcoming: upcomingSlots,
             now: now,
             timeZone: weather.timeZone,
@@ -419,6 +419,10 @@ private struct CurrentWeatherContent: View {
     @ViewBuilder
     private var heroSection: some View {
         heroCard
+        // "Rain starting around 3:15 PM", only when rain or snow is due in the next 2 hours.
+        if let nextRain = NextRain.from(forecastDays.first?.quarterHours ?? [], now: now) {
+            NextRainLine(nextRain: nextRain, timeZone: weather.timeZone)
+        }
         if showWalkCard, RemoteConfigRepository.shared.walkCardEnabled, let walkAdvice {
             WalkCard(advice: walkAdvice)
         }
@@ -503,9 +507,10 @@ private struct CurrentWeatherContent: View {
                     // Baloo 2 reserves a lot of empty space above its digits; pull the number up
                     // into it so it sits close under the city name.
                     .padding(.top, -10)
-                Text(
-                    "\(WeatherFormatting.temperature(weather.tempMin, units: weather.units)) / \(WeatherFormatting.temperature(weather.tempMax, units: weather.units))"
-                )
+                // Today's high and low in whole degrees: "H 64° · L 61°".
+                Text("H \(Int(weather.tempMax.rounded()))° · L \(Int(weather.tempMin.rounded()))°")
+                    // "H 64°" would be read as the letter H.
+                    .accessibilityLabel("High \(Int(weather.tempMax.rounded()))°, low \(Int(weather.tempMin.rounded()))°")
                 Text(mood.caption(on: now, timeZone: weather.timeZone))
                     .font(.brand(.headline))
                     .multilineTextAlignment(.center)
@@ -522,71 +527,18 @@ private struct CurrentWeatherContent: View {
     }
 
     private var detailsCard: some View {
-        VStack(spacing: 0) {
-            MetricIconRow(
-                icon: "thermometer.medium",
-                label: "Feels like",
-                value: WeatherFormatting.temperature(weather.feelsLike, units: weather.units)
-            )
-            Divider().padding(.horizontal, 16)
-            MetricIconRow(
-                icon: "drop.fill",
-                label: "Humidity",
-                value: "\(weather.humidityPercent)%"
-            )
-            Divider().padding(.horizontal, 16)
-            MetricIconRow(
-                icon: "wind",
-                label: "Wind",
-                value: WeatherFormatting.windWithDirection(weather.windSpeed, deg: weather.windDeg, units: weather.units)
-            )
-            if let visibility = weather.visibilityMeters {
-                Divider().padding(.horizontal, 16)
-                MetricIconRow(
-                    icon: "eye",
-                    label: "Visibility",
-                    value: WeatherFormatting.visibility(visibility, inMiles: distanceInMiles)
-                )
-            }
-            if !showingForecast {
-                Divider().padding(.horizontal, 16)
-                MetricIconRow(
-                    icon: "cloud.fill",
-                    label: "Cloud cover",
-                    value: "\(weather.cloudPercent)%"
-                )
-            }
+        TodayTiles(
+            weather: weather,
+            showingForecast: showingForecast,
+            pavementNow: upcomingSlots.first?.pavementTemperature,
+            groundWet: upcomingSlots.first?.groundWet == true
+                || WalkAdvisor.isPrecipitating(conditionMain: weather.conditionMain),
             // UV is always 0 after dark, so it only shows in the daytime (night icons end in "n").
-            if !weather.iconCode.hasSuffix("n"), let uv = upcomingSlots.first?.uvIndex {
-                Divider().padding(.horizontal, 16)
-                MetricIconRow(
-                    icon: "sun.max.fill",
-                    label: "UV index",
-                    value: WeatherFormatting.uvIndex(uv),
-                    iconTint: .brandYellow
-                )
-            }
-            if let sunrise = weather.sunriseEpoch {
-                Divider().padding(.horizontal, 16)
-                MetricIconRow(
-                    icon: "sunrise.fill",
-                    label: "Sunrise",
-                    value: WeatherFormatting.epochTime(sunrise, timeZone: weather.timeZone),
-                    iconTint: .brandYellow
-                )
-            }
-            if let sunset = weather.sunsetEpoch {
-                Divider().padding(.horizontal, 16)
-                MetricIconRow(
-                    icon: "sunset.fill",
-                    label: "Sunset",
-                    value: WeatherFormatting.epochTime(sunset, timeZone: weather.timeZone),
-                    iconTint: .brandYellow
-                )
-            }
-        }
-        .background(Color.surfaceVariant)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+            uvIndex: weather.iconCode.hasSuffix("n") ? nil : upcomingSlots.first?.uvIndex,
+            now: now,
+            thresholds: RemoteConfigRepository.shared.petWeatherThresholds,
+            distanceInMiles: distanceInMiles
+        )
     }
 }
 
@@ -635,40 +587,41 @@ private struct HourlyStrip: View {
 }
 
 /// Small "raindrop N%" chip; shows nothing at 0% to avoid clutter.
-private struct PrecipChance: View {
-    let percent: Int
-
-    var body: some View {
-        if percent > 0 {
-            HStack(spacing: 2) {
-                Image(systemName: "drop.fill")
-                    .font(.system(size: 9))
-                Text("\(percent)%")
-                    .font(.caption)
-            }
-            .foregroundStyle(Color.accent)
-            .accessibilityLabel("Chance of precipitation \(percent)%")
-        }
-    }
-}
-
-private struct MetricIconRow: View {
-    let icon: String
-    let label: String
-    let value: String
-    var iconTint: Color = .accent
+/// One line under the top card: when rain or snow starts or stops in the next 2 hours.
+private struct NextRainLine: View {
+    let nextRain: NextRain
+    let timeZone: TimeZone
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundStyle(iconTint)
-                .frame(width: 20)
-            Text(label)
-            Spacer()
-            Text(value)
+            // The app's own shower and snow icons, as in the hourly row; the text says it all.
+            WeatherIconView(iconCode: nextRain.isSnow ? "13d" : "09d", size: 28)
+                .accessibilityHidden(true)
+            Text(nextRain.line(timeZone: timeZone))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.surfaceVariant, in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+/// Chance of rain with a drop, as in the hourly row, the week list and the day sheet, shown as
+/// `WeatherFormatting.rainChance` has it: nothing under 10%.
+struct PrecipChance: View {
+    let percent: Int
+
+    var body: some View {
+        if let shown = WeatherFormatting.rainChance(percent) {
+            HStack(spacing: 2) {
+                Image(systemName: "drop.fill")
+                    .font(.system(size: 9))
+                Text("\(shown)%")
+                    .font(.caption)
+            }
+            .foregroundStyle(Color.accent)
+            .accessibilityLabel("Chance of precipitation \(shown)%")
+        }
     }
 }
 

@@ -7,12 +7,15 @@ enum WalkRating: Equatable {
 /// `bestTimeLabel` is nil when now is a good time, or when there is no good window soon.
 /// `pavementNow` is the estimated pavement temperature for the current hour, in the forecast's
 /// units, when the source provides it. `bestTimeIsTomorrow` is set when the best time falls on the
-/// city's next day, since the label alone ("7 AM") doesn't say which morning.
+/// city's next day, since the label alone ("7 AM") doesn't say which morning. `pavementBand` is what
+/// `pavementNow` means for paws (the Today tile's band), so the caption can say whether the pavement
+/// is the problem.
 struct WalkAdvice: Equatable {
     let rating: WalkRating
     let bestTimeLabel: String?
     var pavementNow: Double? = nil
     var bestTimeIsTomorrow = false
+    var pavementBand: TodayDetails.PavementBand? = nil
 }
 
 enum WalkAdvisor {
@@ -26,14 +29,14 @@ enum WalkAdvisor {
         ["thunderstorm", "snow", "rain", "drizzle"].contains(conditionMain.lowercased())
     }
 
-    /// Works out when to walk the dog from the current temperature and the upcoming hourly slots
+    /// Works out when to walk the dog from the current feels-like temperature and the upcoming hourly slots
     /// (the first slot is the current or next forecast hour, so it stands in for "now"). Returns nil
     /// when there are no slots yet (forecast loading or failed), since there is nothing to advise on.
     ///
     /// `precipitatingNow` is the current observation. The hourly forecast can say the hour in
     /// progress is dry while it's raining, so when it's raining now, now is never the walk time.
     static func advice(
-        currentTempC: Double,
+        currentFeelsLikeC: Double,
         upcoming: [HourlySlot],
         now: Date = Date(),
         timeZone: TimeZone = .current,
@@ -46,9 +49,9 @@ enum WalkAdvisor {
         let nowWalkable = !precipitatingNow && isWalkable(first, thresholds)
         let firstGood = (precipitatingNow ? Array(slots.dropFirst()) : slots).first { isWalkable($0, thresholds) }
         let pawsHotNow = (pavementC(first) ?? 0) >= thresholds.hotPavementC
-        let rating: WalkRating = if currentTempC >= thresholds.petHotC || pawsHotNow {
+        let rating: WalkRating = if currentFeelsLikeC >= thresholds.petHotC || pawsHotNow {
             .pawsHot
-        } else if currentTempC <= thresholds.petColdC {
+        } else if currentFeelsLikeC <= thresholds.petColdC {
             .tooCold
         } else if nowWalkable {
             .great
@@ -62,7 +65,15 @@ enum WalkAdvisor {
             rating: rating,
             bestTimeLabel: bestSlot?.timeLabel,
             pavementNow: first.pavementTemperature,
-            bestTimeIsTomorrow: bestSlot.map { isOnALaterDay($0, than: now, in: timeZone) } ?? false
+            bestTimeIsTomorrow: bestSlot.map { isOnALaterDay($0, than: now, in: timeZone) } ?? false,
+            pavementBand: pavementC(first).map {
+                TodayDetails.pavementBand(
+                    pavementC: $0,
+                    groundWet: first.groundWet == true,
+                    feelsLikeC: currentFeelsLikeC,
+                    thresholds: thresholds
+                )
+            }
         )
     }
 
@@ -85,10 +96,12 @@ enum WalkAdvisor {
         slot.pavementTemperature.map(slot.units.toCelsius)
     }
 
+    /// Feels-like rather than air temperature: humid heat and wind chill are what the dog feels.
+    /// Pavement that's only getting hot already rules an hour out, so the suggested hour is a cooler one.
     private static func isWalkable(_ slot: HourlySlot, _ thresholds: PetWeatherThresholds) -> Bool {
         isDaytime(slot, thresholds)
-            && (pavementC(slot) ?? 0) < thresholds.hotPavementC
+            && (pavementC(slot) ?? 0) < thresholds.warmPavementC
             && slot.precipitationChance < thresholds.maxRainChance
-            && thresholds.comfortC.contains(slot.units.toCelsius(slot.temperature))
+            && thresholds.comfortC.contains(slot.units.toCelsius(slot.feelsLike))
     }
 }
