@@ -37,12 +37,12 @@ struct SettingsView: View {
             }
 
             Section {
-                Toggle(
-                    "Best walk time",
-                    isOn: Binding(
-                        get: { settingsViewModel.showWalkCard },
-                        set: { settingsViewModel.setShowWalkCard($0) }
-                    )
+                // The walk card and the Paw check tile, for people without a dog to turn off.
+                switchRow(
+                    "Dog walking",
+                    summary: "Best walk time and Paw check",
+                    isOn: settingsViewModel.showWalkCard,
+                    set: settingsViewModel.setShowWalkCard
                 )
             } header: {
                 sectionHeader("Main screen")
@@ -62,17 +62,39 @@ struct SettingsView: View {
             }
 
             Section {
-                permissionRow(
-                    status: settingsViewModel.notificationPermission,
-                    grantedText: "Notifications enabled",
-                    requestTitle: "Allow notifications",
-                    openSettingsTitle: "Open Settings to enable notifications",
-                    // Lands directly on this app's notification settings rather than its general page.
-                    settingsURL: UIApplication.openNotificationSettingsURLString,
-                    onRequest: {
-                        Task { await settingsViewModel.requestNotificationPermission() }
-                    }
-                )
+                // Once allowed, the switches below say it all.
+                if settingsViewModel.notificationPermission != .granted {
+                    permissionRow(
+                        status: settingsViewModel.notificationPermission,
+                        grantedText: "Notifications enabled",
+                        requestTitle: "Allow notifications",
+                        openSettingsTitle: "Open Settings to enable notifications",
+                        // Lands directly on this app's notification settings rather than its general page.
+                        settingsURL: UIApplication.openNotificationSettingsURLString,
+                        onRequest: {
+                            Task { await settingsViewModel.requestNotificationPermission() }
+                        }
+                    )
+                } else {
+                    switchRow(
+                        "Morning briefing",
+                        summary: "Today's weather each morning",
+                        isOn: settingsViewModel.notifyMorningBriefing,
+                        set: settingsViewModel.setNotifyMorningBriefing
+                    )
+                    switchRow(
+                        "Walk time",
+                        summary: "A nudge at the day's best time for a walk",
+                        isOn: settingsViewModel.notifyWalkTime,
+                        set: settingsViewModel.setNotifyWalkTime
+                    )
+                    switchRow(
+                        "Rain alerts",
+                        summary: "When rain or snow is about to start",
+                        isOn: settingsViewModel.notifyRain,
+                        set: settingsViewModel.setNotifyRain
+                    )
+                }
             } header: {
                 sectionHeader("Notifications")
             }
@@ -93,12 +115,10 @@ struct SettingsView: View {
             }
 
             Section {
-                Toggle(
+                switchRow(
                     "Share usage statistics",
-                    isOn: Binding(
-                        get: { settingsViewModel.shareUsageStatistics },
-                        set: { settingsViewModel.setShareUsageStatistics($0) }
-                    )
+                    isOn: settingsViewModel.shareUsageStatistics,
+                    set: settingsViewModel.setShareUsageStatistics
                 )
             } header: {
                 sectionHeader("Privacy")
@@ -157,6 +177,26 @@ struct SettingsView: View {
         }
     }
 
+    /// Takes the value rather than reading it inside the binding, so the body observes it and the
+    /// switch redraws when it changes.
+    private func switchRow(
+        _ title: String,
+        summary: String? = nil,
+        isOn: Bool,
+        set: @escaping (Bool) -> Void
+    ) -> some View {
+        Toggle(isOn: Binding(get: { isOn }, set: set)) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                if let summary {
+                    Text(summary)
+                        .font(.caption)
+                        .foregroundStyle(Color.secondaryText)
+                }
+            }
+        }
+    }
+
     @ViewBuilder
     private func permissionRow(
         status: PermissionStatus,
@@ -191,3 +231,4 @@ struct SettingsView: View {
         SettingsView(settingsViewModel: SettingsViewModel(), onOpenLocations: {}, onLocationResolved: { _ in })
     }
 }
+

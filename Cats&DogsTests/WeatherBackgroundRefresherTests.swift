@@ -22,8 +22,8 @@ final class WeatherBackgroundRefresherTests: XCTestCase {
     func testRefreshCachesFreshDataAndReschedulesNotifications() async {
         preferences.setSavedLocations([london])
         let api = FakeOpenWeatherAPI()
-        var scheduled: [(title: String, body: String)] = []
-        let refresher = makeRefresher(api: api, onSchedule: { scheduled.append(($0, $1)) })
+        var scheduled = 0
+        let refresher = makeRefresher(api: api, onSchedule: { scheduled += 1 })
 
         let result = await refresher.performRefresh()
 
@@ -32,14 +32,13 @@ final class WeatherBackgroundRefresherTests: XCTestCase {
         XCTAssertEqual(preferences.cachedForecast(for: london.cacheKey)?.count, 1)
         XCTAssertEqual(api.lastCurrentLatitude, 51.5074)
         XCTAssertNil(api.lastCurrentCityQuery)
-        XCTAssertEqual(scheduled.count, 1)
-        XCTAssertEqual(scheduled.first?.title, "73° in London, GB")
+        XCTAssertEqual(scheduled, 1)
     }
 
     func testRefreshStillCachesWhenNotificationsAreNotAuthorized() async {
         preferences.setSavedLocations([london])
         var scheduled = 0
-        let refresher = makeRefresher(authorized: false, onSchedule: { _, _ in scheduled += 1 })
+        let refresher = makeRefresher(authorized: false, onSchedule: { scheduled += 1 })
 
         let result = await refresher.performRefresh()
 
@@ -48,8 +47,9 @@ final class WeatherBackgroundRefresherTests: XCTestCase {
         XCTAssertEqual(scheduled, 0)
     }
 
-    func testRefreshOnlyTouchesTheActiveLocation() async {
-        preferences.setSavedLocations([london, nameOnly])
+    func testRefreshOnlyTouchesTheNotificationCityNotTheActiveTab() async {
+        // London is the tab on screen, but with no My Location saved notifications follow the first city.
+        preferences.setSavedLocations([nameOnly, london])
         preferences.setActiveLocationIndex(1)
         let api = FakeOpenWeatherAPI()
         let refresher = makeRefresher(api: api)
@@ -69,7 +69,7 @@ final class WeatherBackgroundRefresherTests: XCTestCase {
         var requestedDelays: [TimeInterval] = []
         let refresher = makeRefresher(
             api: FakeOpenWeatherAPI(currentError: URLError(.notConnectedToInternet)),
-            onSchedule: { _, _ in scheduled += 1 },
+            onSchedule: { scheduled += 1 },
             onSubmit: { requestedDelays.append($0.timeIntervalSinceNow) }
         )
 
@@ -106,7 +106,7 @@ final class WeatherBackgroundRefresherTests: XCTestCase {
     private func makeRefresher(
         api: FakeOpenWeatherAPI? = nil,
         authorized: Bool = true,
-        onSchedule: @escaping (String, String) -> Void = { _, _ in },
+        onSchedule: @escaping () -> Void = {},
         onSubmit: @escaping (Date) -> Void = { _ in }
     ) -> WeatherBackgroundRefresher {
         WeatherBackgroundRefresher(
@@ -119,7 +119,7 @@ final class WeatherBackgroundRefresherTests: XCTestCase {
                 now: { Date(timeIntervalSince1970: TimeInterval(fixtureDayStart)) }
             ),
             notificationsAuthorized: { authorized },
-            scheduleNotifications: { title, body in onSchedule(title, body) },
+            scheduleNotifications: { onSchedule() },
             submitRefreshRequest: onSubmit
         )
     }

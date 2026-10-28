@@ -105,7 +105,7 @@ struct TodayTiles: View {
             feelsLikeC: weather.units.toCelsius(weather.feelsLike),
             thresholds: thresholds
         )
-        return Tile(icon: "pawprint.fill", label: "Asphalt in sun") {
+        return Tile(icon: "pawprint.fill", label: "Paw check") {
             // An estimate for dark asphalt in direct sun, so a whole number, and said to be one.
             TileValue("About \(Int(pavement.rounded())) \(weather.units == .metric ? "°C" : "°F")")
             TileNote(band.line, color: pavementTint(band))

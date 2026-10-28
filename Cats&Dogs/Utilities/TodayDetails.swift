@@ -106,11 +106,11 @@ enum TodayDetails {
 
         var line: String {
             switch self {
-            case .dangerous: "Dangerously hot for paws"
+            case .dangerous: "Dangerously hot"
             case .tooHot: "Too hot for paws"
-            case .warm: "Getting hot, keep it short"
+            case .warm: "Getting hot"
             case .safe: "Safe for paws"
-            case .pavementOK: "Pavement is fine"
+            case .pavementOK: "Fine underfoot"
             case .freezing: "Below freezing"
             case .icy: "Icy, watch for salt"
             }

@@ -17,6 +17,11 @@ final class PreferencesStore {
     private let unitOverrideKey = "unit_override"
     private let shareUsageStatisticsKey = "share_usage_statistics"
     private let showWalkCardKey = "show_walk_card"
+    private let notifyMorningBriefingKey = "notify_morning_briefing"
+    private let notifyWalkTimeKey = "notify_walk_time"
+    private let notifyRainKey = "notify_rain"
+    private let rainAlertStartKey = "rain_alert_start"
+    private let rainAlertFireKey = "rain_alert_fire"
 
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -82,6 +87,47 @@ final class PreferencesStore {
 
     func setShowWalkCard(_ value: Bool) {
         defaults.set(value, forKey: showWalkCardKey)
+    }
+
+    /// The 8:30 AM weather briefing. On unless they turn it off.
+    var notifyMorningBriefing: Bool {
+        defaults.object(forKey: notifyMorningBriefingKey) as? Bool ?? true
+    }
+
+    func setNotifyMorningBriefing(_ value: Bool) {
+        defaults.set(value, forKey: notifyMorningBriefingKey)
+    }
+
+    /// A nudge at the day's best walk time. Until they choose, it follows the dog question (the walk
+    /// card's switch): on with a dog at home, off without.
+    var notifyWalkTime: Bool {
+        defaults.object(forKey: notifyWalkTimeKey) as? Bool ?? showWalkCard
+    }
+
+    func setNotifyWalkTime(_ value: Bool) {
+        defaults.set(value, forKey: notifyWalkTimeKey)
+    }
+
+    /// An alert when rain or snow is about to start. Off unless they turn it on.
+    var notifyRain: Bool {
+        defaults.object(forKey: notifyRainKey) as? Bool ?? false
+    }
+
+    func setNotifyRain(_ value: Bool) {
+        defaults.set(value, forKey: notifyRainKey)
+    }
+
+    /// The last rain alert queued: when that rain starts and when the alert goes off, so the same
+    /// shower isn't alerted twice once it has gone off.
+    var lastRainAlert: RainAlertRecord? {
+        guard let start = defaults.object(forKey: rainAlertStartKey) as? Int,
+              let fire = defaults.object(forKey: rainAlertFireKey) as? Double else { return nil }
+        return RainAlertRecord(rainStart: start, fireDate: Date(timeIntervalSince1970: fire))
+    }
+
+    func setLastRainAlert(_ record: RainAlertRecord) {
+        defaults.set(record.rainStart, forKey: rainAlertStartKey)
+        defaults.set(record.fireDate.timeIntervalSince1970, forKey: rainAlertFireKey)
     }
 
     func setHasSeenWelcome(_ value: Bool) {

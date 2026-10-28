@@ -69,6 +69,7 @@ struct LocationsView: View {
                 onRemoveSaved: { index in
                     cityListViewModel.removeLocation(at: index)
                 },
+                onAddMyLocation: { cityListViewModel.addLocation($0) },
                 onDismiss: {
                     geoViewModel.reset()
                     showAddSheet = false

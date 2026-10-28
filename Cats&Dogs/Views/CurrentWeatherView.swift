@@ -4,10 +4,14 @@ struct CurrentWeatherView: View {
     @Bindable var cityListViewModel: CityListViewModel
     @Bindable var geoViewModel: GeoLocationViewModel
     @Bindable var weatherViewModel: WeatherForecastViewModel
-    let unitOverride: UnitOverride
-    /// The user's Settings choice; Remote Config can also hide the card for everyone.
-    let showWalkCard: Bool
+    /// Read here rather than passed in as values: if RootView read them, every change would rebuild
+    /// the navigation stack, Settings screen included, under the user's finger.
+    let settingsViewModel: SettingsViewModel
     let onOpenSettings: () -> Void
+
+    private var unitOverride: UnitOverride { settingsViewModel.unitOverride }
+    /// The user's Settings choice; Remote Config can also hide the card for everyone.
+    private var showWalkCard: Bool { settingsViewModel.showWalkCard }
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var showAddSheet = false
@@ -16,6 +20,9 @@ struct CurrentWeatherView: View {
     /// "Now" for the hourly strip, walk advice, captions and moon. Moved on when the app becomes
     /// active and every half hour while it stays open, so a screen left on overnight keeps up.
     @State private var now = Date()
+    @State private var locationViewModel = LocationPermissionViewModel()
+    /// Location access at the last check, to spot it being granted later in the Settings app.
+    @State private var locationWasGranted: Bool?
 
     private static let autoRefreshInterval: Duration = .seconds(30 * 60)
 
@@ -71,6 +78,7 @@ struct CurrentWeatherView: View {
             if phase == .active {
                 now = Date()
                 backgroundRefreshActiveLocation()
+                addMyLocationIfNewlyAllowed()
             }
         }
         // The same quiet refresh every half hour while the app stays in the foreground. Restarted
@@ -102,6 +110,13 @@ struct CurrentWeatherView: View {
         }
         .task {
             refreshActiveLocation()
+            addMyLocationIfNewlyAllowed()
+        }
+        .onChange(of: locationViewModel.state) { _, state in
+            if case .located(let location) = state,
+               !cityListViewModel.locations.contains(where: \.isCurrentLocation) {
+                cityListViewModel.addLocation(location)
+            }
         }
         .sheet(isPresented: $showAddSheet) {
             AddCitySheet(
@@ -111,6 +126,7 @@ struct CurrentWeatherView: View {
                 onRemoveSaved: { index in
                     cityListViewModel.removeLocation(at: index)
                 },
+                onAddMyLocation: { cityListViewModel.addLocation($0) },
                 onDismiss: {
                     geoViewModel.reset()
                     showAddSheet = false
@@ -263,6 +279,19 @@ struct CurrentWeatherView: View {
         }
     }
 
+    /// Adds "My Location" once location access turns up after onboarding went without it: granted
+    /// later in the Settings app, say. Only when there are no cities yet, or access has just changed
+    /// to granted, so someone who removed My Location on purpose doesn't get it back every launch.
+    private func addMyLocationIfNewlyAllowed() {
+        let granted = locationViewModel.hasLocationPermission()
+        let newlyGranted = granted && locationWasGranted == false
+        locationWasGranted = granted
+        guard granted, !cityListViewModel.locations.contains(where: \.isCurrentLocation) else { return }
+        if newlyGranted || cityListViewModel.locations.isEmpty {
+            locationViewModel.fetchLocation()
+        }
+    }
+
     private func refreshActiveLocation() {
         // A refresh also moves "now" on, so the hourly strip and captions update even when the
         // weather itself hasn't changed.
@@ -280,7 +309,7 @@ struct CurrentWeatherView: View {
         rescheduleTask = Task {
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
-            await WeatherNotificationScheduler.shared.scheduleDailyNotifications()
+            await WeatherNotificationScheduler.shared.scheduleNotifications()
         }
     }
 
@@ -530,7 +559,8 @@ private struct CurrentWeatherContent: View {
         TodayTiles(
             weather: weather,
             showingForecast: showingForecast,
-            pavementNow: upcomingSlots.first?.pavementTemperature,
+            // Paw check goes with the walk card: Settings' Dog walking switch hides both.
+            pavementNow: showWalkCard ? upcomingSlots.first?.pavementTemperature : nil,
             groundWet: upcomingSlots.first?.groundWet == true
                 || WalkAdvisor.isPrecipitating(conditionMain: weather.conditionMain),
             // UV is always 0 after dark, so it only shows in the daytime (night icons end in "n").

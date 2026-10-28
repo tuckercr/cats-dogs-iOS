@@ -50,16 +50,20 @@ struct OnboardingLocationView: View {
             }
         }
         .onChange(of: viewModel.state) { _, newState in
-            if case .located(let location) = newState {
+            switch newState {
+            case .located(let location):
                 onLocationResolved(location)
+            case .permissionDenied:
+                // A "no" is an answer: move on to entering a city rather than asking again.
+                onSkip()
+            default:
+                break
             }
         }
     }
 
     private var bodyText: String {
         switch viewModel.state {
-        case .permissionDenied:
-            "Location access was denied. You can still add cities manually."
         case .failed:
             "Could not determine your location. You can still add cities manually."
         default:
@@ -70,6 +74,9 @@ struct OnboardingLocationView: View {
     private func requestLocation() {
         if viewModel.hasLocationPermission() {
             viewModel.fetchLocation()
+        } else if viewModel.isPermissionDenied() {
+            // Denied before, so iOS won't show the prompt again.
+            onSkip()
         } else {
             viewModel.requestPermission()
         }

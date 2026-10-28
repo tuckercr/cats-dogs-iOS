@@ -42,6 +42,16 @@ final class LocationPermissionViewModel: NSObject, CLLocationManagerDelegate {
         }
     }
 
+    /// Once denied, iOS won't ask again; only the Settings app can grant it.
+    func isPermissionDenied() -> Bool {
+        switch authorizationStatusOverride?() ?? manager.authorizationStatus {
+        case .denied, .restricted:
+            return true
+        default:
+            return false
+        }
+    }
+
     func requestPermission() {
         awaitingAuthorization = true
         manager.requestWhenInUseAuthorization()
