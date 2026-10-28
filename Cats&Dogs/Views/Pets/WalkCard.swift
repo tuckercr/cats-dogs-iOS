@@ -18,9 +18,9 @@ struct WalkCard: View {
     private var caption: String? {
         if let pavement = advice.pavementNow.map({ Int($0.rounded()) }) {
             switch (advice.rating, advice.pavementBand) {
-            case (.pawsHot, .dangerous): return "Pavement about \(pavement)°. Dangerously hot for paws."
-            case (.pawsHot, .tooHot): return "Pavement about \(pavement)°. Too hot for paws."
-            case (.okay, .warm): return "Pavement about \(pavement)°. Getting hot."
+            case (.pawsHot, .dangerous): return "Paw check: about \(pavement)°. Dangerously hot."
+            case (.pawsHot, .tooHot): return "Paw check: about \(pavement)°. Too hot for paws."
+            case (.okay, .warm): return "Paw check: about \(pavement)°. Getting hot."
             default: break
             }
         }

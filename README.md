@@ -4,7 +4,7 @@
 
 A clean, modern iOS weather app, where Sunny the dog and Misty the cat act out the forecast. Track
 current conditions, an hourly and 7-day forecast, and an animated precipitation radar for any
-number of saved cities, see when to walk the dog, get daily weather notifications, and switch
+number of saved cities, see when to walk the dog, get a morning briefing, walk-time nudges and rain alerts, and switch
 between metric and imperial units. Built with SwiftUI.
 
 There is also a native Android version of the same product, built in Kotlin and Jetpack Compose:
@@ -13,9 +13,9 @@ Firebase project and the same Remote Config keys, and new features ship on both.
 
 ## Screenshots
 
-| Pets, walk time & hourly | Radar & rest of week | Day detail | Settings & units |
-|---|---|---|---|
-| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour detail for a day](./screenshots/day.png) | ![Settings with unit selection](./screenshots/settings.png) |
+| Pets, walk time & hourly | Today tiles & Paw check | Radar & rest of week | Day detail | Settings |
+|---|---|---|---|---|
+| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Today's tiles: feels like, wind, humidity, Paw check, daylight and sky](./screenshots/today.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour temperature and rain chance for a day](./screenshots/day.png) | ![Settings with units, Dog walking and a switch for each notification](./screenshots/settings.png) |
 
 On iPad and in landscape, the pets sit beside today's details and the week splits into two columns:
 
@@ -49,7 +49,7 @@ and scheme keep the original Cats&Dogs name on purpose. The bundle ID is `com.fa
 
 1. **Splash**: Sunny and Misty with the "Sunny & Misty: Pet Weather" wordmark.
 2. **Welcome**: first launch only; tap **Get started**.
-3. **Notification onboarding**: opt in to daily weather updates, or **Not now**.
+3. **Notification onboarding**: opt in to the 8:30 AM briefing (and, with a dog, walk-time nudges), or **Not now**.
 4. **Location onboarding**: use the device location, or **Enter a city manually**.
 5. **Current weather**: the main screen for the active city:
    - Hero card: Sunny and Misty act out one of 8 weather moods (sunny, cloudy, rain, storm, snow, hot,
@@ -101,7 +101,7 @@ and scheme keep the original Cats&Dogs name on purpose. The bundle ID is `com.fa
    A name added without choosing a suggestion appears straight away and is geocoded in the background.
 7. **Settings** (gear):
    - Units: system, metric, or imperial
-   - Main screen: **Best walk time** on or off, for people without a dog
+   - Main screen: **Dog walking** on or off (the walk card and the Paw check tile), for people without a dog
    - Location and notification permission status. A permission that was never requested is requested
      in-app (iOS has no Settings entry for it yet); a denied one links to the iOS Settings app.
      Granting location here adds your current location as a city.
@@ -133,24 +133,32 @@ server error) and without it where it cannot (bad API key, city not found).
 
 ### Background refresh and notifications
 
-If allowed, the app schedules local notifications at **9 AM, 1 PM and 7 PM** for the active city.
+If allowed, the app queues local notifications for one city, My Location when it's saved and
+otherwise the first in the list (not whichever tab was last viewed), each kind with its own switch
+in Settings:
 
-Android runs a periodic `WeatherUpdateWorker` plus a `WeatherNotificationWorker` at each of those
-hours. iOS cannot run code at a fixed time of day, so `WeatherBackgroundRefresher` does both jobs in
-a single `BGAppRefreshTask`. Each time iOS grants background time it:
+- **Morning briefing** at 8:30 AM (on): "52° and partly cloudy in Knoxville / High 70°, low 45°, 60%
+  chance of rain. Sunny's picked 1 PM for a walk." (the walk sentence only with a dog at home).
+- **Walk time** (on with a dog, off without): at the first good walk hour today and tomorrow.
+- **Rain alerts** (off): up to an hour before rain or snow starts, from the 15-minute forecast,
+  between 7 AM and 9 PM city time, once per shower.
 
-1. fetches current weather and the forecast for the active city,
+Android works these out at the time (`WeatherNotificationWorker` at 8:30, a one-off `WalkTimeWorker`,
+and the periodic refresh for rain). iOS cannot run code at a fixed time of day, so
+`NotificationPlanner` works them all out ahead from the cached forecast, and
+`WeatherBackgroundRefresher` refreshes that cache in a `BGAppRefreshTask`. Each time iOS grants
+background time it:
+
+1. fetches current weather and the forecast for that notification city,
 2. writes them to the per-city cache, so the app opens with fresh data,
-3. rewrites the pending notifications with the fresh text, and
+3. replans the queued notifications from it, and
 4. requests the next run after `weather_refresh_interval_minutes` (default 30, as on Android), or 15
    minutes after a failed fetch.
 
-The notifications themselves are on calendar triggers, so they always arrive on time. A week of them
-is queued, none repeating: the next one at each time carries the latest weather, and the rest say
-"Tap to see your weather update." so a notification never shows weather from days ago when iOS
-holds back background time. Each background run, and each time the app itself loads new data,
-replaces the whole queue. The fetch-then-notify decision logic is `NotificationWorkerLogic`, the same logic as on
-Android, with the same tests.
+The notifications themselves are on calendar triggers, so they always arrive on time. A week of
+briefings is queued, none repeating; each carries that day's forecast, and those beyond it say
+"Tap to see today's weather." Each background run, each Settings change and each time the app
+itself loads new data replaces the whole queue.
 
 > **iOS decides when background refresh runs.** The interval is a minimum, not a schedule: iOS
 > learns from how often the app is opened, and runs nothing if the user force-quits the app or turns
@@ -212,7 +220,7 @@ The iOS and Android apps have the same features. Where the platforms differ:
 
 | | iOS | Android |
 |---|---|---|
-| Daily notifications at 9 / 13 / 19 | Text from the latest background refresh | Fetched at send time |
+| Briefing, walk time, rain alerts | Planned ahead from the latest cached forecast | Worked out at the time (walk time re-checked when due) |
 | Background weather refresh | `BGAppRefreshTask`, no sooner than the Remote Config interval | WorkManager, every 30 minutes (Remote Config) |
 | "Use system setting" for temperature | By region | Android 14+ temperature preference, else region |
 | Crash reporting | Xcode Organizer crash reports | Crashlytics, release builds only |
@@ -232,7 +240,8 @@ Shared with Android (the same cases on both platforms):
 - `WeatherUnitsTests`: imperial vs metric by region, Celsius conversion
 - `WeatherRepositoryTests`: repository mapping and error handling (fake API), Open-Meteo switched off by Remote Config
 - `GeocodingRepositoryTests`: suggestion formatting and validation (fake API)
-- `NotificationWorkerLogicTests`: notification content, permission and retry behaviour, "today" in the city's time zone, the Remote Config switch
+- `NotificationWorkerLogicTests`: background fetch, permission and retry behaviour
+- `NotificationPlannerTests`: briefing times and text, walk-time nudges, rain alerts (lead, quiet hours, once per shower), the switches
 - `OpenMeteoForecastTests`: hour filtering, city time zones (including half-hour zones and DST), WMO codes, UV, pavement heat
 - `RadarTests`: RainViewer timeline parsing, tile URLs, load-once and retry, refreshing a stale timeline while the old one stays on screen
 - `PetMoodTests`, `WalkAdvisorTests` (both in `PetTests.swift`): mood mapping, night captions by the city's local hour, walk ratings including walking hours, daylight, raining now and pavement heat, Remote Config thresholds, today vs tomorrow in the city's time zone, the 24-hour cap, dropping past hours
@@ -303,12 +312,12 @@ Remote Config parameters are defined and deployed from the Android repo
 | `analytics_enabled` | true | Kill switch for every analytics event, and SDK collection |
 | `radar_enabled` | true | Hides the radar card if RainViewer or the OpenStreetMap tiles become unavailable |
 | `walk_card_enabled` | true | Hides the "Best walk time" card for everyone; users can also turn it off in Settings |
-| `daily_weather_notifications_enabled` | true | Only the daily 9 / 13 / 19 weather summaries; off removes the pending ones. Future notification types get their own switches |
+| `daily_weather_notifications_enabled` | true | Only the 8:30 AM morning briefing; off removes the queued ones. Walk time and rain alerts have their own switches in Settings |
 | `foreground_refresh_min_minutes` | 0 (0–1440) | Skips the silent refresh on returning to the app if that city was fetched this recently. Pull-to-refresh and city changes are never skipped |
 | `walk_hot_pavement_c` | 52 (40–70) | Pavement temperature that triggers the hot-paws warning |
-| `walk_warm_pavement_c` | 45 (30–65, below `walk_hot_pavement_c`, otherwise 7 below it) | Pavement temperature at which the Today pavement tile says "Getting hot, keep it short" and that hour isn't suggested for a walk (a walk now rates "okay") |
-| `walk_dangerous_pavement_c` | 57.2, which is 135 °F (45–80, above `walk_hot_pavement_c`, otherwise 5 above it) | Pavement temperature at which the Today pavement tile says "Dangerously hot for paws" |
-| `walk_icy_pavement_c` | 0 (−20–10) | Pavement temperature below which the Today pavement tile says "Icy, watch for salt" after rain or snow in the last 12 hours or with snow on the ground, and "Below freezing" otherwise |
+| `walk_warm_pavement_c` | 45 (30–65, below `walk_hot_pavement_c`, otherwise 7 below it) | Pavement temperature at which the Today Paw check tile says "Getting hot" and that hour isn't suggested for a walk (a walk now rates "okay") |
+| `walk_dangerous_pavement_c` | 57.2, which is 135 °F (45–80, above `walk_hot_pavement_c`, otherwise 5 above it) | Pavement temperature at which the Today Paw check tile says "Dangerously hot" |
+| `walk_icy_pavement_c` | 0 (−20–10) | Pavement temperature below which the Today Paw check tile says "Icy, watch for salt" after rain or snow in the last 12 hours or with snow on the ground, and "Below freezing" otherwise |
 | `walk_max_rain_chance` | 30 (0–100) | Rain chance at or above which an hour isn't suggested for a walk |
 | `walk_comfort_min_c` / `walk_comfort_max_c` | 3 (−20–20) / 27 (15–40) | Comfortable walking temperatures (feels-like) |
 | `walk_hours_start` / `walk_hours_end` | 7 / 20 (0–23) | Local hours walks are suggested in, inclusive |

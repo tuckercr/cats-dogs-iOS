@@ -4,8 +4,8 @@ import Foundation
 /// iOS counterpart of Android's `WeatherUpdateWorker` and `WeatherNotificationWorker`.
 ///
 /// iOS cannot run code at a fixed time of day, so one `BGAppRefreshTask` does both jobs whenever
-/// the system grants background time: it refreshes the active city's cache, then rewrites the
-/// pending 9 AM / 1 PM / 7 PM local notifications with the fresh text.
+/// the system grants background time: it refreshes the active city's cache, then replans the queued
+/// notifications (briefings, walk nudges, rain alert) from it.
 @MainActor
 final class WeatherBackgroundRefresher {
     static let shared = WeatherBackgroundRefresher()
@@ -19,7 +19,7 @@ final class WeatherBackgroundRefresher {
     private let preferences: PreferencesStore
     private let weatherRepository: WeatherRepository
     private let notificationsAuthorized: () async -> Bool
-    private let scheduleNotifications: (_ title: String, _ body: String) async -> Void
+    private let scheduleNotifications: () async -> Void
     private let submitRefreshRequest: (_ earliestBegin: Date) -> Void
 
     init(
@@ -29,8 +29,8 @@ final class WeatherBackgroundRefresher {
         notificationsAuthorized: @escaping () async -> Bool = {
             await WeatherNotificationScheduler.shared.isAuthorized()
         },
-        scheduleNotifications: @escaping (_ title: String, _ body: String) async -> Void = { title, body in
-            await WeatherNotificationScheduler.shared.scheduleDailyNotifications(title: title, body: body)
+        scheduleNotifications: @escaping () async -> Void = {
+            await WeatherNotificationScheduler.shared.scheduleNotifications()
         },
         submitRefreshRequest: @escaping (_ earliestBegin: Date) -> Void = { earliestBegin in
             let request = BGAppRefreshTaskRequest(identifier: WeatherBackgroundRefresher.taskIdentifier)
@@ -64,18 +64,16 @@ final class WeatherBackgroundRefresher {
     @discardableResult
     func performRefresh() async -> NotificationWorkerResult {
         let locations = preferences.savedLocations
-        let activeIndex = preferences.activeLocationIndex
-        let activeLocation = locations.indices.contains(activeIndex) ? locations[activeIndex] : nil
-        let cacheKey = activeLocation?.cacheKey
+        let notificationLocation = locations.notificationLocation
+        let cacheKey = notificationLocation?.cacheKey
         // Same display-name rule as the foreground refresh in WeatherForecastViewModel.
-        let usesApiCityName = activeLocation?.isCurrentLocation == true
+        let usesApiCityName = notificationLocation?.isCurrentLocation == true
 
         let authorized = await notificationsAuthorized()
-        var pendingContent: (title: String, body: String)?
+        var refreshed = false
 
         let logic = NotificationWorkerLogic(
             getSavedLocations: { locations },
-            getActiveIndex: { activeIndex },
             getUnits: { [preferences] in
                 WeatherUnitsResolver.resolve(override: preferences.unitOverride)
             },
@@ -105,13 +103,12 @@ final class WeatherBackgroundRefresher {
                 return result
             },
             hasNotificationPermission: { authorized },
-            postNotification: { title, body in pendingContent = (title, body) },
-            dailyNotificationsEnabled: { RemoteConfigRepository.shared.dailyWeatherNotificationsEnabled }
+            onRefreshed: { refreshed = true }
         )
 
         let result = await logic.doWork()
-        if let pendingContent {
-            await scheduleNotifications(pendingContent.title, pendingContent.body)
+        if refreshed {
+            await scheduleNotifications()
         }
         return result
     }

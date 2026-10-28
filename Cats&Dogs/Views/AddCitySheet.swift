@@ -5,7 +5,15 @@ struct AddCitySheet: View {
     @Bindable var geoViewModel: GeoLocationViewModel
     let onAddCity: () -> Void
     let onRemoveSaved: (Int) -> Void
+    /// Adds the device's location as "My Location", offered while it isn't saved and access is on.
+    let onAddMyLocation: (SavedLocation) -> Void
     let onDismiss: () -> Void
+
+    @State private var locationViewModel = LocationPermissionViewModel()
+
+    private var canAddMyLocation: Bool {
+        !savedLocations.contains(where: \.isCurrentLocation) && locationViewModel.hasLocationPermission()
+    }
 
     var body: some View {
         NavigationStack {
@@ -33,6 +41,25 @@ struct AddCitySheet: View {
                             }
                         }
                         Divider()
+                    }
+
+                    if canAddMyLocation {
+                        Button {
+                            locationViewModel.fetchLocation()
+                        } label: {
+                            HStack {
+                                if locationViewModel.state == .locating {
+                                    ProgressView()
+                                } else {
+                                    Image(systemName: "location.fill")
+                                }
+                                Text("Add My Location")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                        .disabled(locationViewModel.state == .locating)
                     }
 
                     Text("ADD A NEW CITY")
@@ -88,5 +115,11 @@ struct AddCitySheet: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.medium, .large])
+        .onChange(of: locationViewModel.state) { _, state in
+            if case .located(let location) = state {
+                onAddMyLocation(location)
+                onDismiss()
+            }
+        }
     }
 }

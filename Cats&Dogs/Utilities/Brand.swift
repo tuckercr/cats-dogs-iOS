@@ -42,7 +42,6 @@ struct AccentButtonStyle: ButtonStyle {
 /// Shared brand styling, matching the Android app's theme (`ui/theme/Color.kt`, `Type.kt`).
 /// Colours live in the asset catalog, each with Android's dark-scheme value:
 /// - AccentColor: the brand blue (Android `primary`)
-/// - BrandYellow: the mascot's gold for sun-related icons (`secondary`)
 /// - BrandSurface: screen backgrounds (`background` / `surface`)
 /// - SurfaceVariant: content cards such as Today, Hourly and Radar (`surfaceVariant`)
 /// - PrimaryContainer: icon circles on the welcome and onboarding screens (`primaryContainer`)

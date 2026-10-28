@@ -21,7 +21,13 @@ struct OnboardingNotificationView: View {
                 .padding(.top, 20)
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Allow Sunny & Misty to send you daily weather updates for your selected city.")
+            // With a dog (the question just before), the walk-time nudge is mentioned too.
+            Text(
+                (PreferencesStore.shared.showWalkCard
+                    ? "Each morning, Sunny & Misty will send a weather briefing for your city, and Sunny will nudge you at the best time for a walk."
+                    : "Each morning, Sunny & Misty will send a weather briefing for your city.")
+                    + "\n\nYou can turn on rain alerts in Settings."
+            )
                 .font(.body)
                 .foregroundStyle(Color.secondaryText)
                 .multilineTextAlignment(.center)
@@ -29,7 +35,7 @@ struct OnboardingNotificationView: View {
             Button {
                 Task {
                     _ = await WeatherNotificationScheduler.shared.requestAuthorization()
-                    await WeatherNotificationScheduler.shared.scheduleDailyNotifications()
+                    await WeatherNotificationScheduler.shared.scheduleNotifications()
                     onDone()
                 }
             } label: {

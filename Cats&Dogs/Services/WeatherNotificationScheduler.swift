@@ -7,15 +7,9 @@ final class WeatherNotificationScheduler {
     static let shared = WeatherNotificationScheduler()
 
     private let center = UNUserNotificationCenter.current()
-    nonisolated private static let notificationHours = [9, 13, 19]
-    /// How many days of notifications are queued. iOS gives no guaranteed background time, so the
-    /// queue has to outlast the gaps between refreshes; each refresh replaces all of it.
-    nonisolated private static let daysQueued = 7
-    /// The text for queued notifications whose weather isn't known yet.
-    nonisolated static let fallbackContent = (title: "Sunny & Misty", body: "Tap to see your weather update.")
-    private var requestIdentifiers: [String] {
-        Self.plannedNotifications(after: Date()).map(\.identifier)
-    }
+    /// Every identifier this app has queued under, now or in older versions (the 9 AM / 1 PM / 7 PM
+    /// "weather_daily" ones), so a reschedule clears them all and leaves nothing else alone.
+    nonisolated static let identifierPrefixes = ["weather_daily", "briefing_", "walk_", "rain_"]
 
     private init() {}
 
@@ -37,102 +31,72 @@ final class WeatherNotificationScheduler {
         return status == .authorized || status == .provisional
     }
 
-    /// Builds the notification text from the cached weather for the active city. Callers run this
-    /// after a refresh has written the cache, so it never needs the network itself.
-    func scheduleDailyNotifications(preferences: PreferencesStore? = nil) async {
+    /// Replaces the queued notifications with a fresh plan from the cached weather for the active
+    /// city: the 8:30 AM briefings, the walk-time nudges and the next rain alert, as each switch
+    /// allows. Callers run this after a refresh has written the cache, so it never needs the network.
+    func scheduleNotifications(preferences: PreferencesStore? = nil) async {
         let preferences = preferences ?? .shared
-        let locations = preferences.savedLocations
-        guard !locations.isEmpty, await isAuthorized() else {
-            removePendingDailyNotifications()
-            return
-        }
-
-        let activeIndex = min(preferences.activeLocationIndex, locations.count - 1)
-        let location = locations[activeIndex]
+        await removePendingNotifications()
+        guard let location = preferences.savedLocations.notificationLocation, await isAuthorized() else { return }
         let weather = preferences.cachedWeather(for: location.cacheKey)
-        let todayForecast = preferences.cachedForecast(for: location.cacheKey).flatMap {
-            forecastForToday(in: $0, timeZone: weather?.timeZone ?? .current)
-        }
+        let settings = NotificationSettings(
+            morningBriefing: preferences.notifyMorningBriefing,
+            walkTime: preferences.notifyWalkTime,
+            rain: preferences.notifyRain,
+            hasDog: preferences.showWalkCard,
+            briefingRemotelyEnabled: RemoteConfigRepository.shared.dailyWeatherNotificationsEnabled
+        )
+        let plan = NotificationPlanner.plan(
+            weather: weather,
+            forecast: preferences.cachedForecast(for: location.cacheKey) ?? [],
+            now: Date(),
+            settings: settings,
+            thresholds: RemoteConfigRepository.shared.petWeatherThresholds,
+            lastRainAlert: preferences.lastRainAlert
+        )
 
-        let content: (title: String, body: String)
-        if let weather {
-            content = buildNotificationContent(weather: weather, todayForecast: todayForecast)
-        } else {
-            content = Self.fallbackContent
-        }
-
-        await scheduleDailyNotifications(title: content.title, body: content.body)
-    }
-
-    /// Replaces the pending 9 AM / 1 PM / 7 PM notifications. The next one at each time gets the given
-    /// text; the ones after it get the fallback, since a repeating notification would keep showing
-    /// this reading for days if iOS doesn't give the app time to refresh. When Remote Config switches
-    /// them off, the pending ones are removed so none fire.
-    func scheduleDailyNotifications(title: String, body: String) async {
-        removePendingDailyNotifications()
-        guard RemoteConfigRepository.shared.dailyWeatherNotificationsEnabled, await isAuthorized() else { return }
-
-        // The brand look: the pets in today's mood, as on the app's top card.
-        let picture = petsPicture(preferences: .shared)
+        let southern = (location.latitude ?? 0) < 0
         let calendar = Calendar.current
-        for planned in Self.plannedNotifications(after: Date(), calendar: calendar) {
+        for planned in plan {
             let trigger = UNCalendarNotificationTrigger(
-                dateMatching: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: planned.date),
+                dateMatching: calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: planned.date),
                 repeats: false
             )
-            let notification = UNMutableNotificationContent()
-            notification.title = planned.isNext ? title : Self.fallbackContent.title
-            notification.body = planned.isNext ? body : Self.fallbackContent.body
-            notification.sound = .default
-            if planned.isNext, let picture, let attachment = Self.attachment(picture, identifier: planned.identifier) {
-                notification.attachments = [attachment]
+            let content = UNMutableNotificationContent()
+            content.title = planned.title
+            content.body = planned.body
+            content.sound = .default
+            // The brand look: the pets, in today's mood for the next briefing, out for a walk, or
+            // under the umbrella.
+            let mood: PetMood? = switch planned.kind {
+            case .morningBriefing: planned.identifier == "briefing_0" ? weather.map(currentMood) : nil
+            case .walkTime: .sunny
+            case .rain: planned.snow ? .snow : .rain
             }
-
-            let request = UNNotificationRequest(identifier: planned.identifier, content: notification, trigger: trigger)
-            try? await center.add(request)
-        }
-    }
-
-    struct PlannedNotification: Equatable {
-        let identifier: String
-        let date: Date
-        /// The next notification at its time of day, the only one whose weather is current.
-        let isNext: Bool
-    }
-
-    /// The queued notifications after `now`: each notification time on each of the next
-    /// `daysQueued` days. The next one at each time keeps the original `weather_daily_<hour>`
-    /// identifier, which also replaces the repeating requests older versions scheduled.
-    nonisolated static func plannedNotifications(after now: Date, calendar: Calendar = .current) -> [PlannedNotification] {
-        notificationHours.flatMap { hour -> [PlannedNotification] in
-            guard let next = calendar.nextDate(
-                after: now,
-                matching: DateComponents(hour: hour, minute: 0),
-                matchingPolicy: .nextTime
-            ) else { return [] }
-            return (0..<daysQueued).compactMap { day in
-                guard let date = calendar.date(byAdding: .day, value: day, to: next) else { return nil }
-                let identifier = day == 0 ? "weather_daily_\(hour)" : "weather_daily_\(hour)_\(day)"
-                return PlannedNotification(identifier: identifier, date: date, isNext: day == 0)
+            if let mood, let png = petsPicture(mood: mood, southernHemisphere: southern),
+               let attachment = Self.attachment(png, identifier: planned.identifier) {
+                content.attachments = [attachment]
+            }
+            try? await center.add(UNNotificationRequest(identifier: planned.identifier, content: content, trigger: trigger))
+            if let start = planned.rainStart {
+                preferences.setLastRainAlert(RainAlertRecord(rainStart: start, fireDate: planned.date))
             }
         }
-        .sorted { $0.date < $1.date }
     }
 
-    /// A PNG of the pets in the mood of the active city's cached weather; nil before there's any.
-    private func petsPicture(preferences: PreferencesStore) -> Data? {
-        let locations = preferences.savedLocations
-        guard !locations.isEmpty else { return nil }
-        let location = locations[min(preferences.activeLocationIndex, locations.count - 1)]
-        guard let weather = preferences.cachedWeather(for: location.cacheKey) else { return nil }
-        let mood = PetMood.forConditions(
+    private func currentMood(_ weather: CurrentWeather) -> PetMood {
+        PetMood.forConditions(
             conditionMain: weather.conditionMain,
             iconCode: weather.iconCode,
             feelsLikeC: weather.units.toCelsius(weather.feelsLike),
             thresholds: RemoteConfigRepository.shared.petWeatherThresholds
         )
+    }
+
+    /// A PNG of the pets in `mood`.
+    private func petsPicture(mood: PetMood, southernHemisphere: Bool) -> Data? {
         let renderer = ImageRenderer(
-            content: PetSceneIcon(mood: mood, southernHemisphere: (location.latitude ?? 0) < 0)
+            content: PetSceneIcon(mood: mood, southernHemisphere: southernHemisphere)
                 .frame(width: 120, height: 120)
         )
         renderer.scale = 3
@@ -151,8 +115,10 @@ final class WeatherNotificationScheduler {
         }
     }
 
-    /// Only this app's daily weather requests, so future notification types are left alone.
-    private func removePendingDailyNotifications() {
-        center.removePendingNotificationRequests(withIdentifiers: requestIdentifiers)
+    /// Only this app's weather requests, so anything else queued is left alone.
+    private func removePendingNotifications() async {
+        let pending = await center.pendingNotificationRequests()
+        let ours = pending.map(\.identifier).filter { id in Self.identifierPrefixes.contains { id.hasPrefix($0) } }
+        center.removePendingNotificationRequests(withIdentifiers: ours)
     }
 }

@@ -33,6 +33,9 @@ final class SettingsViewModel {
     private(set) var unitOverride: UnitOverride
     private(set) var shareUsageStatistics: Bool
     private(set) var showWalkCard: Bool
+    private(set) var notifyMorningBriefing: Bool
+    private(set) var notifyWalkTime: Bool
+    private(set) var notifyRain: Bool
     private(set) var locationPermission: PermissionStatus = .notDetermined
     private(set) var notificationPermission: PermissionStatus = .notDetermined
 
@@ -61,7 +64,7 @@ final class SettingsViewModel {
             await WeatherNotificationScheduler.shared.requestAuthorization()
         }
         self.rescheduleNotifications = rescheduleNotifications ?? {
-            await WeatherNotificationScheduler.shared.scheduleDailyNotifications()
+            await WeatherNotificationScheduler.shared.scheduleNotifications()
         }
         self.applyUsageSharing = applyUsageSharing ?? {
             AnalyticsRepository.shared.applyUsageSharingPreference()
@@ -69,6 +72,9 @@ final class SettingsViewModel {
         unitOverride = preferences.unitOverride
         shareUsageStatistics = preferences.shareUsageStatistics
         showWalkCard = preferences.showWalkCard
+        notifyMorningBriefing = preferences.notifyMorningBriefing
+        notifyWalkTime = preferences.notifyWalkTime
+        notifyRain = preferences.notifyRain
     }
 
     func setUnitOverride(_ override: UnitOverride) {
@@ -86,6 +92,25 @@ final class SettingsViewModel {
     func setShowWalkCard(_ show: Bool) {
         showWalkCard = show
         preferences.setShowWalkCard(show)
+    }
+
+    /// The notification switches: each kind can be turned off on its own, and the queue is replanned.
+    func setNotifyMorningBriefing(_ enabled: Bool) {
+        notifyMorningBriefing = enabled
+        preferences.setNotifyMorningBriefing(enabled)
+        Task { await rescheduleNotifications() }
+    }
+
+    func setNotifyWalkTime(_ enabled: Bool) {
+        notifyWalkTime = enabled
+        preferences.setNotifyWalkTime(enabled)
+        Task { await rescheduleNotifications() }
+    }
+
+    func setNotifyRain(_ enabled: Bool) {
+        notifyRain = enabled
+        preferences.setNotifyRain(enabled)
+        Task { await rescheduleNotifications() }
     }
 
     func clearCache() {

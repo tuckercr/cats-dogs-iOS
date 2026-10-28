@@ -25,7 +25,6 @@ struct DayDetailSheet: View {
                             }
                         }
                     } else {
-                        columnHeader
                         Divider()
                         ForEach(day.hourlySlots) { slot in
                             HourlySlotRow(slot: slot)
@@ -68,21 +67,6 @@ struct DayDetailSheet: View {
         .padding(.top, 8)
     }
 
-    private var columnHeader: some View {
-        HStack {
-            Text("TIME")
-                .font(.caption)
-                .foregroundStyle(Color.secondaryText)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text("TEMP")
-                .font(.caption)
-                .foregroundStyle(Color.secondaryText)
-            Text("RAIN")
-                .font(.caption)
-                .foregroundStyle(Color.secondaryText)
-                .frame(minWidth: 44, alignment: .trailing)
-        }
-    }
 }
 
 private struct HourlySlotRow: View {
@@ -93,12 +77,11 @@ private struct HourlySlotRow: View {
             Text(slot.timeLabel)
                 .fontWeight(.medium)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            // Rain before the icon, so the temperatures line up at the end.
+            PrecipChance(percent: slot.precipitationChance)
             WeatherIconView(iconCode: slot.iconCode, size: 28, description: slot.description, date: slot.date)
             Text(WeatherFormatting.temperature(slot.temperature, units: slot.units))
                 .fontWeight(.semibold)
-            // A fixed slot, so temperatures stay lined up on dry hours, which show no chance.
-            PrecipChance(percent: slot.precipitationChance)
-                .frame(minWidth: 44, alignment: .trailing)
         }
         .padding(.vertical, 8)
     }
