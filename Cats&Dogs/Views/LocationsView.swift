@@ -36,13 +36,13 @@ struct LocationsView: View {
                         ? Color.surfaceVariant
                         : Color(.secondarySystemGroupedBackground)
                 )
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    if cityListViewModel.locations.count > 1 {
-                        Button("Delete", role: .destructive) {
-                            cityListViewModel.removeLocation(at: index)
-                        }
-                    }
-                }
+                // The last city stays: the app always has one to show.
+                .deleteDisabled(cityListViewModel.locations.count <= 1)
+            }
+            // The standard delete: swipe left, or Edit and the red minus.
+            .onDelete { offsets in
+                guard let index = offsets.first, cityListViewModel.locations.count > 1 else { return }
+                cityListViewModel.removeLocation(at: index)
             }
             .onMove { source, destination in
                 cityListViewModel.reorderLocations(from: source, to: destination)
