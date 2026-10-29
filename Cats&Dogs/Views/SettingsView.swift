@@ -157,15 +157,13 @@ struct SettingsView: SettingsScreen {
         return count == 0 ? "Off" : "\(count) on"
     }
 
-    /// "Version 1.0 (1)", plus "· Debug build" in debug builds, so a screenshot says what was tested.
+    /// "Version 1.0", plus "· Debug build" in debug builds, so a screenshot says what was tested.
     static var versionText: String {
-        let info = Bundle.main.infoDictionary
-        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
-        let build = info?["CFBundleVersion"] as? String ?? "?"
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
         #if DEBUG
-        return "Version \(version) (\(build)) · Debug build"
+        return "Version \(version) · Debug build"
         #else
-        return "Version \(version) (\(build))"
+        return "Version \(version)"
         #endif
     }
 
