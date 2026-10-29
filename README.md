@@ -187,19 +187,38 @@ which Xcode merges with the generated Info.plist.
 
 ### Trying notifications
 
-Debug builds only, to see each kind without waiting for 8:30 or the weather. Both send one of each
-kind (two briefings so a group forms, a walk nudge, rain and snow) a few seconds apart, with made-up
-weather for the notification city, following *I have a dog*. They show as banners even with the app
-open, and stack by kind on the Lock Screen.
+Debug builds only, to see each kind without waiting for 8:30 or the weather. Release builds include
+none of this.
 
-- Settings › Notifications › *Send sample notifications*, or
-- launch with `-sendSampleNotifications`:
+**What's sent:** five notifications, 5 to 17 seconds later: two briefings (so a group forms), a walk
+nudge, rain and snow. The weather is made up, but the city is the real notification city (My
+Location, otherwise the top city), and the text follows *I have a dog* the way the real ones do.
+
+**How to send them** (notifications must be allowed first):
+
+- In the app: Settings › Notifications › *Send sample notifications* (bottom of the screen).
+- From the terminal, on a simulator:
+
+  ```bash
+  xcrun simctl launch --terminate-running-process CatsDogs-Tests com.fangjet.weather -sendSampleNotifications
+  ```
+
+  `--terminate-running-process` matters: if the app is already running, `simctl launch` just brings
+  it forward and the argument is ignored.
+
+**Where to see them:**
+
+- With the app open: debug builds show them as banners.
+- The Lock Screen lists everything delivered, stacked by kind (briefings, walk, rain). Lock and wake
+  the simulator (Device › Lock, then the Home button) if Notification Center can't be pulled down.
+
+**The real ones:** they're planned from the cached forecast (see above), so the quickest way to
+replan is to open the app, or change a switch under Settings › Notifications. A simulator needs a
+location for My Location:
 
 ```bash
-xcrun simctl launch --terminate-running-process CatsDogs-Tests com.fangjet.weather -sendSampleNotifications
+xcrun simctl location CatsDogs-Tests set 36.21,-83.29
 ```
-
-Notifications must be allowed first. Release builds include neither.
 
 ## Architecture
 
