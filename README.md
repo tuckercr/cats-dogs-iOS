@@ -113,8 +113,9 @@ and scheme keep the original Cats&Dogs name on purpose. The bundle ID is `com.fa
      - iOS Settings › Notifications › Sunny & Misty links straight to this screen.
    - **Location**: permission status. Never asked: asked in-app; denied: links to the iOS Settings
      app. Granting it here adds your current location as a city.
-   - **Locations**: *Manage locations* to add, set active (the same as tapping its tab), reorder and
-     delete cities. A bell marks the city notifications are for: My Location, otherwise the top city.
+   - **Locations**: *Manage locations* to add, reorder and delete cities (swipe, or Edit). A bell
+     marks the city notifications are for: My Location, otherwise the top city. The city tabs on the
+     main screen choose which city it shows.
    - **Cache**: clear cached weather.
    - **Privacy**: *Share usage statistics* turns analytics on or off. It starts on, except in the EU,
      EEA, UK and Switzerland, where it starts off until the user turns it on.
