@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 private let splashDuration: Duration = .seconds(1.5)
 
@@ -20,6 +21,15 @@ struct Cats_DogsApp: App {
         AnalyticsRepository.shared.applyUsageSharingPreference()
         // Start the Remote Config fetch early so the values are ready by the next launch.
         _ = RemoteConfigRepository.shared
+        // Set before launch finishes, so a tap on the iOS Settings link that opened the app arrives.
+        UNUserNotificationCenter.current().delegate = NotificationSettingsLink.shared
+        Task { await WeatherNotificationScheduler.shared.refreshAuthorizationOptions() }
+        #if DEBUG
+        // xcrun simctl launch <device> com.fangjet.weather -sendSampleNotifications
+        if ProcessInfo.processInfo.arguments.contains("-sendSampleNotifications") {
+            Task { await WeatherNotificationScheduler.shared.sendSamples() }
+        }
+        #endif
     }
 
     var body: some Scene {

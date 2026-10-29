@@ -45,6 +45,7 @@ final class SettingsViewModel {
     private let requestNotificationAuthorization: () async -> Bool
     private let rescheduleNotifications: () async -> Void
     private let applyUsageSharing: () -> Void
+    private let remotelyEnabled: (NotificationKind) -> Bool
 
     init(
         preferences: PreferencesStore? = nil,
@@ -52,7 +53,8 @@ final class SettingsViewModel {
         notificationStatus: (() async -> UNAuthorizationStatus)? = nil,
         requestNotificationAuthorization: (() async -> Bool)? = nil,
         rescheduleNotifications: (() async -> Void)? = nil,
-        applyUsageSharing: (() -> Void)? = nil
+        applyUsageSharing: (() -> Void)? = nil,
+        remotelyEnabled: ((NotificationKind) -> Bool)? = nil
     ) {
         let preferences = preferences ?? .shared
         self.preferences = preferences
@@ -69,6 +71,7 @@ final class SettingsViewModel {
         self.applyUsageSharing = applyUsageSharing ?? {
             AnalyticsRepository.shared.applyUsageSharingPreference()
         }
+        self.remotelyEnabled = remotelyEnabled ?? { RemoteConfigRepository.shared.notificationsEnabled($0) }
         unitOverride = preferences.unitOverride
         shareUsageStatistics = preferences.shareUsageStatistics
         showWalkCard = preferences.showWalkCard
@@ -89,9 +92,28 @@ final class SettingsViewModel {
         applyUsageSharing()
     }
 
+    /// "I have a dog": the walk card, Paw check, the briefing's walk sentence and Walk time. Walk time
+    /// keeps its own value, so turning the dog back on brings it back as it was.
     func setShowWalkCard(_ show: Bool) {
         showWalkCard = show
         preferences.setShowWalkCard(show)
+        Task { await rescheduleNotifications() }
+    }
+
+    /// Whether a kind's switch shows in Settings: not when Remote Config has switched it off for
+    /// everyone, and Walk time only with a dog. A hidden switch keeps its value.
+    func isAvailable(_ kind: NotificationKind) -> Bool {
+        remotelyEnabled(kind) && (kind != .walkTime || showWalkCard)
+    }
+
+    /// For the Notifications row in Settings: how many of the shown switches are on.
+    var notificationsOnCount: Int {
+        let switches: [(NotificationKind, Bool)] = [
+            (.morningBriefing, notifyMorningBriefing),
+            (.walkTime, notifyWalkTime),
+            (.rain, notifyRain),
+        ]
+        return switches.filter { isAvailable($0.0) && $0.1 }.count
     }
 
     /// The notification switches: each kind can be turned off on its own, and the queue is replanned.

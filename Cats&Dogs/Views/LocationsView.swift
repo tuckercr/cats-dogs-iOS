@@ -7,6 +7,7 @@ struct LocationsView: View {
 
     var body: some View {
         List {
+            Section {
             ForEach(Array(cityListViewModel.locations.enumerated()), id: \.offset) { index, location in
                 HStack {
                     if location.isCurrentLocation {
@@ -15,6 +16,12 @@ struct LocationsView: View {
                             .foregroundStyle(Color.accent)
                     }
                     Text(index == cityListViewModel.activeIndex ? "\(location.label) (Active)" : location.label)
+                    if index == cityListViewModel.locations.notificationIndex {
+                        Image(systemName: "bell.fill")
+                            .font(.caption)
+                            .foregroundStyle(Color.accent)
+                            .accessibilityLabel("Notifications")
+                    }
                     Spacer()
                     if index != cityListViewModel.activeIndex {
                         Button("Set active") {
@@ -39,6 +46,11 @@ struct LocationsView: View {
             }
             .onMove { source, destination in
                 cityListViewModel.reorderLocations(from: source, to: destination)
+            }
+            } footer: {
+                Label("Notifications are for My Location, otherwise the top city.", systemImage: "bell.fill")
+                    .font(.footnote)
+                    .foregroundStyle(Color.secondaryText)
             }
         }
         .scrollContentBackground(.hidden)

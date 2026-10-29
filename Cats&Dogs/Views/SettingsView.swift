@@ -1,8 +1,9 @@
 import SwiftUI
 import UIKit
 
-struct SettingsView: View {
+struct SettingsView: SettingsScreen {
     @Bindable var settingsViewModel: SettingsViewModel
+    let onOpenNotifications: () -> Void
     let onOpenLocations: () -> Void
     let onLocationResolved: (SavedLocation) -> Void
     @Environment(\.openURL) private var openURL
@@ -37,15 +38,32 @@ struct SettingsView: View {
             }
 
             Section {
-                // The walk card and the Paw check tile, for people without a dog to turn off.
+                // One switch for everything dog: the walk card, Paw check and the walk notifications.
                 switchRow(
-                    "Dog walking",
-                    summary: "Best walk time and Paw check",
+                    "I have a dog",
+                    summary: "Walk times, pavement checks and walk reminders",
                     isOn: settingsViewModel.showWalkCard,
                     set: settingsViewModel.setShowWalkCard
                 )
             } header: {
-                sectionHeader("Main screen")
+                sectionHeader("My Pets")
+            }
+
+            Section {
+                Button(action: onOpenNotifications) {
+                    HStack {
+                        Text("Notifications")
+                            .foregroundStyle(Color.primary)
+                        Spacer()
+                        Text(notificationsSummary)
+                            .foregroundStyle(Color.secondaryText)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color.secondaryText)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
 
             Section {
@@ -59,44 +77,6 @@ struct SettingsView: View {
                 )
             } header: {
                 sectionHeader("Location")
-            }
-
-            Section {
-                // Once allowed, the switches below say it all.
-                if settingsViewModel.notificationPermission != .granted {
-                    permissionRow(
-                        status: settingsViewModel.notificationPermission,
-                        grantedText: "Notifications enabled",
-                        requestTitle: "Allow notifications",
-                        openSettingsTitle: "Open Settings to enable notifications",
-                        // Lands directly on this app's notification settings rather than its general page.
-                        settingsURL: UIApplication.openNotificationSettingsURLString,
-                        onRequest: {
-                            Task { await settingsViewModel.requestNotificationPermission() }
-                        }
-                    )
-                } else {
-                    switchRow(
-                        "Morning briefing",
-                        summary: "Today's weather each morning",
-                        isOn: settingsViewModel.notifyMorningBriefing,
-                        set: settingsViewModel.setNotifyMorningBriefing
-                    )
-                    switchRow(
-                        "Walk time",
-                        summary: "A nudge at the day's best time for a walk",
-                        isOn: settingsViewModel.notifyWalkTime,
-                        set: settingsViewModel.setNotifyWalkTime
-                    )
-                    switchRow(
-                        "Rain alerts",
-                        summary: "When rain or snow is about to start",
-                        isOn: settingsViewModel.notifyRain,
-                        set: settingsViewModel.setNotifyRain
-                    )
-                }
-            } header: {
-                sectionHeader("Notifications")
             }
 
             Section {
@@ -164,9 +144,11 @@ struct SettingsView: View {
         }
     }
 
-    /// The system's header grey is only about 3.3:1 on the brand surface; this one is 8.8:1.
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title).foregroundStyle(Color.secondaryText)
+    /// "Off" until notifications are allowed, then how many of the switches are on.
+    private var notificationsSummary: String {
+        guard settingsViewModel.notificationPermission == .granted else { return "Off" }
+        let count = settingsViewModel.notificationsOnCount
+        return count == 0 ? "Off" : "\(count) on"
     }
 
     private func unitLabel(for override: UnitOverride) -> String {
@@ -176,59 +158,16 @@ struct SettingsView: View {
         case .imperial: "Imperial (°F)"
         }
     }
-
-    /// Takes the value rather than reading it inside the binding, so the body observes it and the
-    /// switch redraws when it changes.
-    private func switchRow(
-        _ title: String,
-        summary: String? = nil,
-        isOn: Bool,
-        set: @escaping (Bool) -> Void
-    ) -> some View {
-        Toggle(isOn: Binding(get: { isOn }, set: set)) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                if let summary {
-                    Text(summary)
-                        .font(.caption)
-                        .foregroundStyle(Color.secondaryText)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func permissionRow(
-        status: PermissionStatus,
-        grantedText: String,
-        requestTitle: String,
-        openSettingsTitle: String,
-        settingsURL: String,
-        onRequest: @escaping () -> Void
-    ) -> some View {
-        switch status {
-        case .granted:
-            Text(grantedText)
-                .foregroundStyle(Color.secondaryText)
-        case .notDetermined:
-            // iOS has no Settings entry for a permission the app has never asked for.
-            Button(requestTitle, action: onRequest)
-        case .denied:
-            Button(openSettingsTitle) {
-                openSystemSettings(settingsURL)
-            }
-        }
-    }
-
-    private func openSystemSettings(_ urlString: String) {
-        guard let url = URL(string: urlString) else { return }
-        UIApplication.shared.open(url)
-    }
 }
 
 #Preview {
     NavigationStack {
-        SettingsView(settingsViewModel: SettingsViewModel(), onOpenLocations: {}, onLocationResolved: { _ in })
+        SettingsView(
+            settingsViewModel: SettingsViewModel(),
+            onOpenNotifications: {},
+            onOpenLocations: {},
+            onLocationResolved: { _ in }
+        )
     }
 }
 

@@ -15,6 +15,14 @@ final class NotificationWorkerLogicTests: XCTestCase {
         XCTAssertEqual(refreshed, 0)
     }
 
+    func testTheBellInManageLocationsMarksTheNotificationCity() {
+        let here = SavedLocation(label: "My Location", latitude: 40, longitude: -83, isCurrentLocation: true)
+        let paris = SavedLocation(label: "Paris, FR", latitude: 48.9, longitude: 2.4)
+        XCTAssertEqual([paris, london, here].notificationIndex, 2)
+        XCTAssertEqual([london, paris].notificationIndex, 0)
+        XCTAssertNil([SavedLocation]().notificationIndex)
+    }
+
     func testRefreshesMyLocationFirstOtherwiseTheFirstCity() async {
         let here = SavedLocation(label: "My Location", latitude: 40, longitude: -83, isCurrentLocation: true)
         let paris = SavedLocation(label: "Paris, FR", latitude: 48.9, longitude: 2.4)

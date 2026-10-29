@@ -92,6 +92,20 @@ final class CityListViewModel {
         preferences.setSavedLocations(updated)
     }
 
+    /// Checking whether My Location has moved happens at most this often, so switching in and out of
+    /// the app doesn't fetch the position each time. Adding My Location always fetches.
+    static let myLocationCheckInterval: TimeInterval = 15 * 60
+    private var myLocationCheckedAt: Date?
+
+    /// Whether it's time to check whether My Location has moved, and if so, notes the time.
+    func claimMyLocationCheck(now: Date = Date()) -> Bool {
+        if let last = myLocationCheckedAt, now.timeIntervalSince(last) < Self.myLocationCheckInterval {
+            return false
+        }
+        myLocationCheckedAt = now
+        return true
+    }
+
     func removeLocation(at index: Int) {
         guard locations.indices.contains(index) else { return }
         var updated = locations

@@ -21,12 +21,13 @@ struct OnboardingNotificationView: View {
                 .padding(.top, 20)
                 .accessibilityAddTraits(.isHeader)
 
-            // With a dog (the question just before), the walk-time nudge is mentioned too.
+            // With a dog (the question just before), the walk-time nudge is mentioned too; each kind
+            // only while Remote Config has it on.
             Text(
-                (PreferencesStore.shared.showWalkCard
+                (PreferencesStore.shared.showWalkCard && RemoteConfigRepository.shared.walkTimeNotificationsEnabled
                     ? "Each morning, Sunny & Misty will send a weather briefing for your city, and Sunny will nudge you at the best time for a walk."
                     : "Each morning, Sunny & Misty will send a weather briefing for your city.")
-                    + "\n\nYou can turn on rain alerts in Settings."
+                    + (RemoteConfigRepository.shared.rainNotificationsEnabled ? "\n\nYou can turn on rain alerts in Settings." : "")
             )
                 .font(.body)
                 .foregroundStyle(Color.secondaryText)

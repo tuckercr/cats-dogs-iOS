@@ -15,7 +15,7 @@ Firebase project and the same Remote Config keys, and new features ship on both.
 
 | Pets, walk time & hourly | Today tiles & Paw check | Radar & rest of week | Day detail | Settings |
 |---|---|---|---|---|
-| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Today's tiles: feels like, wind, humidity, Paw check, daylight and sky](./screenshots/today.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour temperature and rain chance for a day](./screenshots/day.png) | ![Settings with units, Dog walking and a switch for each notification](./screenshots/settings.png) |
+| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Today's tiles: feels like, wind, humidity, Paw check, daylight and sky](./screenshots/today.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour temperature and rain chance for a day](./screenshots/day.png) | ![Settings with units, I have a dog and notifications](./screenshots/settings.png) |
 
 On iPad and in landscape, the pets sit beside today's details and the week splits into two columns:
 
@@ -99,17 +99,27 @@ and scheme keep the original Cats&Dogs name on purpose. The bundle ID is `com.fa
    - The walk card and the radar can each be switched off from Remote Config.
 6. **Add city** (＋): search with geocoding suggestions; choosing a suggestion pins exact coordinates.
    A name added without choosing a suggestion appears straight away and is geocoded in the background.
-7. **Settings** (gear):
-   - Units: system, metric, or imperial
-   - Main screen: **Dog walking** on or off (the walk card and the Paw check tile), for people without a dog
-   - Location and notification permission status. A permission that was never requested is requested
-     in-app (iOS has no Settings entry for it yet); a denied one links to the iOS Settings app.
-     Granting location here adds your current location as a city.
-   - Manage locations: add, set active, reorder, delete
-   - Clear cached weather
-   - Privacy: **Share usage statistics** turns analytics on or off. It starts on, except in the EU,
-     EEA, UK and Switzerland, where it starts off until the user turns it on
-   - OpenWeather and Open-Meteo attribution, and [privacy policy](https://sunnyandmisty.com/privacy)
+7. **Settings** (gear), top to bottom:
+   - **Units**: system, metric, or imperial.
+   - **My Pets**: *I have a dog* turns on the walk card, the Paw check tile, the briefing's walk
+     sentence and the Walk time notification ("Walk times, pavement checks and walk reminders").
+   - **Notifications**: a row showing how many are on ("2 on", or "Off"), which opens its own screen:
+     - Asks for permission if it hasn't been given (in-app while never asked, since iOS has no
+       Settings entry yet; a denied one links to this app's notification settings in iOS Settings).
+     - Then a switch for each kind: *Morning briefing*, *Walk time* and *Rain alerts*. Walk time only
+       shows with a dog, and a kind switched off in Remote Config is hidden. A hidden switch keeps
+       its value for when it comes back.
+     - Debug builds add *Send sample notifications* (see [Trying notifications](#trying-notifications)).
+     - iOS Settings › Notifications › Sunny & Misty links straight to this screen.
+   - **Location**: permission status. Never asked: asked in-app; denied: links to the iOS Settings
+     app. Granting it here adds your current location as a city.
+   - **Locations**: *Manage locations* to add, set active (the same as tapping its tab), reorder and
+     delete cities. A bell marks the city notifications are for: My Location, otherwise the top city.
+   - **Cache**: clear cached weather.
+   - **Privacy**: *Share usage statistics* turns analytics on or off. It starts on, except in the EU,
+     EEA, UK and Switzerland, where it starts off until the user turns it on.
+   - **About**: OpenWeather and Open-Meteo attribution, and the
+     [privacy policy](https://sunnyandmisty.com/privacy).
 
 ### Where the data comes from
 
@@ -139,7 +149,8 @@ in Settings:
 
 - **Morning briefing** at 8:30 AM (on): "52° and partly cloudy in Knoxville / High 70°, low 45°, 60%
   chance of rain. Sunny's picked 1 PM for a walk." (the walk sentence only with a dog at home).
-- **Walk time** (on with a dog, off without): at the first good walk hour today and tomorrow.
+- **Walk time** (only with a dog): at the first good walk hour today and tomorrow. When that hour has
+  already started at 8:30 the briefing says "now's a great time" instead, unless the briefing is off.
 - **Rain alerts** (off): up to an hour before rain or snow starts, from the 15-minute forecast,
   between 7 AM and 9 PM city time, once per shower.
 
@@ -173,6 +184,22 @@ e -l objc -- (void)[[BGTaskScheduler sharedScheduler] _simulateLaunchForTaskWith
 
 The task identifier and the `fetch` background mode are declared in [`Cats&Dogs/Info.plist`](Cats&Dogs/Info.plist),
 which Xcode merges with the generated Info.plist.
+
+### Trying notifications
+
+Debug builds only, to see each kind without waiting for 8:30 or the weather. Both send one of each
+kind (two briefings so a group forms, a walk nudge, rain and snow) a few seconds apart, with made-up
+weather for the notification city, following *I have a dog*. They show as banners even with the app
+open, and stack by kind on the Lock Screen.
+
+- Settings › Notifications › *Send sample notifications*, or
+- launch with `-sendSampleNotifications`:
+
+```bash
+xcrun simctl launch --terminate-running-process CatsDogs-Tests com.fangjet.weather -sendSampleNotifications
+```
+
+Notifications must be allowed first. Release builds include neither.
 
 ## Architecture
 
@@ -312,7 +339,9 @@ Remote Config parameters are defined and deployed from the Android repo
 | `analytics_enabled` | true | Kill switch for every analytics event, and SDK collection |
 | `radar_enabled` | true | Hides the radar card if RainViewer or the OpenStreetMap tiles become unavailable |
 | `walk_card_enabled` | true | Hides the "Best walk time" card for everyone; users can also turn it off in Settings |
-| `daily_weather_notifications_enabled` | true | Only the 8:30 AM morning briefing; off removes the queued ones. Walk time and rain alerts have their own switches in Settings |
+| `daily_weather_notifications_enabled` | true | The morning briefing; off removes the queued ones and hides its switch in Settings |
+| `walk_time_notifications_enabled` | true | The Walk time nudge; off removes the queued ones and hides its switch in Settings |
+| `rain_notifications_enabled` | true | Rain alerts; off removes the queued one and hides its switch in Settings |
 | `foreground_refresh_min_minutes` | 0 (0–1440) | Skips the silent refresh on returning to the app if that city was fetched this recently. Pull-to-refresh and city changes are never skipped |
 | `walk_hot_pavement_c` | 52 (40–70) | Pavement temperature that triggers the hot-paws warning |
 | `walk_warm_pavement_c` | 45 (30–65, below `walk_hot_pavement_c`, otherwise 7 below it) | Pavement temperature at which the Today Paw check tile says "Getting hot" and that hour isn't suggested for a walk (a walk now rates "okay") |

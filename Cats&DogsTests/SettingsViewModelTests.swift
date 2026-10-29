@@ -39,12 +39,49 @@ final class SettingsViewModelTests: XCTestCase {
     }
 
     func testTurningTheWalkCardOffUpdatesStateAndPersists() {
-        let viewModel = SettingsViewModel(preferences: preferences.store)
+        let viewModel = SettingsViewModel(preferences: preferences.store, rescheduleNotifications: {})
 
         viewModel.setShowWalkCard(false)
 
         XCTAssertFalse(viewModel.showWalkCard)
         XCTAssertFalse(preferences.reopened().showWalkCard)
+    }
+
+    func testTheNotificationCountLeavesOutWalkTimeWithoutADogButKeepsItsValue() {
+        let viewModel = SettingsViewModel(preferences: preferences.store, rescheduleNotifications: {})
+        viewModel.setNotifyMorningBriefing(true)
+        viewModel.setNotifyWalkTime(true)
+        viewModel.setNotifyRain(false)
+        viewModel.setShowWalkCard(true)
+        XCTAssertEqual(viewModel.notificationsOnCount, 2)
+
+        viewModel.setShowWalkCard(false)
+
+        XCTAssertEqual(viewModel.notificationsOnCount, 1)
+        XCTAssertTrue(viewModel.notifyWalkTime)
+        XCTAssertTrue(preferences.reopened().notifyWalkTime)
+    }
+
+    func testKindsSwitchedOffRemotelyAreHiddenAndLeftOutOfTheCount() {
+        var off: Set<NotificationKind> = []
+        let viewModel = SettingsViewModel(
+            preferences: preferences.store,
+            rescheduleNotifications: {},
+            remotelyEnabled: { !off.contains($0) }
+        )
+        viewModel.setNotifyMorningBriefing(true)
+        viewModel.setNotifyWalkTime(true)
+        viewModel.setNotifyRain(true)
+        viewModel.setShowWalkCard(true)
+        XCTAssertEqual(viewModel.notificationsOnCount, 3)
+
+        off = [.morningBriefing, .rain]
+
+        XCTAssertFalse(viewModel.isAvailable(.morningBriefing))
+        XCTAssertTrue(viewModel.isAvailable(.walkTime))
+        XCTAssertFalse(viewModel.isAvailable(.rain))
+        XCTAssertEqual(viewModel.notificationsOnCount, 1)
+        XCTAssertTrue(viewModel.notifyMorningBriefing, "the user's own choice is kept for when it's back")
     }
 
     func testUsageSharingIsOnByDefault() {

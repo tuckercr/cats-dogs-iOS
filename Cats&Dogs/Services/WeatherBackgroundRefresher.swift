@@ -61,8 +61,10 @@ final class WeatherBackgroundRefresher {
         }
     }
 
+    /// `replan` replans the notifications even when the refresh fails or there's no city left, for
+    /// when the notification city itself has changed and the old plan is wrong either way.
     @discardableResult
-    func performRefresh() async -> NotificationWorkerResult {
+    func performRefresh(replan: Bool = false) async -> NotificationWorkerResult {
         let locations = preferences.savedLocations
         let notificationLocation = locations.notificationLocation
         let cacheKey = notificationLocation?.cacheKey
@@ -107,7 +109,7 @@ final class WeatherBackgroundRefresher {
         )
 
         let result = await logic.doWork()
-        if refreshed {
+        if refreshed || replan {
             await scheduleNotifications()
         }
         return result

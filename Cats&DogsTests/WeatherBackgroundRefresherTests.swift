@@ -93,6 +93,25 @@ final class WeatherBackgroundRefresherTests: XCTestCase {
         XCTAssertEqual(requestedDelays[0], refreshInterval, accuracy: 5)
     }
 
+    func testWhenTheNotificationCityChangesItReplansEvenIfTheFetchFailsOrNoCityIsLeft() async {
+        preferences.setSavedLocations([london])
+        var scheduled = 0
+        let offline = makeRefresher(
+            api: FakeOpenWeatherAPI(currentError: URLError(.notConnectedToInternet)),
+            onSchedule: { scheduled += 1 }
+        )
+        await offline.performRefresh(replan: true)
+        XCTAssertEqual(scheduled, 1)
+
+        preferences.setSavedLocations([])
+        await makeRefresher(onSchedule: { scheduled += 1 }).performRefresh(replan: true)
+        XCTAssertEqual(scheduled, 2)
+
+        preferences.setSavedLocations([london])
+        await makeRefresher(onSchedule: { scheduled += 1 }).performRefresh(replan: true)
+        XCTAssertEqual(scheduled, 3, "replanned once, not twice, after a good refresh")
+    }
+
     func testNoSavedLocationsDoesNoNetworkWork() async {
         let api = FakeOpenWeatherAPI()
         let refresher = makeRefresher(api: api)

@@ -72,6 +72,12 @@ struct CurrentWeatherView: View {
             // Also covers removing the last city, which must clear its notifications.
             rescheduleNotificationsSoon()
         }
+        // Notifications are for My Location, otherwise the first city, whichever tab is showing. When
+        // that changes (reordered, added, removed, or My Location moved), its weather may not be
+        // cached yet: fetch it, then replan.
+        .onChange(of: cityListViewModel.locations.notificationLocation?.cacheKey) { _, _ in
+            Task { await WeatherBackgroundRefresher.shared.performRefresh(replan: true) }
+        }
         .onChange(of: unitOverride) { _, _ in
             // Cached data is in the old units, so this has to be a real refetch.
             refreshActiveLocation()
@@ -297,6 +303,7 @@ struct CurrentWeatherView: View {
         locationWasGranted = granted
         guard granted, locationViewModel.state != .locating else { return }
         if cityListViewModel.locations.contains(where: \.isCurrentLocation) {
+            guard cityListViewModel.claimMyLocationCheck() else { return }
             fetchingMyLocationToAdd = false
             locationViewModel.fetchLocation()
         } else if newlyGranted || cityListViewModel.locations.isEmpty {

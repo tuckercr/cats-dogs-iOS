@@ -26,12 +26,16 @@ struct RainAlertRecord: Equatable {
 /// The switches the plan follows: the user's, and Remote Config's for the briefing.
 struct NotificationSettings: Equatable {
     var morningBriefing = true
+    /// Only counts with a dog: Settings hides it otherwise, keeping its value for when one comes back.
     var walkTime = false
     var rain = false
-    /// A dog at home (the dog question / walk card switch): the briefing then mentions the walk.
+    /// A dog at home ("I have a dog"): the briefing then mentions the walk, and Walk time can nudge.
     var hasDog = false
-    /// Remote Config `daily_weather_notifications_enabled`: switches the briefing off for everyone.
+    /// Remote Config `daily_weather_notifications_enabled`, `walk_time_notifications_enabled` and
+    /// `rain_notifications_enabled`: each switches its kind off for everyone.
     var briefingRemotelyEnabled = true
+    var walkTimeRemotelyEnabled = true
+    var rainRemotelyEnabled = true
 }
 
 /// Plans the notifications from the cached weather. iOS can't run code at a set time, so everything
@@ -95,12 +99,12 @@ enum NotificationPlanner {
             }
         }
 
-        if settings.walkTime, let weather {
+        if settings.walkTime, settings.hasDog, settings.walkTimeRemotelyEnabled, let weather {
             for (day, briefing) in briefings.prefix(walkDays).enumerated() {
                 guard let slot = bestWalkSlot(after: briefing, slots: slots, thresholds: thresholds, calendar: calendar),
                       let start = slot.date else { continue }
-                // The slot under way at 8:30 is "now": the briefing says so, or without it the nudge
-                // goes with the briefing time.
+                // The slot under way at 8:30 is "now": the briefing says so (it mentions the walk with
+                // a dog, which a nudge needs too), or without it the nudge goes with the briefing time.
                 let covers = start <= briefing
                 if covers, briefingOn { continue }
                 let date = max(start, briefing)
@@ -115,7 +119,13 @@ enum NotificationPlanner {
             }
         }
 
-        if settings.rain, let weather, let alert = rainAlert(weather: weather, forecast: forecast, now: now, lastRainAlert: lastRainAlert) {
+        if settings.rain, settings.rainRemotelyEnabled, let weather, let alert = rainAlert(
+            weather: weather,
+            forecast: forecast,
+            now: now,
+            lastRainAlert: lastRainAlert,
+            hasDog: settings.hasDog
+        ) {
             planned.append(alert)
         }
         return planned.sorted { $0.date < $1.date }
@@ -192,12 +202,14 @@ enum NotificationPlanner {
     }
 
     /// "Rain starting around 3:15 PM" an hour before rain due within the 15-minute forecast, in the
-    /// daytime, and not again for rain whose alert has already gone off.
+    /// daytime, and not again for rain whose alert has already gone off. Mentions the walk only with
+    /// a dog.
     static func rainAlert(
         weather: CurrentWeather,
         forecast: [DayForecast],
         now: Date,
-        lastRainAlert: RainAlertRecord?
+        lastRainAlert: RainAlertRecord?,
+        hasDog: Bool
     ) -> PlannedNotification? {
         guard case let .starting(start, snow) = NextRain.from(forecast.first?.quarterHours ?? [], now: now) else { return nil }
         let startDate = Date(timeIntervalSince1970: TimeInterval(start))
@@ -213,7 +225,7 @@ enum NotificationPlanner {
             kind: .rain,
             date: fire,
             title: "\(what) starting around \(WeatherFormatting.epochTime(start, timeZone: weather.timeZone))",
-            body: "\(what) on the way in \(weather.cityName). Walk now or wait it out.",
+            body: "\(what) on the way in \(weather.cityName). " + (hasDog ? "Walk now or wait it out." : "Misty's staying in."),
             rainStart: start,
             snow: snow
         )
