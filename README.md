@@ -119,8 +119,9 @@ and scheme keep the original Cats&Dogs name on purpose. The bundle ID is `com.fa
    - **Cache**: clear cached weather.
    - **Privacy**: *Share usage statistics* turns analytics on or off. It starts on, except in the EU,
      EEA, UK and Switzerland, where it starts off until the user turns it on.
-   - **About**: OpenWeather and Open-Meteo attribution, and the
-     [privacy policy](https://sunnyandmisty.com/privacy).
+   - **About**: OpenWeather and Open-Meteo attribution, the
+     [privacy policy](https://sunnyandmisty.com/privacy), and the version at the bottom ("Version 1.0
+     (1)", with "· Debug build" in debug builds).
 
 ### Where the data comes from
 

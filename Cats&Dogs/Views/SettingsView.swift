@@ -120,6 +120,12 @@ struct SettingsView: SettingsScreen {
                 }
             } header: {
                 sectionHeader("About")
+            } footer: {
+                Text(Self.versionText)
+                    .font(.footnote)
+                    .foregroundStyle(Color.secondaryText)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 16)
             }
         }
         .scrollContentBackground(.hidden)
@@ -149,6 +155,18 @@ struct SettingsView: SettingsScreen {
         guard settingsViewModel.notificationPermission == .granted else { return "Off" }
         let count = settingsViewModel.notificationsOnCount
         return count == 0 ? "Off" : "\(count) on"
+    }
+
+    /// "Version 1.0 (1)", plus "· Debug build" in debug builds, so a screenshot says what was tested.
+    static var versionText: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        #if DEBUG
+        return "Version \(version) (\(build)) · Debug build"
+        #else
+        return "Version \(version) (\(build))"
+        #endif
     }
 
     private func unitLabel(for override: UnitOverride) -> String {
