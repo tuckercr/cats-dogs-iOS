@@ -42,6 +42,12 @@ final class LocationPermissionViewModel: NSObject, CLLocationManagerDelegate {
         }
     }
 
+    /// Whether asking would show the system prompt: before the first answer, and again each launch
+    /// for "Allow Once" or "Ask Next Time", which iOS reports as not yet decided.
+    func canRequestPermission() -> Bool {
+        (authorizationStatusOverride?() ?? manager.authorizationStatus) == .notDetermined
+    }
+
     /// Once denied, iOS won't ask again; only the Settings app can grant it.
     func isPermissionDenied() -> Bool {
         switch authorizationStatusOverride?() ?? manager.authorizationStatus {

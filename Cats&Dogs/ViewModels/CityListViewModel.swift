@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import Observation
 
@@ -61,6 +62,31 @@ final class CityListViewModel {
             latitude: geocoded.weatherLat,
             longitude: geocoded.weatherLon,
             isCurrentLocation: updated[index].isCurrentLocation
+        )
+        locations = updated
+        preferences.setSavedLocations(updated)
+    }
+
+    /// How far the device has to move before My Location follows it.
+    static let myLocationMoveMeters: CLLocationDistance = 1_000
+
+    /// Moves My Location to where the device is now. Only for a real move: below
+    /// `myLocationMoveMeters` it's GPS wobble, and new coordinates would just miss the cache.
+    func updateCurrentLocation(_ location: SavedLocation) {
+        guard let latitude = location.latitude, let longitude = location.longitude,
+              let index = locations.firstIndex(where: \.isCurrentLocation) else { return }
+        let current = locations[index]
+        if let oldLatitude = current.latitude, let oldLongitude = current.longitude {
+            let moved = CLLocation(latitude: oldLatitude, longitude: oldLongitude)
+                .distance(from: CLLocation(latitude: latitude, longitude: longitude))
+            guard moved >= Self.myLocationMoveMeters else { return }
+        }
+        var updated = locations
+        updated[index] = SavedLocation(
+            label: current.label,
+            latitude: latitude,
+            longitude: longitude,
+            isCurrentLocation: true
         )
         locations = updated
         preferences.setSavedLocations(updated)

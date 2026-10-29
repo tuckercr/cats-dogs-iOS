@@ -91,7 +91,7 @@ final class TodayDetailsTests: XCTestCase {
         XCTAssertEqual(TodayDetails.windForce(speed: 10, units: .imperial), 3)
         XCTAssertEqual(TodayDetails.windForce(speed: 20, units: .metric), 8)
         XCTAssertEqual(TodayDetails.windForce(speed: 40, units: .metric), 12)
-        XCTAssertEqual(TodayDetails.windForceNames[1], "Light air")
+        XCTAssertEqual(TodayDetails.windForceNames[1], "Light wind")
         XCTAssertEqual(TodayDetails.windForceNames.count, 13)
     }
 

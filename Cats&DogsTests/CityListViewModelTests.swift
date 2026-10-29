@@ -19,6 +19,42 @@ final class CityListViewModelTests: XCTestCase {
         preferences.destroy()
     }
 
+    // MARK: - updateCurrentLocation
+
+    private let myLocation = SavedLocation(label: "My Location", latitude: 40, longitude: -83, isCurrentLocation: true)
+
+    func testUpdateCurrentLocationMovesMyLocationAfterARealMove() {
+        preferences.store.setSavedLocations([austin, myLocation])
+        let viewModel = makeViewModel()
+
+        // About 11 km north.
+        viewModel.updateCurrentLocation(SavedLocation(label: "My Location", latitude: 40.1, longitude: -83, isCurrentLocation: true))
+
+        let moved = SavedLocation(label: "My Location", latitude: 40.1, longitude: -83, isCurrentLocation: true)
+        XCTAssertEqual(viewModel.locations, [austin, moved])
+        XCTAssertEqual(preferences.reopened().savedLocations, [austin, moved])
+    }
+
+    func testUpdateCurrentLocationIgnoresGPSWobbleUnderAKilometre() {
+        preferences.store.setSavedLocations([myLocation])
+        let viewModel = makeViewModel()
+
+        // About 110 m.
+        viewModel.updateCurrentLocation(SavedLocation(label: "My Location", latitude: 40.001, longitude: -83, isCurrentLocation: true))
+
+        XCTAssertEqual(viewModel.locations, [myLocation])
+        XCTAssertEqual(preferences.reopened().savedLocations, [myLocation])
+    }
+
+    func testUpdateCurrentLocationDoesNothingWithoutMyLocation() {
+        preferences.store.setSavedLocations([austin])
+        let viewModel = makeViewModel()
+
+        viewModel.updateCurrentLocation(myLocation)
+
+        XCTAssertEqual(viewModel.locations, [austin])
+    }
+
     // MARK: - init
 
     func testInitLoadsSavedLocationsAndActiveIndex() {

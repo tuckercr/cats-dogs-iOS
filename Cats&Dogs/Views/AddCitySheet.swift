@@ -5,14 +5,16 @@ struct AddCitySheet: View {
     @Bindable var geoViewModel: GeoLocationViewModel
     let onAddCity: () -> Void
     let onRemoveSaved: (Int) -> Void
-    /// Adds the device's location as "My Location", offered while it isn't saved and access is on.
+    /// Adds the device's location as "My Location", offered while it isn't saved and access is on or
+    /// can still be asked for ("Allow Once" and "Ask Next Time" users included).
     let onAddMyLocation: (SavedLocation) -> Void
     let onDismiss: () -> Void
 
     @State private var locationViewModel = LocationPermissionViewModel()
 
     private var canAddMyLocation: Bool {
-        !savedLocations.contains(where: \.isCurrentLocation) && locationViewModel.hasLocationPermission()
+        !savedLocations.contains(where: \.isCurrentLocation)
+            && (locationViewModel.hasLocationPermission() || locationViewModel.canRequestPermission())
     }
 
     var body: some View {
@@ -45,7 +47,12 @@ struct AddCitySheet: View {
 
                     if canAddMyLocation {
                         Button {
-                            locationViewModel.fetchLocation()
+                            if locationViewModel.hasLocationPermission() {
+                                locationViewModel.fetchLocation()
+                            } else {
+                                // Fetches once allowed; a "Don't Allow" hides the button.
+                                locationViewModel.requestPermission()
+                            }
                         } label: {
                             HStack {
                                 if locationViewModel.state == .locating {
