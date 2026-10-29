@@ -25,6 +25,8 @@ final class RemoteConfigRepository {
     nonisolated static let keyRadarEnabled = "radar_enabled"
     /// Only the daily 9 AM / 1 PM / 7 PM weather summaries. Other notification types get their own.
     nonisolated static let keyDailyWeatherNotificationsEnabled = "daily_weather_notifications_enabled"
+    nonisolated static let keyWalkTimeNotificationsEnabled = "walk_time_notifications_enabled"
+    nonisolated static let keyRainNotificationsEnabled = "rain_notifications_enabled"
 
     /// Skips the silent refresh on returning to the foreground if the city was fetched this recently.
     nonisolated static let keyForegroundRefreshMinMinutes = "foreground_refresh_min_minutes"
@@ -70,6 +72,8 @@ final class RemoteConfigRepository {
             Self.keyRadarEnabled: NSNumber(value: true),
             Self.keyWalkCardEnabled: NSNumber(value: true),
             Self.keyDailyWeatherNotificationsEnabled: NSNumber(value: true),
+            Self.keyWalkTimeNotificationsEnabled: NSNumber(value: true),
+            Self.keyRainNotificationsEnabled: NSNumber(value: true),
             Self.keyForegroundRefreshMinMinutes: NSNumber(value: Self.defaultForegroundRefreshMinMinutes),
             Self.keyOpenMeteoEnabled: NSNumber(value: true),
             Self.keyOpenWeatherApiKey: "" as NSString,
@@ -129,6 +133,17 @@ final class RemoteConfigRepository {
     }
 
     var dailyWeatherNotificationsEnabled: Bool { Self.flag(Self.keyDailyWeatherNotificationsEnabled) }
+    var walkTimeNotificationsEnabled: Bool { Self.flag(Self.keyWalkTimeNotificationsEnabled) }
+    var rainNotificationsEnabled: Bool { Self.flag(Self.keyRainNotificationsEnabled) }
+
+    /// Each kind of notification can be switched off for everyone; Settings then hides its switch.
+    func notificationsEnabled(_ kind: NotificationKind) -> Bool {
+        switch kind {
+        case .morningBriefing: dailyWeatherNotificationsEnabled
+        case .walkTime: walkTimeNotificationsEnabled
+        case .rain: rainNotificationsEnabled
+        }
+    }
 
     var foregroundRefreshMinInterval: TimeInterval {
         let minutes = remoteConfig?[Self.keyForegroundRefreshMinMinutes].numberValue.intValue

@@ -13,12 +13,25 @@ final class WeatherNotificationScheduler {
 
     private init() {}
 
+    /// `.providesAppNotificationSettings` adds the link to the Notifications screen in iOS Settings.
+    private static let authorizationOptions: UNAuthorizationOptions = [
+        .alert, .sound, .badge, .providesAppNotificationSettings,
+    ]
+
     func requestAuthorization() async -> Bool {
         do {
-            return try await center.requestAuthorization(options: [.alert, .sound, .badge])
+            return try await center.requestAuthorization(options: Self.authorizationOptions)
         } catch {
             return false
         }
+    }
+
+    /// Asks again, without a prompt, when already allowed: people who allowed notifications before
+    /// the Settings link existed get it too. Only for full authorization: a provisional user would
+    /// see the real prompt.
+    func refreshAuthorizationOptions() async {
+        guard await authorizationStatus() == .authorized else { return }
+        _ = await requestAuthorization()
     }
 
     func authorizationStatus() async -> UNAuthorizationStatus {
@@ -44,7 +57,9 @@ final class WeatherNotificationScheduler {
             walkTime: preferences.notifyWalkTime,
             rain: preferences.notifyRain,
             hasDog: preferences.showWalkCard,
-            briefingRemotelyEnabled: RemoteConfigRepository.shared.dailyWeatherNotificationsEnabled
+            briefingRemotelyEnabled: RemoteConfigRepository.shared.dailyWeatherNotificationsEnabled,
+            walkTimeRemotelyEnabled: RemoteConfigRepository.shared.walkTimeNotificationsEnabled,
+            rainRemotelyEnabled: RemoteConfigRepository.shared.rainNotificationsEnabled
         )
         let plan = NotificationPlanner.plan(
             weather: weather,
@@ -62,10 +77,6 @@ final class WeatherNotificationScheduler {
                 dateMatching: calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: planned.date),
                 repeats: false
             )
-            let content = UNMutableNotificationContent()
-            content.title = planned.title
-            content.body = planned.body
-            content.sound = .default
             // The brand look: the pets, in today's mood for the next briefing, out for a walk, or
             // under the umbrella.
             let mood: PetMood? = switch planned.kind {
@@ -73,14 +84,75 @@ final class WeatherNotificationScheduler {
             case .walkTime: .sunny
             case .rain: planned.snow ? .snow : .rain
             }
-            if let mood, let png = petsPicture(mood: mood, southernHemisphere: southern),
-               let attachment = Self.attachment(png, identifier: planned.identifier) {
-                content.attachments = [attachment]
-            }
+            let content = content(for: planned, mood: mood, southernHemisphere: southern)
             try? await center.add(UNNotificationRequest(identifier: planned.identifier, content: content, trigger: trigger))
             if let start = planned.rainStart {
                 preferences.setLastRainAlert(RainAlertRecord(rainStart: start, fireDate: planned.date))
             }
+        }
+    }
+
+    private func content(for planned: PlannedNotification, mood: PetMood?, southernHemisphere: Bool) -> UNMutableNotificationContent {
+        let content = UNMutableNotificationContent()
+        content.title = planned.title
+        content.body = planned.body
+        content.sound = .default
+        // Groups them by kind in Notification Center, like Android's channels.
+        content.threadIdentifier = Self.threadIdentifier(planned.kind)
+        if let mood, let png = petsPicture(mood: mood, southernHemisphere: southernHemisphere),
+           let attachment = Self.attachment(png, identifier: planned.identifier) {
+            content.attachments = [attachment]
+        }
+        return content
+    }
+
+    #if DEBUG
+    /// Debug builds only: one of each kind, plus a second briefing so a group forms, a few seconds
+    /// apart with made-up text, through the same content code. Shows the look and the grouping
+    /// without waiting for 8:30 or the weather.
+    func sendSamples(preferences: PreferencesStore? = nil) async {
+        guard await isAuthorized() else { return }
+        let preferences = preferences ?? .shared
+        // They follow "I have a dog", and use the notification city's name, as the real ones do.
+        let hasDog = preferences.showWalkCard
+        let location = preferences.savedLocations.notificationLocation
+        let city = location.flatMap { preferences.cachedWeather(for: $0.cacheKey)?.cityName }
+            ?? location.flatMap { $0.isCurrentLocation ? nil : $0.label }
+            ?? "Knoxville"
+        let walk = hasDog ? " Sunny's picked 1 PM for a walk." : ""
+        let advice = hasDog ? "Walk now or wait it out." : "Misty's staying in."
+        let notToday = hasDog ? " Not a good day for walkies." : ""
+        let samples: [(PlannedNotification, PetMood)] = [
+            (PlannedNotification(identifier: "debug_briefing_1", kind: .morningBriefing, date: .now,
+                                 title: "52° and partly cloudy in \(city)",
+                                 body: "High 70°, low 45°, 60% chance of rain.\(walk)"), .cloudy),
+            (PlannedNotification(identifier: "debug_walk", kind: .walkTime, date: .now,
+                                 title: "Time for a walk",
+                                 body: "64° and clear in \(city). Sunny's waiting by the door."), .sunny),
+            (PlannedNotification(identifier: "debug_rain", kind: .rain, date: .now,
+                                 title: "Rain starting around 3:15 PM",
+                                 body: "Rain on the way in \(city). \(advice)"), .rain),
+            (PlannedNotification(identifier: "debug_snow", kind: .rain, date: .now,
+                                 title: "Snow starting around 6:45 PM",
+                                 body: "Snow on the way in \(city). \(advice)"), .snow),
+            (PlannedNotification(identifier: "debug_briefing_2", kind: .morningBriefing, date: .now,
+                                 title: "48° and light rain in \(city)",
+                                 body: "High 61°, low 44°, 80% chance of rain.\(notToday)"), .rain),
+        ]
+        for (index, (planned, mood)) in samples.enumerated() {
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(5 + index * 3), repeats: false)
+            let content = content(for: planned, mood: mood, southernHemisphere: false)
+            try? await center.add(UNNotificationRequest(identifier: planned.identifier, content: content, trigger: trigger))
+        }
+    }
+    #endif
+
+    /// The same names as Android's notification channels.
+    nonisolated static func threadIdentifier(_ kind: NotificationKind) -> String {
+        switch kind {
+        case .morningBriefing: "morning_briefing"
+        case .walkTime: "walk_time"
+        case .rain: "rain_alerts"
         }
     }
 

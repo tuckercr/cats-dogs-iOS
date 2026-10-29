@@ -348,4 +348,15 @@ final class CityListViewModelTests: XCTestCase {
     private func makeViewModel() -> CityListViewModel {
         CityListViewModel(preferences: preferences.store, geocodingRepository: geocoding.repository, onCityAdded: {})
     }
+
+    func testMyLocationIsCheckedForAMoveAtMostEveryFifteenMinutes() {
+        let viewModel = CityListViewModel(preferences: preferences.store)
+        let start = Date(timeIntervalSince1970: 1_000_000)
+
+        XCTAssertTrue(viewModel.claimMyLocationCheck(now: start))
+        XCTAssertFalse(viewModel.claimMyLocationCheck(now: start.addingTimeInterval(60)))
+        XCTAssertFalse(viewModel.claimMyLocationCheck(now: start.addingTimeInterval(CityListViewModel.myLocationCheckInterval - 1)))
+        XCTAssertTrue(viewModel.claimMyLocationCheck(now: start.addingTimeInterval(CityListViewModel.myLocationCheckInterval)))
+    }
+
 }

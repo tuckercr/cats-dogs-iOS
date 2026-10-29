@@ -119,7 +119,7 @@ final class NotificationPlannerTests: XCTestCase {
     func testTheWalkNudgeIsAtTheDaysFirstGoodHour() {
         let walks = plan(
             [day(dry.map { slot($0, rain: $0 < 11 ? 90 : 0) })],
-            settings: NotificationSettings(walkTime: true)
+            settings: NotificationSettings(walkTime: true, hasDog: true)
         ).filter { $0.kind == .walkTime }
 
         XCTAssertEqual(walks.map(\.date), [at(11)])
@@ -129,17 +129,38 @@ final class NotificationPlannerTests: XCTestCase {
 
     func testWhenTheBriefingHourIsGoodTheBriefingSaysSoOrWithoutItTheNudgeGoesThen() {
         let good = [day(dry.map { slot($0) })]
-        XCTAssertTrue(plan(good, settings: NotificationSettings(walkTime: true)).filter { $0.kind == .walkTime }.isEmpty)
+        XCTAssertTrue(plan(good, settings: NotificationSettings(walkTime: true, hasDog: true)).filter { $0.kind == .walkTime }.isEmpty)
 
-        let walks = plan(good, settings: NotificationSettings(morningBriefing: false, walkTime: true))
+        let walks = plan(good, settings: NotificationSettings(morningBriefing: false, walkTime: true, hasDog: true))
         XCTAssertEqual(walks.map(\.date), [at(8.5)])
     }
 
+    func testWithoutADogThereIsNoWalkNudgeEvenWithItsSwitchOn() {
+        let laterGood = [day(dry.map { slot($0, rain: $0 < 11 ? 90 : 0) })]
+        XCTAssertTrue(plan(laterGood, settings: NotificationSettings(walkTime: true)).filter { $0.kind == .walkTime }.isEmpty)
+        XCTAssertTrue(plan(laterGood, settings: NotificationSettings(morningBriefing: false, walkTime: true))
+            .filter { $0.kind == .walkTime }.isEmpty)
+    }
+
+    func testRemoteConfigCanSwitchOffWalkNudgesAndRainAlertsForEveryone() {
+        let laterGood = [day(dry.map { slot($0, rain: $0 < 11 ? 90 : 0) })]
+        XCTAssertTrue(plan(laterGood, settings: NotificationSettings(walkTime: true, hasDog: true, walkTimeRemotelyEnabled: false))
+            .filter { $0.kind == .walkTime }.isEmpty)
+        XCTAssertTrue(plan(rainFrom(8.5), now: at(7), settings: NotificationSettings(rain: true, rainRemotelyEnabled: false))
+            .filter { $0.kind == .rain }.isEmpty)
+    }
+
     func testNoWalkNudgeWithoutAGoodHourOrWithItsSwitchOff() {
-        XCTAssertTrue(plan([day(dry.map { slot($0, rain: 90) })], settings: NotificationSettings(walkTime: true))
+        XCTAssertTrue(plan([day(dry.map { slot($0, rain: 90) })], settings: NotificationSettings(walkTime: true, hasDog: true))
             .filter { $0.kind == .walkTime }.isEmpty)
         XCTAssertTrue(plan([day(dry.map { slot($0, rain: $0 < 11 ? 90 : 0) })])
             .filter { $0.kind == .walkTime }.isEmpty)
+    }
+
+    func testEachKindHasItsOwnNotificationCenterGroupNamedLikeAndroidsChannels() {
+        XCTAssertEqual(WeatherNotificationScheduler.threadIdentifier(.morningBriefing), "morning_briefing")
+        XCTAssertEqual(WeatherNotificationScheduler.threadIdentifier(.walkTime), "walk_time")
+        XCTAssertEqual(WeatherNotificationScheduler.threadIdentifier(.rain), "rain_alerts")
     }
 
     // MARK: - Rain alerts
@@ -154,13 +175,19 @@ final class NotificationPlannerTests: XCTestCase {
     }
 
     func testTheRainAlertIsAnHourBeforeTheRain() {
-        let alert = plan(rainFrom(8.5), now: at(7), settings: NotificationSettings(morningBriefing: false, rain: true)).first
+        let alert = plan(rainFrom(8.5), now: at(7), settings: NotificationSettings(morningBriefing: false, rain: true, hasDog: true)).first
 
         XCTAssertEqual(alert?.kind, .rain)
         XCTAssertEqual(alert?.date, at(7.5))
         XCTAssertTrue(alert?.title.hasPrefix("Rain starting around 8:30") == true)
         XCTAssertEqual(alert?.body, "Rain on the way in London. Walk now or wait it out.")
         XCTAssertEqual(alert?.rainStart, dayStart + 8 * hour + 1800)
+    }
+
+    func testWithoutADogTheRainAlertDoesNotMentionTheWalk() {
+        let alert = plan(rainFrom(8.5), now: at(7), settings: NotificationSettings(morningBriefing: false, rain: true)).first
+
+        XCTAssertEqual(alert?.body, "Rain on the way in London. Misty's staying in.")
     }
 
     func testRainSoonerThanAnHourAlertsRightAway() {

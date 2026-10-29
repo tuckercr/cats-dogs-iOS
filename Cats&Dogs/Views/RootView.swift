@@ -2,6 +2,7 @@ import SwiftUI
 
 private enum AppScreen: Hashable {
     case settings
+    case notifications
     case locations
 }
 
@@ -12,6 +13,7 @@ struct RootView: View {
     @State private var weatherViewModel = WeatherForecastViewModel()
     @State private var settingsViewModel = SettingsViewModel()
     @State private var path: [AppScreen] = []
+    private let notificationSettingsLink = NotificationSettingsLink.shared
 
     var body: some View {
         Group {
@@ -57,9 +59,12 @@ struct RootView: View {
                             case .settings:
                                 SettingsView(
                                     settingsViewModel: settingsViewModel,
+                                    onOpenNotifications: { path.append(.notifications) },
                                     onOpenLocations: { path.append(.locations) },
                                     onLocationResolved: { cityListViewModel.addLocation($0) }
                                 )
+                            case .notifications:
+                                NotificationSettingsView(settingsViewModel: settingsViewModel)
                             case .locations:
                                 LocationsView(
                                     cityListViewModel: cityListViewModel,
@@ -67,6 +72,12 @@ struct RootView: View {
                                 )
                             }
                         }
+                    }
+                    // From the link in iOS Settings; waits here until onboarding is done.
+                    .onChange(of: notificationSettingsLink.isRequested, initial: true) { _, requested in
+                        guard requested else { return }
+                        notificationSettingsLink.isRequested = false
+                        path = [.settings, .notifications]
                     }
                 }
             } else {

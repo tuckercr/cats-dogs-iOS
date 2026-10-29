@@ -15,6 +15,12 @@ enum LocationFetchState: Equatable {
 final class LocationPermissionViewModel: NSObject, CLLocationManagerDelegate {
     private(set) var state: LocationFetchState = .idle
 
+    /// Give up on a fix after this, as Android does: with no signal (or no simulated location)
+    /// Core Location can take minutes to fail.
+    static let fixTimeout: Duration = .seconds(10)
+    /// A position iOS already has, this recent, is used straight away.
+    static let recentFixAge: TimeInterval = 10 * 60
+
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CLLocation?, Error>?
     private var awaitingAuthorization = false
@@ -72,6 +78,7 @@ final class LocationPermissionViewModel: NSObject, CLLocationManagerDelegate {
             state = .permissionDenied
             return
         }
+        guard state != .locating else { return }
         state = .locating
         Task {
             do {
@@ -98,10 +105,25 @@ final class LocationPermissionViewModel: NSObject, CLLocationManagerDelegate {
         if let locationFetcherOverride {
             return try await locationFetcherOverride()
         }
+        if let known = manager.location, -known.timestamp.timeIntervalSinceNow < Self.recentFixAge {
+            return known
+        }
+        let timeout = Task { [weak self] in
+            try await Task.sleep(for: Self.fixTimeout)
+            self?.finish(.success(nil))
+        }
+        defer { timeout.cancel() }
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
             manager.requestLocation()
         }
+    }
+
+    /// Resumes the request under way, once: the fix, the error or the timeout, whichever is first.
+    private func finish(_ result: Result<CLLocation?, Error>) {
+        guard let continuation else { return }
+        self.continuation = nil
+        continuation.resume(with: result)
     }
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -124,16 +146,10 @@ final class LocationPermissionViewModel: NSObject, CLLocationManagerDelegate {
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        Task { @MainActor in
-            continuation?.resume(returning: locations.first)
-            continuation = nil
-        }
+        Task { @MainActor in finish(.success(locations.first)) }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        Task { @MainActor in
-            continuation?.resume(throwing: error)
-            continuation = nil
-        }
+        Task { @MainActor in finish(.failure(error)) }
     }
 }

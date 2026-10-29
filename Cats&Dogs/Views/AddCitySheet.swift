@@ -67,6 +67,12 @@ struct AddCitySheet: View {
                         .buttonStyle(.bordered)
                         .controlSize(.large)
                         .disabled(locationViewModel.state == .locating)
+
+                        if locationViewModel.state == .failed {
+                            Text("Couldn't find your location. Try again, or add a city by name.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.secondaryText)
+                        }
                     }
 
                     Text("ADD A NEW CITY")

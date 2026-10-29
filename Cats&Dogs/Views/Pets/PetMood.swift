@@ -87,7 +87,7 @@ enum PetMood: CaseIterable {
                 "Sunny thinks there's time for one more lap of the block.",
             ]
             case .lateNight: [
-                "Sunny and Misty are curled up asleep. Shh.",
+                "Sunny and Misty are curled up asleep.",
                 "Lights out. Misty has claimed the warm spot.",
             ]
             case .beforeDawn: [

@@ -7,38 +7,38 @@ struct LocationsView: View {
 
     var body: some View {
         List {
-            ForEach(Array(cityListViewModel.locations.enumerated()), id: \.offset) { index, location in
-                HStack {
-                    if location.isCurrentLocation {
-                        Image(systemName: "location.fill")
-                            .font(.caption)
-                            .foregroundStyle(Color.accent)
-                    }
-                    Text(index == cityListViewModel.activeIndex ? "\(location.label) (Active)" : location.label)
-                    Spacer()
-                    if index != cityListViewModel.activeIndex {
-                        Button("Set active") {
-                            cityListViewModel.setActiveIndex(index)
+            Section {
+                ForEach(Array(cityListViewModel.locations.enumerated()), id: \.offset) { index, location in
+                    HStack {
+                        if location.isCurrentLocation {
+                            Image(systemName: "location.fill")
+                                .font(.caption)
+                                .foregroundStyle(Color.accent)
                         }
-                        .font(.caption)
-                    }
-                }
-                // The active city is highlighted like Android's Manage Locations list.
-                .listRowBackground(
-                    index == cityListViewModel.activeIndex
-                        ? Color.surfaceVariant
-                        : Color(.secondarySystemGroupedBackground)
-                )
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    if cityListViewModel.locations.count > 1 {
-                        Button("Delete", role: .destructive) {
-                            cityListViewModel.removeLocation(at: index)
+                        Text(location.label)
+                        if index == cityListViewModel.locations.notificationIndex {
+                            Image(systemName: "bell.fill")
+                                .font(.caption)
+                                .foregroundStyle(Color.accent)
+                                .accessibilityLabel("Notifications")
                         }
+                        Spacer()
                     }
+                    // The last city stays: the app always has one to show.
+                    .deleteDisabled(cityListViewModel.locations.count <= 1)
                 }
-            }
-            .onMove { source, destination in
-                cityListViewModel.reorderLocations(from: source, to: destination)
+                // The standard delete: swipe left, or Edit and the red minus.
+                .onDelete { offsets in
+                    guard let index = offsets.first, cityListViewModel.locations.count > 1 else { return }
+                    cityListViewModel.removeLocation(at: index)
+                }
+                .onMove { source, destination in
+                    cityListViewModel.reorderLocations(from: source, to: destination)
+                }
+            } footer: {
+                Label("Notifications are for My Location, otherwise the top city.", systemImage: "bell.fill")
+                    .font(.footnote)
+                    .foregroundStyle(Color.secondaryText)
             }
         }
         .scrollContentBackground(.hidden)
