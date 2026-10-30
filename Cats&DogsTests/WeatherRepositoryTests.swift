@@ -7,7 +7,7 @@ final class WeatherRepositoryTests: XCTestCase {
 
     func testFetchCurrentWeatherWithCoordinatesSendsCoordinatesAndPreservesLocationLabel() async {
         let api = FakeOpenWeatherAPI()
-        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), timeZone: utc)
+        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), airQuality: StubAirQualityAPI(), timeZone: utc)
 
         let result = await repository.fetchCurrentWeather(
             units: .imperial,
@@ -30,7 +30,7 @@ final class WeatherRepositoryTests: XCTestCase {
 
     func testFetchCurrentWeatherTrimsCityQueryWhenCoordinatesAreAbsent() async {
         let api = FakeOpenWeatherAPI()
-        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), timeZone: utc)
+        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), airQuality: StubAirQualityAPI(), timeZone: utc)
 
         let result = await repository.fetchCurrentWeather(
             units: .metric,
@@ -47,7 +47,7 @@ final class WeatherRepositoryTests: XCTestCase {
 
     func testFetchCurrentWeatherWithBlankCityQueryFailsBeforeCallingAPI() async {
         let api = FakeOpenWeatherAPI()
-        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), timeZone: utc)
+        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), airQuality: StubAirQualityAPI(), timeZone: utc)
 
         let result = await repository.fetchCurrentWeather(units: .metric, cityQuery: "   ")
 
@@ -63,6 +63,7 @@ final class WeatherRepositoryTests: XCTestCase {
         let repository = WeatherRepository(
             client: OpenWeatherClient(apiKey: "   "),
             openMeteo: StubOpenMeteoAPI(),
+            airQuality: StubAirQualityAPI(),
             timeZone: utc
         )
 
@@ -85,7 +86,7 @@ final class WeatherRepositoryTests: XCTestCase {
                 ]
             )
         )
-        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), timeZone: utc)
+        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), airQuality: StubAirQualityAPI(), timeZone: utc)
 
         let result = await repository.fetchForecast(units: .metric, cityQuery: " Austin ")
 
@@ -105,6 +106,7 @@ final class WeatherRepositoryTests: XCTestCase {
         let repository = WeatherRepository(
             client: api,
             openMeteo: openMeteo,
+            airQuality: StubAirQualityAPI(),
             timeZone: utc,
             now: { Date(timeIntervalSince1970: TimeInterval(fixtureDayStart)) }
         )
@@ -121,12 +123,41 @@ final class WeatherRepositoryTests: XCTestCase {
         XCTAssertEqual(slot?.uvIndex, 0)
     }
 
+    func testOpenMeteoForecastCarriesEachHoursAirQualityBand() async {
+        let repository = WeatherRepository(
+            client: FakeOpenWeatherAPI(),
+            openMeteo: StubOpenMeteoAPI(response: openMeteoResponse(hours: 2)),
+            airQuality: StubAirQualityAPI(hourlyIndices: [fixtureDayStart: 40, fixtureDayStart + 3600: 172]),
+            timeZone: utc,
+            now: { Date(timeIntervalSince1970: TimeInterval(fixtureDayStart)) }
+        )
+
+        let result = await repository.fetchForecast(units: .metric, latitude: 30, longitude: -97)
+
+        XCTAssertEqual(try? result.get().flatMap(\.hourlySlots).map(\.airQualityBand), [0, 3])
+    }
+
+    func testForecastStillLoadsWhenAirQualityFails() async {
+        let repository = WeatherRepository(
+            client: FakeOpenWeatherAPI(),
+            openMeteo: StubOpenMeteoAPI(response: openMeteoResponse(hours: 2)),
+            airQuality: StubAirQualityAPI(error: URLError(.timedOut)),
+            timeZone: utc,
+            now: { Date(timeIntervalSince1970: TimeInterval(fixtureDayStart)) }
+        )
+
+        let result = await repository.fetchForecast(units: .metric, latitude: 30, longitude: -97)
+
+        XCTAssertEqual(try? result.get().flatMap(\.hourlySlots).map(\.airQualityBand), [nil, nil])
+    }
+
     func testFetchForecastWithCoordinatesUsesOpenWeatherWhenOpenMeteoIsSwitchedOff() async {
         let api = FakeOpenWeatherAPI()
         let openMeteo = StubOpenMeteoAPI()
         let repository = WeatherRepository(
             client: api,
             openMeteo: openMeteo,
+            airQuality: StubAirQualityAPI(),
             timeZone: utc,
             useOpenMeteo: { false }
         )
@@ -144,6 +175,7 @@ final class WeatherRepositoryTests: XCTestCase {
         let repository = WeatherRepository(
             client: OpenWeatherClient(apiKey: "   "),
             openMeteo: StubOpenMeteoAPI(),
+            airQuality: StubAirQualityAPI(),
             timeZone: utc,
             now: { Date(timeIntervalSince1970: TimeInterval(fixtureDayStart)) }
         )
@@ -157,6 +189,7 @@ final class WeatherRepositoryTests: XCTestCase {
         let repository = WeatherRepository(
             client: FakeOpenWeatherAPI(),
             openMeteo: StubOpenMeteoAPI(error: OpenWeatherClientError.network),
+            airQuality: StubAirQualityAPI(),
             timeZone: utc
         )
 
@@ -170,7 +203,7 @@ final class WeatherRepositoryTests: XCTestCase {
 
     func testFetchCurrentWeatherMapsNetworkFailures() async {
         let api = FakeOpenWeatherAPI(currentError: OpenWeatherClientError.network)
-        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), timeZone: utc)
+        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), airQuality: StubAirQualityAPI(), timeZone: utc)
 
         let result = await repository.fetchCurrentWeather(units: .metric, cityQuery: "Austin")
 
@@ -184,7 +217,7 @@ final class WeatherRepositoryTests: XCTestCase {
         let api = FakeOpenWeatherAPI(
             currentError: OpenWeatherClientError.http(statusCode: 404, message: "city not found")
         )
-        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), timeZone: utc)
+        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), airQuality: StubAirQualityAPI(), timeZone: utc)
 
         let result = await repository.fetchCurrentWeather(units: .metric, cityQuery: "Missing City")
 
@@ -210,7 +243,7 @@ final class WeatherRepositoryTests: XCTestCase {
                 sys: nil
             )
         )
-        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), timeZone: utc)
+        let repository = WeatherRepository(client: api, openMeteo: StubOpenMeteoAPI(), airQuality: StubAirQualityAPI(), timeZone: utc)
 
         let result = await repository.fetchCurrentWeather(units: .metric, cityQuery: "Broken City")
 

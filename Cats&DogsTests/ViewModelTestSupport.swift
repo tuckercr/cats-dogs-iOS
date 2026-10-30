@@ -100,6 +100,30 @@ final class StubOpenMeteoAPI: OpenMeteoAPI, @unchecked Sendable {
     }
 }
 
+/// Air quality fake: no hourly readings unless `hourlyIndices` (US AQI by hour) are set; throws `error` if set.
+final class StubAirQualityAPI: AirQualityAPI, @unchecked Sendable {
+    var hourlyIndices: [Int: Int] = [:]
+    var error: Error?
+
+    init(hourlyIndices: [Int: Int] = [:], error: Error? = nil) {
+        self.hourlyIndices = hourlyIndices
+        self.error = error
+    }
+
+    func current(latitude: Double, longitude: Double) async throws -> AirQualityResponse {
+        throw error ?? URLError(.notConnectedToInternet)
+    }
+
+    func hourly(latitude: Double, longitude: Double) async throws -> AirQualityHourlyResponse {
+        if let error { throw error }
+        let times = hourlyIndices.keys.sorted()
+        return AirQualityHourlyResponse(
+            timezone: "America/New_York",
+            hourly: .init(time: times, usAqi: times.map { hourlyIndices[$0] }, europeanAqi: nil)
+        )
+    }
+}
+
 /// A day of hourly Open-Meteo data starting at `start`, all with the same values.
 func openMeteoResponse(
     hours: Int = 3,
@@ -172,6 +196,7 @@ final class ScriptedWeatherAPI: OpenWeatherAPI, @unchecked Sendable {
         WeatherRepository(
             client: self,
             openMeteo: openMeteo,
+            airQuality: StubAirQualityAPI(),
             timeZone: TimeZone(identifier: "UTC")!,
             now: { Date(timeIntervalSince1970: TimeInterval(fixtureDayStart)) }
         )

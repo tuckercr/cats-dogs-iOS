@@ -1,7 +1,7 @@
 import Foundation
 
 enum WalkRating: Equatable {
-    case great, okay, poor, pawsHot, tooCold
+    case great, okay, poor, pawsHot, tooCold, badAir
 }
 
 /// `bestTimeLabel` is nil when now is a good time, or when there is no good window soon.
@@ -51,6 +51,8 @@ enum WalkAdvisor {
         let pawsHotNow = (pavementC(first) ?? 0) >= thresholds.hotPavementC
         let rating: WalkRating = if currentFeelsLikeC >= thresholds.petHotC || pawsHotNow {
             .pawsHot
+        } else if hasBadAir(first) {
+            .badAir
         } else if currentFeelsLikeC <= thresholds.petColdC {
             .tooCold
         } else if nowWalkable {
@@ -96,10 +98,16 @@ enum WalkAdvisor {
         slot.pavementTemperature.map(slot.units.toCelsius)
     }
 
+    /// Unhealthy air or worse (the Air quality tile's "Potty breaks only today"). Unknown counts as clean.
+    private static func hasBadAir(_ slot: HourlySlot) -> Bool {
+        (slot.airQualityBand ?? 0) >= AirQuality.badAirBand
+    }
+
     /// Feels-like rather than air temperature: humid heat and wind chill are what the dog feels.
     /// Pavement that's only getting hot already rules an hour out, so the suggested hour is a cooler one.
     static func isWalkable(_ slot: HourlySlot, _ thresholds: PetWeatherThresholds) -> Bool {
         isDaytime(slot, thresholds)
+            && !hasBadAir(slot)
             && (pavementC(slot) ?? 0) < thresholds.warmPavementC
             && slot.precipitationChance < thresholds.maxRainChance
             && thresholds.comfortC.contains(slot.units.toCelsius(slot.feelsLike))

@@ -134,6 +134,7 @@ final class WeatherBackgroundRefresherTests: XCTestCase {
             weatherRepository: WeatherRepository(
                 client: api ?? FakeOpenWeatherAPI(),
                 openMeteo: StubOpenMeteoAPI(response: openMeteoResponse(hours: 1)),
+                airQuality: StubAirQualityAPI(),
                 timeZone: TimeZone(identifier: "UTC")!,
                 now: { Date(timeIntervalSince1970: TimeInterval(fixtureDayStart)) }
             ),

@@ -1,6 +1,7 @@
 import Foundation
 
-/// A city pinned by the user. Coordinates may be nil for name-only entries (legacy migration).
+/// A city pinned by the user. Coordinates are nil for a name-only entry (typed without picking a
+/// suggestion, or legacy migration) until `CityListViewModel` geocodes it.
 struct SavedLocation: Codable, Equatable, Identifiable {
     var id: String { cacheKey }
     let label: String

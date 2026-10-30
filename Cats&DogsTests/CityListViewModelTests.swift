@@ -178,6 +178,33 @@ final class CityListViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.locations, [SavedLocation(label: "Nowhere", latitude: nil, longitude: nil)])
     }
 
+    /// A city whose first lookup failed gets its coordinates the next time the app opens.
+    func testNameOnlyCitySavedEarlierIsGeocodedOnLaunch() async {
+        preferences.store.setSavedLocations([SavedLocation(label: "London", latitude: nil, longitude: nil)])
+        geocoding.onSearch = { _ in [geocodingResult(name: "London", country: "GB", lat: 51.51, lon: -0.13)] }
+
+        let viewModel = makeViewModel()
+        await waitUntil { viewModel.locations.first?.latitude != nil }
+
+        let geocoded = SavedLocation(label: "London", latitude: 51.51, longitude: -0.13)
+        XCTAssertEqual(viewModel.locations, [geocoded])
+        XCTAssertEqual(preferences.reopened().savedLocations, [geocoded])
+    }
+
+    func testRetryingWhileALookupIsInFlightDoesNotLookItUpTwice() async {
+        let search = Gate<[GeocodingDirectDTO]>()
+        geocoding.onSearch = { _ in try await search.value() }
+        let viewModel = makeViewModel()
+        viewModel.addLocation(SavedLocation(label: "London", latitude: nil, longitude: nil))
+        await waitUntil { self.geocoding.queries.count == 1 }
+
+        viewModel.fillInMissingCoordinates()
+        search.succeed([geocodingResult(name: "London", country: "GB", lat: 51.51, lon: -0.13)])
+        await waitUntil { viewModel.locations.first?.latitude != nil }
+
+        XCTAssertEqual(geocoding.queries, ["London"])
+    }
+
     func testAddLocationWithDuplicateLabelSwitchesToExistingInsteadOfDuplicating() async {
         preferences.store.setSavedLocations([austin, denver])
         preferences.store.setActiveLocationIndex(1)

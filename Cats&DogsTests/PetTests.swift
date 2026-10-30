@@ -96,6 +96,28 @@ final class WalkAdvisorTests: XCTestCase {
         XCTAssertEqual(advice, WalkAdvice(rating: .pawsHot, bestTimeLabel: "7 PM"))
     }
 
+    func testBadAirNowPointsAtTheFirstCleanerHour() {
+        let advice = WalkAdvisor.advice(
+            currentFeelsLikeC: 18,
+            upcoming: [slot("3 PM", 18, rain: 0, airBand: 3), slot("4 PM", 18, rain: 0, airBand: 4), slot("6 PM", 18, rain: 0, airBand: 2)]
+        )
+        XCTAssertEqual(advice, WalkAdvice(rating: .badAir, bestTimeLabel: "6 PM"))
+    }
+
+    func testAirThatIsOnlyPoorForSomeStillAllowsAWalk() {
+        XCTAssertEqual(
+            WalkAdvisor.advice(currentFeelsLikeC: 18, upcoming: [slot("3 PM", 18, rain: 0, airBand: 2)])?.rating,
+            .great
+        )
+    }
+
+    func testHeatOutranksBadAir() {
+        XCTAssertEqual(
+            WalkAdvisor.advice(currentFeelsLikeC: 33, upcoming: [slot("3 PM", 33, rain: 0, airBand: 5)])?.rating,
+            .pawsHot
+        )
+    }
+
     func testTooColdAtOrBelowFreezing() {
         XCTAssertEqual(WalkAdvisor.advice(currentFeelsLikeC: -3, upcoming: [slot("3 PM", -3, rain: 0)])?.rating, .tooCold)
     }
@@ -327,9 +349,10 @@ final class WalkAdvisorTests: XCTestCase {
         hour: Int? = nil,
         epoch: Int? = nil,
         icon: String = "01d",
-        feelsLike: Double? = nil
+        feelsLike: Double? = nil,
+        airBand: Int? = nil
     ) -> HourlySlot {
-        HourlySlot(
+        var slot = HourlySlot(
             timeLabel: label,
             iconCode: icon,
             description: "clear",
@@ -345,6 +368,8 @@ final class WalkAdvisorTests: XCTestCase {
             localHour: hour ?? Self.hourOf(label),
             epochSeconds: epoch
         )
+        slot.airQualityBand = airBand
+        return slot
     }
 
     /// Test-only: reads the hour from a "3 PM"-style label.

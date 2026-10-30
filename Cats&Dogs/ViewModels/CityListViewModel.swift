@@ -25,6 +25,7 @@ final class CityListViewModel {
         self.geocodingRepository = geocodingRepository ?? GeocodingRepository()
         self.onCityAdded = onCityAdded ?? { AnalyticsRepository.shared.logCityAdded() }
         loadFromPreferences()
+        fillInMissingCoordinates()
     }
 
     func addLocation(_ location: SavedLocation) {
@@ -43,8 +44,22 @@ final class CityListViewModel {
         preferences.setSavedLocations(updated)
         preferences.setActiveLocationIndex(newIndex)
 
-        if location.latitude == nil || location.longitude == nil {
-            Task { await fillInCoordinates(forLabel: location.label) }
+        fillInMissingCoordinates()
+    }
+
+    /// Labels being geocoded now, so launch and a quick return to the app don't look one up twice.
+    private var geocodingLabels: Set<String> = []
+
+    /// Geocodes every name-only city. Runs on launch and whenever the app comes back as well as on
+    /// add, so a city whose lookup failed (offline, say) still gets its radar later.
+    func fillInMissingCoordinates() {
+        for location in locations where location.latitude == nil || location.longitude == nil {
+            let label = location.label
+            guard geocodingLabels.insert(label).inserted else { continue }
+            Task {
+                await fillInCoordinates(forLabel: label)
+                geocodingLabels.remove(label)
+            }
         }
     }
 

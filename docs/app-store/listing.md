@@ -94,7 +94,7 @@ Answered in the build (`ITSAppUsesNonExemptEncryption = NO`); App Store Connect 
 
 Not settled by code; each needs an outside answer or account:
 
-- **Signing team**: `DEVELOPMENT_TEAM` is still the personal free team (`LNG7P6G3S6`). Switch it to FangJet LLC's Team ID once Apple approves the enrolment.
+- **Signing team**: FangJet LLC (`3V3NR8HP58`), with automatic signing. Xcode needs the colin@fangjet.com account added under Settings, then Accounts.
 - **RainViewer**: the free radar API is offered "for personal and educational use only". Get written permission or a commercial agreement for a published app, or launch with Remote Config `radar_enabled` set to false.
 - **Open-Meteo**: the free API is for non-commercial use. Confirm with Open-Meteo that a free, ad-free app from FangJet LLC qualifies, or take a paid plan; until then `open_meteo_enabled` can fall back to OpenWeatherMap.
 - **OpenWeather key**: it ships inside the app (Secrets.plist), so anyone can extract it. Watch usage in the OpenWeather dashboard and rotate it if it's abused; a small key-proxy backend would remove it from the app entirely.
