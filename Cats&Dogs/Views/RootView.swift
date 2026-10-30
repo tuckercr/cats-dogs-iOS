@@ -13,11 +13,15 @@ struct RootView: View {
     @State private var weatherViewModel = WeatherForecastViewModel()
     @State private var settingsViewModel = SettingsViewModel()
     @State private var path: [AppScreen] = []
+    @State private var updatePrompt = UpdatePromptViewModel()
+    @Environment(\.scenePhase) private var scenePhase
     private let notificationSettingsLink = NotificationSettingsLink.shared
 
     var body: some View {
         Group {
-            if let state = welcomeViewModel.onboardingState {
+            if updatePrompt.prompt == .required {
+                UpdateRequiredView(storeURL: updatePrompt.storeURL)
+            } else if let state = welcomeViewModel.onboardingState {
                 if !state.hasSeenWelcome {
                     WelcomeView {
                         welcomeViewModel.completeWelcome()
@@ -54,6 +58,13 @@ struct RootView: View {
                                 path.append(.settings)
                             }
                         )
+                        .safeAreaInset(edge: .top) {
+                            if updatePrompt.prompt == .recommended {
+                                UpdateBanner(storeURL: updatePrompt.storeURL, onDismiss: updatePrompt.dismissBanner)
+                                    .padding(.horizontal, 16)
+                                    .padding(.bottom, 8)
+                            }
+                        }
                         .navigationDestination(for: AppScreen.self) { screen in
                             switch screen {
                             case .settings:
@@ -83,6 +94,10 @@ struct RootView: View {
             } else {
                 ProgressView()
             }
+        }
+        // Remote Config values fetched in the background apply from the next read.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { updatePrompt.refresh() }
         }
     }
 }

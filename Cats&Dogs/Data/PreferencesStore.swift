@@ -22,6 +22,7 @@ final class PreferencesStore {
     private let notifyRainKey = "notify_rain"
     private let rainAlertStartKey = "rain_alert_start"
     private let rainAlertFireKey = "rain_alert_fire"
+    private let updateBannerDismissedKey = "update_banner_dismissed_at"
 
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -128,6 +129,15 @@ final class PreferencesStore {
     func setLastRainAlert(_ record: RainAlertRecord) {
         defaults.set(record.rainStart, forKey: rainAlertStartKey)
         defaults.set(record.fireDate.timeIntervalSince1970, forKey: rainAlertFireKey)
+    }
+
+    /// When "Not now" was last tapped on the update banner.
+    var updateBannerDismissedAt: Date? {
+        (defaults.object(forKey: updateBannerDismissedKey) as? Double).map(Date.init(timeIntervalSince1970:))
+    }
+
+    func setUpdateBannerDismissedAt(_ date: Date) {
+        defaults.set(date.timeIntervalSince1970, forKey: updateBannerDismissedKey)
     }
 
     func setHasSeenWelcome(_ value: Bool) {

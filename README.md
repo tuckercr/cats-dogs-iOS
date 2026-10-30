@@ -374,6 +374,9 @@ Remote Config parameters are defined and deployed from the Android repo
 | `pet_hot_threshold_c` / `pet_cold_threshold_c` | 30 (20–45) / 0 (−20–10) | Feels-like temperatures that switch the pets to their hot and cold moods, and the walk card to "paws hot" and "too cold" |
 | `open_meteo_enabled` | true | Off sends forecasts for cities with coordinates to OpenWeatherMap (3-hourly) instead of Open-Meteo |
 | `openweather_api_key` | "" | Replacement OpenWeather API key, used from the next launch; empty uses the key built into the app. Lets a leaked key be rotated without an update. Not secret: Remote Config values reach every device |
+| `ios_min_supported_version` | "" | Below this version (e.g. `1.1`) the app shows only "Time for an update" until it's updated. Empty never asks. Android has its own key |
+| `ios_min_recommended_version` | "" | Below this version a banner above the weather suggests updating; "Not now" hides it for a week. Empty never asks |
+| `ios_app_store_url` | "" | The App Store link behind the Update buttons; empty hides them until the App Store record exists |
 
 Walk and pet temperatures are Celsius whatever units the user picked. An out-of-range value falls
 back to its default, and if a pair ends up inverted (minimum not below maximum), both fall back to
