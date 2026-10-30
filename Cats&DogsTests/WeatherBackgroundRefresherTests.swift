@@ -7,16 +7,16 @@ final class WeatherBackgroundRefresherTests: XCTestCase {
     private let nameOnly = SavedLocation(label: "Paris", latitude: nil, longitude: nil)
     private let refreshInterval: TimeInterval = 45 * 60
 
-    private var suiteName: String!
+    private var suite: ThrowawayDefaults!
     private var preferences: PreferencesStore!
 
     override func setUp() async throws {
-        suiteName = "WeatherBackgroundRefresherTests-\(UUID().uuidString)"
-        preferences = PreferencesStore(defaults: UserDefaults(suiteName: suiteName)!)
+        suite = ThrowawayDefaults()
+        preferences = PreferencesStore(defaults: suite.defaults)
     }
 
     override func tearDown() async throws {
-        UserDefaults.standard.removePersistentDomain(forName: suiteName)
+        suite.destroy()
     }
 
     func testRefreshCachesFreshDataAndReschedulesNotifications() async {

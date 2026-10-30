@@ -53,6 +53,13 @@ final class RemoteConfigRepository {
     /// Replacement OpenWeather API key, so a leaked key can be rotated without an app update.
     nonisolated static let keyOpenWeatherApiKey = "openweather_api_key"
 
+    /// Below this version the app is blocked until it's updated; below the recommended one a
+    /// banner asks. Separate from Android's keys. Empty never asks.
+    nonisolated static let keyIosMinSupportedVersion = "ios_min_supported_version"
+    nonisolated static let keyIosMinRecommendedVersion = "ios_min_recommended_version"
+    /// Where the Update button goes. Empty hides the button, until the App Store record exists.
+    nonisolated static let keyIosAppStoreURL = "ios_app_store_url"
+
     private let remoteConfig: RemoteConfig?
 
     private init() {
@@ -77,6 +84,9 @@ final class RemoteConfigRepository {
             Self.keyForegroundRefreshMinMinutes: NSNumber(value: Self.defaultForegroundRefreshMinMinutes),
             Self.keyOpenMeteoEnabled: NSNumber(value: true),
             Self.keyOpenWeatherApiKey: "" as NSString,
+            Self.keyIosMinSupportedVersion: "" as NSString,
+            Self.keyIosMinRecommendedVersion: "" as NSString,
+            Self.keyIosAppStoreURL: "" as NSString,
             Self.keyWalkHotPavementC: NSNumber(value: PetWeatherThresholds.standard.hotPavementC),
             Self.keyWalkWarmPavementC: NSNumber(value: PetWeatherThresholds.standard.warmPavementC),
             Self.keyWalkIcyPavementC: NSNumber(value: PetWeatherThresholds.standard.icyPavementC),
@@ -143,6 +153,16 @@ final class RemoteConfigRepository {
         case .walkTime: walkTimeNotificationsEnabled
         case .rain: rainNotificationsEnabled
         }
+    }
+
+    var iosMinSupportedVersion: String? { string(Self.keyIosMinSupportedVersion) }
+    var iosMinRecommendedVersion: String? { string(Self.keyIosMinRecommendedVersion) }
+    var iosAppStoreURL: URL? { string(Self.keyIosAppStoreURL).flatMap(URL.init(string:)) }
+
+    /// Nil when Firebase is off or the value is blank.
+    private func string(_ key: String) -> String? {
+        let value: String? = remoteConfig?[key].stringValue
+        return value?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank
     }
 
     var foregroundRefreshMinInterval: TimeInterval {

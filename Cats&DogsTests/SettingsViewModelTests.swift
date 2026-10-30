@@ -89,9 +89,9 @@ final class SettingsViewModelTests: XCTestCase {
     }
 
     func testUsageSharingDefaultsToOffWhereConsentIsNeededAndCanBeTurnedOn() {
-        let suiteName = "SettingsViewModelTests-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
+        let suite = ThrowawayDefaults()
+        let defaults = suite.defaults
+        defer { suite.destroy() }
         let germany = PreferencesStore(defaults: defaults, region: "DE")
         XCTAssertFalse(germany.shareUsageStatistics)
         XCTAssertTrue(PreferencesStore(defaults: defaults, region: "US").shareUsageStatistics)
