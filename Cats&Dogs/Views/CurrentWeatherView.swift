@@ -20,6 +20,7 @@ struct CurrentWeatherView: View {
     /// "Now" for the hourly strip, walk advice, captions and moon. Moved on when the app becomes
     /// active and every half hour while it stays open, so a screen left on overnight keeps up.
     @State private var now = Date()
+    @State private var airQualityViewModel = AirQualityViewModel()
     @State private var locationViewModel = LocationPermissionViewModel()
     /// Location access at the last check, to spot it being granted later in the Settings app.
     @State private var locationWasGranted: Bool?
@@ -87,6 +88,7 @@ struct CurrentWeatherView: View {
                 now = Date()
                 backgroundRefreshActiveLocation()
                 updateMyLocation()
+                cityListViewModel.fillInMissingCoordinates()
             }
         }
         // The same quiet refresh every half hour while the app stays in the foreground. Restarted
@@ -263,6 +265,7 @@ struct CurrentWeatherView: View {
                         forecastState: weatherViewModel.forecast,
                         location: cityListViewModel.activeLocation,
                         showWalkCard: showWalkCard,
+                        airQuality: airQualityViewModel.reading(for: cityListViewModel.activeLocation),
                         now: now,
                         onDaySelected: { selectedDay = $0 },
                         onForecastRetry: refreshActiveLocation
@@ -319,6 +322,7 @@ struct CurrentWeatherView: View {
         guard let location = cityListViewModel.activeLocation else { return }
         weatherViewModel.refreshCurrent(location: location)
         weatherViewModel.refreshForecast(location: location)
+        airQualityViewModel.load(for: location)
     }
 
     /// Notification text is built from the cache, so reschedule once fresh data has landed. One
@@ -337,24 +341,12 @@ struct CurrentWeatherView: View {
         guard let location = cityListViewModel.activeLocation else { return }
         weatherViewModel.backgroundRefreshCurrent(location: location)
         weatherViewModel.backgroundRefreshForecast(location: location)
+        airQualityViewModel.load(for: location)
     }
 
     private func addCityFromSheet() {
-        if let suggestion = geoViewModel.selectedSuggestion {
-            cityListViewModel.addLocation(
-                SavedLocation(
-                    label: suggestion.label,
-                    latitude: suggestion.weatherLat,
-                    longitude: suggestion.weatherLon
-                )
-            )
-        } else {
-            let trimmed = geoViewModel.cityInput.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return }
-            cityListViewModel.addLocation(
-                SavedLocation(label: trimmed, latitude: nil, longitude: nil)
-            )
-        }
+        guard let location = geoViewModel.locationToAdd else { return }
+        cityListViewModel.addLocation(location)
         geoViewModel.reset()
         showAddSheet = false
     }
@@ -374,6 +366,7 @@ private struct CurrentWeatherContent: View {
     let forecastState: LoadingState<[DayForecast]>
     let location: SavedLocation?
     let showWalkCard: Bool
+    let airQuality: AirQuality?
     let now: Date
     let onDaySelected: (DayForecast) -> Void
     let onForecastRetry: () -> Void
@@ -585,6 +578,8 @@ private struct CurrentWeatherContent: View {
                 || WalkAdvisor.isPrecipitating(conditionMain: weather.conditionMain),
             // UV is always 0 after dark, so it only shows in the daytime (night icons end in "n").
             uvIndex: weather.iconCode.hasSuffix("n") ? nil : upcomingSlots.first?.uvIndex,
+            airQuality: airQuality,
+            hasDog: showWalkCard,
             now: now,
             thresholds: RemoteConfigRepository.shared.petWeatherThresholds,
             distanceInMiles: distanceInMiles

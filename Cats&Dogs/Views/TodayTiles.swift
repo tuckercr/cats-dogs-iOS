@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Today's details as a grid of tiles: feels like, wind, humidity and pavement in pairs, then
+/// Today's details as a grid of tiles: feels like, wind, humidity, pavement and air quality in pairs, then
 /// daylight (with the UV index) and the sky across the full width. Each tile has a plain fact under its number; only the
 /// pavement and sky tiles speak for the pets. Same layout as Android's `TodayTiles`.
 struct TodayTiles: View {
@@ -14,6 +14,10 @@ struct TodayTiles: View {
     let groundWet: Bool
     /// Today's UV index, or nil after dark or when not forecast.
     let uvIndex: Double?
+    /// Nil until it's fetched, or when it can't be.
+    let airQuality: AirQuality?
+    /// Air quality speaks of walks with a dog, of people without one.
+    let hasDog: Bool
     let now: Date
     let thresholds: PetWeatherThresholds
     let distanceInMiles: Bool
@@ -28,6 +32,7 @@ struct TodayTiles: View {
     private var smallTiles: [AnyView] {
         var tiles = [AnyView(feelsLike), AnyView(wind), AnyView(humidity)]
         if let pavementNow { tiles.append(AnyView(pavement(pavementNow))) }
+        if let airQuality { tiles.append(AnyView(air(airQuality))) }
         // UV normally rides in the Daylight tile's header; only without sunrise and sunset does it
         // need a tile of its own.
         if let uvIndex, !hasDaylight { tiles.append(AnyView(uv(uvIndex))) }
@@ -118,6 +123,37 @@ struct TodayTiles: View {
         case .safe: (0x27500A, 0xC0DD97)
         case .warm, .pavementOK, .freezing, .icy: (0x633806, 0xFAC775)
         case .tooHot, .dangerous: (0x791F1F, 0xF7C1C1)
+        }
+        return Color(hex: colorScheme == .dark ? dark : light)
+    }
+
+    private func air(_ air: AirQuality) -> some View {
+        Tile(icon: "aqi.medium", label: "Air quality") {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                TileValue("\(air.index)")
+                Text(air.bandName)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.secondaryText)
+            }
+            AirQualityBar(position: air.barPosition)
+                .padding(.vertical, 2)
+                .accessibilityHidden(true)
+            // The pollutant behind it is for VoiceOver only: another line would stretch every tile
+            // in the grid, which all take the tallest one's height.
+            TileNote(
+                air.line(hasDog: hasDog),
+                color: airTint(band: air.band),
+                spoken: [air.pollutantLine, air.line(hasDog: hasDog)].compactMap(\.self).joined(separator: ". ")
+            )
+        }
+    }
+
+    /// The walk card's shades again: green for good air, amber for so-so, red from unhealthy up.
+    private func airTint(band: Int) -> Color {
+        let (light, dark): (UInt32, UInt32) = switch band {
+        case 0: (0x27500A, 0xC0DD97)
+        case 1, 2: (0x633806, 0xFAC775)
+        default: (0x791F1F, 0xF7C1C1)
         }
         return Color(hex: colorScheme == .dark ? dark : light)
     }
@@ -332,6 +368,32 @@ private struct TileNote: View {
             .font(.subheadline)
             .foregroundStyle(color)
             .accessibilityLabel(spoken ?? TodayDetails.keepUnitsTogether(text))
+    }
+}
+
+/// The six air quality bands, good to worst, with a mark where the reading sits.
+private struct AirQualityBar: View {
+    /// 0 to 1 along the bar.
+    let position: Double
+
+    private static let bands: [UInt32] = [0x4CAF50, 0xE6C531, 0xF08C2E, 0xD94141, 0x8E4AA8, 0x7A2230]
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                HStack(spacing: 0) {
+                    ForEach(Self.bands, id: \.self) { Color(hex: $0) }
+                }
+                .frame(height: 6)
+                .clipShape(Capsule())
+                Capsule()
+                    .fill(Color.primary)
+                    .frame(width: 4, height: 12)
+                    .offset(x: min(max(proxy.size.width * position - 2, 0), proxy.size.width - 4))
+            }
+            .frame(maxHeight: .infinity)
+        }
+        .frame(height: 12)
     }
 }
 

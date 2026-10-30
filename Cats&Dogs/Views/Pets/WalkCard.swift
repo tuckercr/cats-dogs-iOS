@@ -28,6 +28,7 @@ struct WalkCard: View {
         return switch advice.rating {
         case .pawsHot: "Too hot for paws."
         case .tooCold: "Too cold for paws."
+        case .badAir: "Bad air. Potty breaks only."
         default: nil
         }
     }
@@ -39,7 +40,7 @@ struct WalkCard: View {
         case .great: (0x27500A, 0xC0DD97)
         case .okay: (0x633806, 0xFAC775)
         case .poor: (0x444441, 0xD3D1C7)
-        case .pawsHot: (0x791F1F, 0xF7C1C1)
+        case .pawsHot, .badAir: (0x791F1F, 0xF7C1C1)
         case .tooCold: (0x0C447C, 0xB5D4F4)
         }
         return Color(hex: colorScheme == .dark ? dark : light)

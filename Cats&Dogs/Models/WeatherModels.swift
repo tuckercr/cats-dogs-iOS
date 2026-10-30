@@ -55,6 +55,9 @@ struct HourlySlot: Codable, Equatable, Identifiable {
     /// freezing, the pavement may be icy or salted. Nil when the source doesn't say (optional, so a
     /// forecast cached before it existed still decodes).
     var groundWet: Bool? = nil
+    /// The hour's air quality band, 0 (good) to 5, on the city's scale (`AirQuality.band`). Nil when
+    /// unknown, which the walk planner treats as clean air.
+    var airQualityBand: Int? = nil
 
     var date: Date? { epochSeconds.map { Date(timeIntervalSince1970: TimeInterval($0)) } }
 }
@@ -70,7 +73,7 @@ struct DayForecast: Codable, Equatable, Identifiable {
     let tempMin: Double
     let tempMax: Double
     let units: WeatherUnits
-    let hourlySlots: [HourlySlot]
+    var hourlySlots: [HourlySlot]
     /// Highest probability of precipitation across the day's slots, as a percentage, 0...100.
     var precipitationChance: Int = 0
     /// Peak UV index across the day's slots; nil when the source doesn't provide UV.

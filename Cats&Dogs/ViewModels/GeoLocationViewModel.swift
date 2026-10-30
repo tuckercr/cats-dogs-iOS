@@ -16,6 +16,17 @@ final class GeoLocationViewModel {
         self.geocodingRepository = geocodingRepository ?? GeocodingRepository()
     }
 
+    /// What Add city adds: the picked suggestion, otherwise the top one showing, otherwise the typed
+    /// name (its coordinates are looked up later, so a city can be added offline). Nil with nothing
+    /// typed.
+    var locationToAdd: SavedLocation? {
+        if let suggestion = selectedSuggestion ?? citySuggestions.first {
+            return SavedLocation(label: suggestion.label, latitude: suggestion.weatherLat, longitude: suggestion.weatherLon)
+        }
+        let trimmed = cityInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : SavedLocation(label: trimmed, latitude: nil, longitude: nil)
+    }
+
     func onCityInputChange(_ value: String) {
         cityInput = value
         selectedSuggestion = nil

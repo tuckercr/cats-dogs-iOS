@@ -103,6 +103,41 @@ final class GeoLocationViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.selectedSuggestion, suggestion)
     }
 
+    // MARK: - locationToAdd
+
+    func testAddCityTakesTheTopSuggestionWhenNoneIsPicked() async {
+        api.onSearch = { _ in
+            [
+                geocodingResult(name: "London", country: "GB", lat: 51.51, lon: -0.13),
+                geocodingResult(name: "London", country: "CA", state: "Ontario", lat: 42.98, lon: -81.25),
+            ]
+        }
+        viewModel.onCityInputChange("London")
+        await waitUntil { !self.viewModel.citySuggestions.isEmpty }
+
+        XCTAssertEqual(viewModel.locationToAdd, SavedLocation(label: "London, GB", latitude: 51.51, longitude: -0.13))
+    }
+
+    func testAddCityTakesThePickedSuggestionOverTheTopOne() {
+        let ontario = CitySuggestion(label: "London, Ontario, CA", weatherLat: 42.98, weatherLon: -81.25)
+        viewModel.onCitySuggestionChosen(ontario)
+
+        XCTAssertEqual(viewModel.locationToAdd, SavedLocation(label: "London, Ontario, CA", latitude: 42.98, longitude: -81.25))
+    }
+
+    func testAddCityFallsBackToTheTypedNameWithoutSuggestions() async {
+        api.onSearch = { _ in throw URLError(.notConnectedToInternet) }
+        viewModel.onCityInputChange("  London ")
+        await waitUntil { self.api.completedSearches == 1 }
+        await settle()
+
+        XCTAssertEqual(viewModel.locationToAdd, SavedLocation(label: "London", latitude: nil, longitude: nil))
+    }
+
+    func testAddCityHasNothingToAddWithNothingTyped() {
+        XCTAssertNil(viewModel.locationToAdd)
+    }
+
     func testResetClearsAllStateAndCancelsPendingSearch() async {
         viewModel.onCitySuggestionChosen(CitySuggestion(label: "Austin", weatherLat: 1, weatherLon: 2))
         viewModel.onCityInputChange("Denver")

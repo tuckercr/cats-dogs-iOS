@@ -79,21 +79,8 @@ struct LocationsView: View {
     }
 
     private func addCityFromSheet() {
-        if let suggestion = geoViewModel.selectedSuggestion {
-            cityListViewModel.addLocation(
-                SavedLocation(
-                    label: suggestion.label,
-                    latitude: suggestion.weatherLat,
-                    longitude: suggestion.weatherLon
-                )
-            )
-        } else {
-            let trimmed = geoViewModel.cityInput.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return }
-            cityListViewModel.addLocation(
-                SavedLocation(label: trimmed, latitude: nil, longitude: nil)
-            )
-        }
+        guard let location = geoViewModel.locationToAdd else { return }
+        cityListViewModel.addLocation(location)
         geoViewModel.reset()
     }
 }
