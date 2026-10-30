@@ -55,9 +55,9 @@ final class PreferencesStoreTests: XCTestCase {
 
     /// Builds before this change stored each entry as a JSON string inside the map.
     func testCacheWrittenInTheOlderFormatIsIgnoredAndThenReplaced() async throws {
-        let suite = "PreferencesStoreTests-legacy-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        let suite = ThrowawayDefaults()
+        let defaults = suite.defaults
+        defer { suite.destroy() }
         defaults.set(try JSONEncoder().encode([austin.cacheKey: "{\"cityName\":\"Austin\"}"]), forKey: "weather_cache")
         let store = PreferencesStore(defaults: defaults)
 

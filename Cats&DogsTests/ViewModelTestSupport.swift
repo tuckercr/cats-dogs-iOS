@@ -1,23 +1,48 @@
 import XCTest
 @testable import Cats_Dogs
 
+/// A throwaway `UserDefaults` suite. Names cycle through a small fixed pool: removing a persistent
+/// domain leaves an empty .plist in Library/Preferences, and cfprefsd rewrites it seconds after it's
+/// deleted, so a fresh name per test left one more file behind every time. The pool is wider than
+/// the two suites a test uses at once, so a late write from a finished test lands in an idle suite.
+@MainActor
+final class ThrowawayDefaults {
+    private static let poolSize = 8
+    private static var next = 0
+
+    let name: String
+
+    init() {
+        name = "CatsDogsTests-\(Self.next)"
+        Self.next = (Self.next + 1) % Self.poolSize
+        // Whatever the last user of this name (or a crashed run) left behind.
+        UserDefaults.standard.removePersistentDomain(forName: name)
+    }
+
+    var defaults: UserDefaults { UserDefaults(suiteName: name)! }
+
+    func destroy() {
+        UserDefaults.standard.removePersistentDomain(forName: name)
+    }
+}
+
 /// A `PreferencesStore` backed by a throwaway `UserDefaults` suite, so tests never touch real app data.
 @MainActor
 final class IsolatedPreferences {
     let store: PreferencesStore
-    private let suiteName = "CatsDogsTests-\(UUID().uuidString)"
+    private let suite = ThrowawayDefaults()
 
     init() {
-        store = PreferencesStore(defaults: UserDefaults(suiteName: suiteName)!, region: "US")
+        store = PreferencesStore(defaults: suite.defaults, region: "US")
     }
 
     /// A second store over the same suite, to prove values were persisted rather than held in memory.
     func reopened() -> PreferencesStore {
-        PreferencesStore(defaults: UserDefaults(suiteName: suiteName)!, region: "US")
+        PreferencesStore(defaults: suite.defaults, region: "US")
     }
 
     func destroy() {
-        UserDefaults.standard.removePersistentDomain(forName: suiteName)
+        suite.destroy()
     }
 }
 
